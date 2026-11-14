@@ -1,6 +1,7 @@
 import type { EventKind } from "../../core/events";
 import type { Input } from "../../core/input";
 import { rng } from "../../core/rng";
+import type { DeepReadonly } from "../../core/scene";
 import type { GameEvent, Ship } from "../../core/state";
 
 /** cabin oxygen lost each second a breach stays open */
@@ -64,24 +65,42 @@ export function openBreach(w: Welder, damage: number, part?: string): void {
 
 /** one tick of the weld; input is the engineer's, or still when nobody is at the station */
 export function stepWeld(w: Welder, ship: Pick<Ship, "hull" | "cabinOxygen">, input: Input, dt: number, emit: Emit): void {
-  w.torch.x = clamp(w.torch.x + input.dx * TORCH_SPEED * dt);
-  w.torch.y = clamp(w.torch.y + input.dy * TORCH_SPEED * dt);
   const job = w.jobs[0];
+  // small steps, so a long tick from a throttled background host can't carry the torch over a crack point
+  const steps = Math.max(1, Math.ceil((TORCH_SPEED * dt) / TOLERANCE));
+  for (let i = 0; i < steps; i++) {
+    w.torch.x = clamp(w.torch.x + (input.dx * TORCH_SPEED * dt) / steps);
+    w.torch.y = clamp(w.torch.y + (input.dy * TORCH_SPEED * dt) / steps);
+    if (job) weldAt(job, w.torch, dt / steps);
+  }
   if (!job) return;
 
   ship.cabinOxygen = clamp(ship.cabinOxygen - LEAK_PER_SECOND * dt);
-  if (dist(w.torch, job.crack[job.next]) <= TOLERANCE) job.next += 1;
-  else if (job.next > 0 && toSegment(w.torch, job.crack[job.next - 1], job.crack[job.next]) > TOLERANCE) {
-    // once the weld has started, every moment off the line burns sealant
-    job.sealant = clamp(job.sealant - WASTE_PER_SECOND * dt);
-  }
-
   if (job.next < job.crack.length) return;
   // a clean weld gives back all the breach took, an empty can only half
   const restored = job.damage * (0.5 + 0.5 * job.sealant);
   ship.hull = clamp(ship.hull + restored);
   emit("breach_sealed", { part: job.part, value: restored });
   w.jobs.shift();
+}
+
+/**
+ * The bus and the weld share W, S and E, so only one of them hears the engineer at a time:
+ * an open breach takes the keys, and the bus keeps running on its own meanwhile.
+ */
+export function routeEngineer(w: DeepReadonly<Welder>, input: Input): { bus: Input; weld: Input } {
+  return w.jobs.length > 0 ? { bus: STILL, weld: input } : { bus: input, weld: STILL };
+}
+
+const STILL: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
+
+function weldAt(job: WeldJob, torch: Point, dt: number): void {
+  if (job.next >= job.crack.length) return;
+  if (dist(torch, job.crack[job.next]) <= TOLERANCE) job.next += 1;
+  else if (job.next > 0 && toSegment(torch, job.crack[job.next - 1], job.crack[job.next]) > TOLERANCE) {
+    // once the weld has started, every moment off the line burns sealant
+    job.sealant = clamp(job.sealant - WASTE_PER_SECOND * dt);
+  }
 }
 
 function dist(a: Point, b: Point): number {

@@ -88,7 +88,7 @@ export function drawWeld(ctx: CanvasRenderingContext2D, w: DeepReadonly<Welder>,
   ctx.fillText(job ? `Breach open, cabin air leaking${queued}` : "Hull holding", x, y + 42);
 
   // the panel is square, so a crack keeps its shape whatever the area
-  const size = Math.min(width, area.h - 110);
+  const size = Math.max(0, Math.min(width, area.h - 110));
   const px = x;
   const py = y + 56;
   const at = (p: { x: number; y: number }) => [px + p.x * size, py + p.y * size] as const;

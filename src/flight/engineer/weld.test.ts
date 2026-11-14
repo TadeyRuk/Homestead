@@ -3,7 +3,7 @@ import type { EventKind } from "../../core/events";
 import type { Input } from "../../core/input";
 import type { GameEvent } from "../../core/state";
 import {
-  createWelder, LEAK_PER_SECOND, openBreach, stepWeld, TOLERANCE, WASTE_PER_SECOND, type Emit, type Point, type Welder,
+  createWelder, LEAK_PER_SECOND, openBreach, routeEngineer, stepWeld, TOLERANCE, WASTE_PER_SECOND, type Emit, type Point, type Welder,
 } from "./weld";
 
 const still: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
@@ -150,6 +150,24 @@ describe("hull weld", () => {
     const s = ship(0.5);
     trace(w, s);
     expect(w.jobs).toHaveLength(1);
+  });
+
+  it("seals a point the torch sweeps across in one long tick", () => {
+    const w = createWelder(2);
+    openBreach(w, 0.2);
+    const p = w.jobs[0].crack[0];
+    // a throttled background host can tick once a second; the torch must not jump over the point
+    w.torch = { x: p.x - 0.3, y: p.y };
+    stepWeld(w, ship(), { ...still, dx: 1 }, 1, () => {});
+    expect(w.jobs[0].next).toBe(1);
+  });
+
+  it("sends the engineer's keys to the weld while a breach is open, and to the bus otherwise", () => {
+    const w = createWelder(2);
+    const keys = { ...still, dy: 1, interact: true };
+    expect(routeEngineer(w, keys)).toEqual({ bus: keys, weld: still });
+    openBreach(w, 0.2);
+    expect(routeEngineer(w, keys)).toEqual({ bus: still, weld: keys });
   });
 
   it("counts the torch as on a point within the tolerance", () => {
