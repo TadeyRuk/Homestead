@@ -84,4 +84,36 @@ describe("build timer running out", () => {
     expect(kinds(s).filter((k) => k === "salvage_filled")).toHaveLength(3);
     expect(s.phase).toBe("flight");
   });
+
+  it("fills salvage before lift-off when a countdown ends on the exact deadline tick", () => {
+    const s = campus(at("a", pad.x, pad.y));
+    s.launchAt = s.phaseEndsAt;
+    launchRule(s, {}, s.phaseEndsAt!);
+    expect(s.ship.salvaged).toEqual(["propulsion", "power", "comms", "payload"]);
+    expect(s.phase).toBe("flight");
+  });
+
+  it("lets the timeout launch a countdown started with under five seconds left", () => {
+    const s = campus(at("a", pad.x, pad.y));
+    launchRule(s, { a: press }, 178_000);
+    launchRule(s, {}, 180_000);
+    expect(s.phase).toBe("flight");
+    expect(s.launchAt).toBeNull();
+  });
+
+  it("starts the countdown once when two players press E at the pad on the same tick", () => {
+    const s = campus(at("a", pad.x, pad.y), at("b", pad.x + 10, pad.y));
+    launchRule(s, { a: press, b: press }, 10_000);
+    expect(s.launchAt).toBe(10_000 + COUNTDOWN_MS);
+    expect(kinds(s)).toEqual(["launch_started"]);
+  });
+
+  it("fails the launch instead of crashing on a part the catalog doesn't know", () => {
+    const s = campus(at("a", pad.x, pad.y));
+    Object.assign(s.ship.slots, { ...goodBuild, payload: "mystery-box" });
+    launchRule(s, { a: press }, 10_000);
+    expect(() => launchRule(s, {}, 10_000 + COUNTDOWN_MS)).not.toThrow();
+    expect(s.log.find((e) => e.kind === "launch_failed")?.part).toBe("mystery-box");
+    expect(s.phase).toBe("report");
+  });
 });

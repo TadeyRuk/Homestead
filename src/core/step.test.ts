@@ -85,4 +85,27 @@ describe("step", () => {
     step(s, {}, 1_000, 0.016);
     expect(ran).toBe(false);
   });
+
+  it("stops running a phase's rules once one of them changes the phase", () => {
+    let later = false;
+    registerRule("surface", (st, _i, now) => enterPhase(st, "report", now));
+    registerRule("surface", () => {
+      later = true;
+    });
+    const s = createState(1, "mars");
+    enterPhase(s, "surface", 0);
+    step(s, {}, 1_000, 0.016);
+    expect(s.phase).toBe("report");
+    expect(later).toBe(false);
+  });
+
+  it("only walks players on a map, so WASD at a flight station doesn't move them", () => {
+    for (const phase of ["brief", "flight", "report"] as const) {
+      const s = createState(1, "mars");
+      s.players.push(player("a"));
+      enterPhase(s, phase, 0);
+      step(s, { a: { ...still, dx: 1 } }, 100, 0.5);
+      expect(s.players[0].x).toBe(100);
+    }
+  });
 });

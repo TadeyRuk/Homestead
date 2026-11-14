@@ -22,7 +22,7 @@ Spawns, launch, meter math, kiosk and hazards went to other seats to even out th
 ## Needs from others
 
 - Seat 1: `GameState`, input map, timers (S1-01, S1-06).
-- Seat 3: `src/data/parts.json` and `missions.json` (S3-01). Read every part number from there.
+- Seat 3: part data (S3-01). Read every part number through `partInfo()` in `src/core/catalog.ts` (seat 3 fills it from `src/data/`).
 - Seat 3: the screens that show your state (pad meters, mission panel). Agree the `GameState` fields with them early.
 
 ## Issues

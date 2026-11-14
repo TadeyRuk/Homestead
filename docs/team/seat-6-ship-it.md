@@ -35,7 +35,7 @@ Fill in the AI-use section (where AI was used for code, art and data) and the cr
 **Done when:** no "to be filled in" text left in `README.md`.
 
 ### S6-06 Playtest and balance (hour 10.5)
-Balance runs on the part numbers in `src/data/parts.json` with seat 3. Get someone outside the team to play solo on the itch.io build without help, and note where they got stuck.
+Balance runs on the part numbers in `src/core/catalog.ts` with seat 3. With the proposal's numbers no campus build can be overweight (the ion drive lifts exactly its heaviest load), so only a salvage motor fails; decide with seat 3 whether that is the intended balance. Get someone outside the team to play solo on the itch.io build without help, and note where they got stuck.
 **Done when:** one outside playtest done, issues filed for what broke.
 
 ### S6-07 Video (hour 11.5)

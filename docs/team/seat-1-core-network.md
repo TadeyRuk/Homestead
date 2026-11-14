@@ -8,7 +8,7 @@ Everyone else waits on S1-01, so it lands first and nobody branches before it.
 
 ## Needs from others
 
-- Seat 3: `src/data/parts.json` and `missions.json` shapes by hour 1.5, so the state can hold part ids.
+- Seat 3: real part and mission data through `registerParts` and `registerMissionInfo`.
 - Seat 3: the lobby screens (S3-03) that call your host and join functions.
 
 ## Issues

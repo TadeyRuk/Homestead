@@ -44,7 +44,7 @@ export interface Ship {
 export interface LoosePart {
   /** unique per piece, so two of the same part can lie on the map */
   id: string;
-  /** the part id from src/data/parts.json */
+  /** the part id; look it up with partInfo in src/core/catalog.ts */
   part: string;
   x: number;
   y: number;
