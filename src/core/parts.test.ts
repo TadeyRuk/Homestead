@@ -19,5 +19,8 @@ describe("placePart", () => {
     placePart(s, "rtg", { x: 5, y: 6 }, "k");
     enterPhase(s, "surface", 0);
     expect(s.parts).toEqual([]);
+    placePart(s, "rtg", { x: 5, y: 6 }, "d");
+    enterPhase(s, "report", 0);
+    expect(s.parts).toEqual([]);
   });
 });

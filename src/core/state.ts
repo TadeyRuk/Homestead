@@ -70,8 +70,10 @@ export interface GameState {
   /** ms timestamp on the host clock */
   runStartedAt: number;
   credits: number;
+  /** host-clock ms when the rocket lifts off; null while no countdown is running */
+  launchAt: number | null;
   players: Player[];
-  /** loose parts on the current map; cleared whenever the map changes */
+  /** loose parts on the current map; cleared on every phase change */
   parts: LoosePart[];
   /** counter behind loose-part ids; use placePart in src/core/parts.ts, not this */
   partSeq: number;
@@ -97,6 +99,7 @@ export function createState(seed: number, mission: MissionId): GameState {
     phaseEndsAt: null, // the lobby waits for Start, not a timer
     runStartedAt: 0,
     credits: 0,
+    launchAt: null,
     players: [],
     parts: [],
     partSeq: 0,
