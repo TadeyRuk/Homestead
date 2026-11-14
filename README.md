@@ -149,9 +149,9 @@ The mission cards, part stats, hazards and report lines come from these sources.
 | [Concept Maturity Levels (NASA Science)](https://science.nasa.gov/wp-content/uploads/2023/11/03-ziemer-mission-development-101-cmls.pdf) | Same as above. |
 | [CubeSat 101 (NASA CubeSat Launch Initiative)](https://www.nasa.gov/wp-content/uploads/2017/03/nasa_csli_cubesat_101_508.pdf) | A check on how we describe power, comms and payload to beginners. |
 | [GMAT, General Mission Analysis Tool (NASA Goddard)](https://etd.gsfc.nasa.gov/capabilities/capabilities-listing/general-mission-analysis-tool-gmat/) | Reference for transit times only. Not built into the game. |
-| Design and Develop Science Missions | The four mission segments. Launch and space segments are the build, operations are the flight and surface, and the user segment is the report. Link to be copied from the challenge page. |
-| A Learning Game About Telescopes | Ending the report on a real mission that made the same choice as the player. Link to be copied from the challenge page. |
-| NASA Mission Viz | Reference for transit times only. Link to be copied from the challenge page. |
+| [Design and Develop Science Missions (NASA SmallSat Institute)](https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf) | The four mission segments. Launch and space segments are the build, operations are the flight and surface, and the user segment is the report. |
+| [A Learning Game About Telescopes (NASA Webb)](https://science.nasa.gov/mission/webb/game-build-it-yourself/) | Ending the report on a real mission that made the same choice as the player. |
+| [NASA Mission Viz](https://nasa.github.io/mission-viz/) | Reference for transit times only. |
 
 Challenge page: [Space Mission Design Game](https://www.spaceappschallenge.org/2026/challenges/space-mission-design-game/).
 
