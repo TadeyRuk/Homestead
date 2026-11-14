@@ -20,6 +20,28 @@ export const CAMPUS_PALETTE: Palette = {
   text: "#e6e9ef",
 };
 
+// the Moon and Mars share one surface layout; only the colours change
+export const MOON_PALETTE: Palette = {
+  ground: "#5b5d63",
+  floors: { pit: "#45474d" },
+  wall: "#8a8d94",
+  wallEdge: "#2e3035",
+  text: "#f2f4f8",
+};
+
+export const MARS_PALETTE: Palette = {
+  ground: "#9a4a2a",
+  floors: { pit: "#7a3820" },
+  wall: "#6b2f1b",
+  wallEdge: "#3a180c",
+  text: "#fff1e6",
+};
+
+export function paletteFor(which: "campus" | "surface", mission: "moon" | "mars"): Palette {
+  if (which === "campus") return CAMPUS_PALETTE;
+  return mission === "moon" ? MOON_PALETTE : MARS_PALETTE;
+}
+
 // role colours from the proposal mocks, so each player reads as their job
 export const ROLE_COLOURS: Record<Role, string> = {
   pilot: "#f08a24",
@@ -36,6 +58,12 @@ export function drawGround(ctx: Ctx, map: GroundMap, palette: Palette): void {
   for (const f of map.floors) {
     ctx.fillStyle = palette.floors[f.kind] ?? palette.floors.road ?? palette.ground;
     ctx.fillRect(f.x, f.y, f.w, f.h);
+  }
+  for (const pit of map.pits ?? []) {
+    ctx.fillStyle = palette.floors.pit ?? palette.ground;
+    ctx.beginPath();
+    ctx.arc(pit.x, pit.y, pit.r, 0, Math.PI * 2);
+    ctx.fill();
   }
   for (const w of map.walls) {
     ctx.fillStyle = palette.wallEdge;

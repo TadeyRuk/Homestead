@@ -22,6 +22,8 @@ export interface GroundBase {
   /** where the crew stands when the phase starts, one per player */
   starts: Point[];
   floors: Floor[];
+  /** round walkable hollows drawn in the floor colour, like a crater */
+  pits?: (Point & { r: number })[];
   labels: Label[];
 }
 

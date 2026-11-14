@@ -1,6 +1,7 @@
 import type { Scene } from "../core/scene";
 import { edgeArrow, follow, PX_PER_M, type EdgeArrow } from "./camera";
-import { CAMPUS_PALETTE, drawGround, drawMarker, drawParts, drawPlayers } from "./draw";
+import { drawGround, drawMarker, drawParts, drawPlayers, paletteFor } from "./draw";
+import { SURFACE } from "./surface";
 import { groundFor, type Ground, type GroundMap } from "./world";
 
 /**
@@ -19,10 +20,20 @@ export function groundScene(which: Ground): Scene {
 
       ctx.save();
       ctx.translate(-Math.round(cam.x), -Math.round(cam.y));
-      drawGround(ctx, map, CAMPUS_PALETTE);
-      if (map.pad) drawMarker(ctx, map.pad, "#7ef0d0", "Launch pad");
-      if (map.kiosk) drawMarker(ctx, map.kiosk, "#ff5fae", "Kiosk", 16);
-      if (which === "surface" && map.lander) drawMarker(ctx, map.lander, "#7ef0d0", "Lander", 30);
+      drawGround(ctx, map, paletteFor(which, state.mission));
+      if (which === "campus") {
+        if (map.pad) drawMarker(ctx, map.pad, "#7ef0d0", "Launch pad");
+        if (map.kiosk) drawMarker(ctx, map.kiosk, "#ff5fae", "Kiosk", 16);
+      } else {
+        for (const site of map.sites ?? []) {
+          drawMarker(ctx, site, site.rich ? "#ffd84a" : "#c9ced8", site.rich ? "Rich site" : "Site", site.rich ? 20 : 14);
+        }
+        if (map === SURFACE) {
+          drawMarker(ctx, SURFACE.sampleSites[state.mission], "#ff7b3a", state.mission === "mars" ? "Core sample" : "Regolith", 14);
+          drawMarker(ctx, SURFACE.deploySpot, "#b48cff", state.mission === "mars" ? "Weather station" : "Seismometer", 14);
+        }
+        if (map.lander) drawMarker(ctx, map.lander, "#7ef0d0", "Lander", 30);
+      }
       drawParts(ctx, state.parts);
       drawPlayers(ctx, state.players, view.playerId);
       ctx.restore();

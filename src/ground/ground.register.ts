@@ -5,11 +5,11 @@ import { CAMPUS } from "./campus";
 import { carryRule } from "./carry";
 import { groundRule } from "./player";
 import { groundScene } from "./scene";
-import { registerGround, TEST_ROOM } from "./world";
+import { SURFACE } from "./surface";
+import { registerGround } from "./world";
 
 registerGround("campus", CAMPUS);
-// a one-screen test room until the real surface map lands
-registerGround("surface", TEST_ROOM);
+registerGround("surface", SURFACE);
 
 // order matters within a phase: walls first, so later rules see where players really are
 registerRule("campus", groundRule);
