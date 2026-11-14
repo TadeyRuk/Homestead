@@ -10,6 +10,8 @@ export interface Player {
   name: string;
   /** solo holds all four */
   roles: Role[];
+  /** the flight station this player is looking at; one of their roles, or null outside flight */
+  station: Role | null;
   x: number;
   y: number;
   /** part id */
@@ -62,6 +64,8 @@ export interface GameState {
   ship: Ship;
   data: { collected: number; uplinked: number; target: number };
   objectives: Record<string, boolean>;
+  /** each flight station's current problem in a few words, for the crew strip; absent when fine */
+  trouble: Partial<Record<Role, string>>;
   log: GameEvent[];
 }
 
@@ -87,6 +91,7 @@ export function createState(seed: number, mission: MissionId): GameState {
     },
     data: { collected: 0, uplinked: 0, target: 0 },
     objectives: {},
+    trouble: {},
     log: [],
   };
 }
