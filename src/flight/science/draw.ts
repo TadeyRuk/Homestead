@@ -1,6 +1,6 @@
 import type { DeepReadonly } from "../../core/scene";
 import type { Ship } from "../../core/state";
-import { LOW_OXYGEN, type Converter, type Item } from "./converter";
+import { LOW_OXYGEN, TRAY_SIZE, type Converter, type Item } from "./converter";
 
 /** where on the canvas a station draws; the flight shell (S4-01) decides */
 export interface Area {
@@ -49,7 +49,7 @@ export function drawConverter(
   ctx.fillText(c.jammed > 0 ? `Intake jammed, clears in ${Math.ceil(c.jammed)} s` : "Intake running", x, barY + 40);
 
   // the tray, oldest on the left, sliding toward the intake as new items arrive
-  const slot = w / 5;
+  const slot = w / TRAY_SIZE;
   const trayY = barY + 64;
   c.tray.forEach((item, i) => {
     const sx = x + i * slot;
