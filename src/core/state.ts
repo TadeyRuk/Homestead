@@ -40,6 +40,16 @@ export interface Ship {
   linkLocked: boolean;
 }
 
+/** a part lying on the map; picking it up moves `part` into the player's `carrying` and removes it here */
+export interface LoosePart {
+  /** unique per piece, so two of the same part can lie on the map */
+  id: string;
+  /** the part id from src/data/parts.json */
+  part: string;
+  x: number;
+  y: number;
+}
+
 export interface GameEvent {
   /** seconds since run start */
   t: number;
@@ -61,6 +71,8 @@ export interface GameState {
   runStartedAt: number;
   credits: number;
   players: Player[];
+  /** loose parts on the current map */
+  parts: LoosePart[];
   ship: Ship;
   data: { collected: number; uplinked: number; target: number };
   objectives: Record<string, boolean>;
@@ -79,6 +91,7 @@ export function createState(seed: number, mission: MissionId): GameState {
     runStartedAt: 0,
     credits: 0,
     players: [],
+    parts: [],
     ship: {
       slots: { propulsion: null, power: null, comms: null, payload: null },
       salvaged: [],
