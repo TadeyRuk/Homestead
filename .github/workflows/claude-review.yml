@@ -31,6 +31,9 @@ jobs:
         with:
           # Token from `claude setup-token` (Claude Pro/Max subscription).
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # polsalarm's GitHub token, so review comments are posted under
+          # polsalarm instead of claude[bot].
+          github_token: ${{ secrets.REVIEWER_GITHUB_TOKEN }}
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
