@@ -73,6 +73,7 @@ Seat 1 lands this in `src/core/` at hour 1.5. Until then, code against these nam
 ### Rules
 
 - The host holds the one true `GameState`. Clients send inputs, never state.
+- Joiners get the whole state in each snapshot except `log`, which arrives only during the report phase (the only screen that reads it). Draw live problems from `state.trouble`, not from the log.
 - Scenes read from `GameState` and append to the event log. A scene never reaches into another seat's scene.
 - All randomness goes through the seeded RNG in `src/core/rng.ts`. No `Math.random()` in game logic.
 - Part and mission numbers live in `src/data/` only. No magic numbers for part stats in scene code.

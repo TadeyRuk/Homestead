@@ -35,6 +35,8 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
   const crew = new Map<string, Conn>();
   const inputs: Record<string, Input> = {};
   const heard: Record<string, number> = {};
+  // connections that have not said hello yet, with when they opened; they get DROP_MS to do it
+  const pending = new Map<Conn, number>();
   let nextId = 2;
   let lastSnapshot = -Infinity;
   let hostNow = clock(); // the latest tick time; snapshots carry it
@@ -42,6 +44,12 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
 
   const send = (conn: Conn, msg: FromHost) => conn.send(msg);
   const broadcast = (msg: FromHost) => crew.forEach((c) => send(c, msg));
+  // the log grows all run and only the report reads it, so it rides along only then
+  const snapshot = (now: number): FromHost => ({
+    t: "snapshot",
+    state: state.phase === "report" ? state : { ...state, log: [] },
+    hostNow: now,
+  });
 
   function end(reason: string) {
     if (ended) return;
@@ -49,6 +57,8 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
     broadcast({ t: "end", reason });
     crew.forEach((c) => c.close());
     crew.clear();
+    pending.forEach((_, c) => c.close());
+    pending.clear();
     onEnd(reason);
   }
 
@@ -59,11 +69,13 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
 
   function addConnection(conn: Conn) {
     let id: string | null = null;
+    pending.set(conn, clock());
     conn.onData((raw) => {
       const msg = parseFromClient(raw);
       if (!msg || ended) return;
       if (id !== null) heard[id] = clock();
       if (msg.t === "hello" && id === null) {
+        pending.delete(conn);
         if (state.phase !== "lobby") return refuse(conn, "Run already started");
         if (state.players.length >= MAX_CREW) return refuse(conn, "Crew is full");
         id = `p${nextId++}`;
@@ -72,11 +84,11 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
         crew.set(id, conn);
         heard[id] = clock();
         send(conn, { t: "welcome", playerId: id });
-        broadcast({ t: "snapshot", state, hostNow });
+        broadcast(snapshot(hostNow));
       } else if (msg.t === "role" && id !== null) {
         if (state.phase !== "lobby") return;
         takeRole(state, id, msg.role);
-        broadcast({ t: "snapshot", state, hostNow });
+        broadcast(snapshot(hostNow));
       } else if (msg.t === "input" && id !== null) {
         // or-in presses so one sent just before a newer input still reaches the next tick
         const prev = inputs[id];
@@ -86,6 +98,7 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
       }
     });
     conn.onClose(() => {
+      pending.delete(conn);
       if (id !== null) left(id);
     });
   }
@@ -103,6 +116,12 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
     for (const id of crew.keys()) {
       if (clock() - heard[id] > DROP_MS) return left(id);
     }
+    for (const [conn, opened] of pending) {
+      if (clock() - opened > DROP_MS) {
+        pending.delete(conn);
+        conn.close();
+      }
+    }
     const before = state.phase;
     step(state, { ...inputs, [HOST_ID]: hostInput }, now, dt);
     // the report wrapping round to the lobby is the end of the run
@@ -113,7 +132,7 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
     }
     if (now - lastSnapshot >= SNAPSHOT_MS) {
       lastSnapshot = now;
-      broadcast({ t: "snapshot", state, hostNow: now });
+      broadcast(snapshot(now));
     }
   }
 
@@ -125,7 +144,7 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
     takeRole: (role: Role) => {
       if (state.phase !== "lobby") return;
       takeRole(state, HOST_ID, role);
-      broadcast({ t: "snapshot", state, hostNow });
+      broadcast(snapshot(hostNow));
     },
     setMission: (choice: MissionChoice) => {
       mission = choice;
@@ -133,7 +152,7 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
     start: (now: number) => {
       if (state.phase !== "lobby") return; // a second Start would wipe the run in progress
       startRun(state, mission, now);
-      broadcast({ t: "snapshot", state, hostNow: now });
+      broadcast(snapshot(now));
     },
   };
 }
