@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EventKind } from "../../core/events";
-import { BEAM, createDish, LEAN_RATE, stepDish } from "./dish";
+import { BEAM, createDish, LEAN_RATE, MAX_ANGLE, stepDish } from "./dish";
 
 const log: { kind: EventKind; part?: string }[] = [];
 const emit = (kind: EventKind, f: { part?: string }) => log.push({ kind, ...f });
@@ -38,5 +38,21 @@ describe("comms dish", () => {
     stepDish(watched, { pilot: turn(1), comms: turn(0), drift: 0.5, part: "laser", pace: 1 }, 0.2, () => {});
     stepDish(unwatched, { pilot: turn(1), comms: turn(0), drift: 0.5, part: "laser", pace: 0.4 }, 0.2, () => {});
     expect(Math.abs(unwatched.angle)).toBeLessThan(Math.abs(watched.angle));
+  });
+
+  it("lets full lean win a laser back during a held pilot turn", () => {
+    const d = createDish();
+    d.angle = 0.5;
+    d.locked = false;
+    for (let i = 0; i < 100 && !d.locked; i++) {
+      stepDish(d, { pilot: turn(1), comms: turn(-1), drift: 0.9, part: "laser", pace: 1 }, 0.1, () => {});
+    }
+    expect(d.locked).toBe(true);
+  });
+
+  it("caps how far off the dish can get, so a long turn doesn't leave a debt", () => {
+    const d = createDish();
+    for (let i = 0; i < 200; i++) stepDish(d, { pilot: turn(1), comms: turn(0), drift: 0.9, part: "laser", pace: 1 }, 0.1, () => {});
+    expect(Math.abs(d.angle)).toBeLessThanOrEqual(MAX_ANGLE);
   });
 });

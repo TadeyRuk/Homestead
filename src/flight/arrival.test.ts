@@ -3,6 +3,7 @@ import "../register";
 import { enterPhase } from "../core/phases";
 import { createState } from "../core/state";
 import { step } from "../core/step";
+import { LOST_FUEL, LOST_HULL } from "./flight.register";
 
 describe("arrival", () => {
   it("records fuel and hull as the ship lands and logs the landing", () => {
@@ -25,6 +26,7 @@ describe("arrival", () => {
       expect(s.phase).toBe("report");
       expect(s.arrival).toBeNull();
       expect(s.log.map((e) => e.kind)).toContain("ship_lost");
+      expect(s.log.find((e) => e.kind === "ship_lost")?.value).toBe("hull" in lost ? LOST_HULL : LOST_FUEL);
     }
   });
 

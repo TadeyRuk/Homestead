@@ -8,10 +8,14 @@ onEnterPhase("flight", (state, now) => {
   state.flight.events = planEvents(state, now, PHASE_SECONDS.flight);
 });
 
+/** `ship_lost` value: what ran out (hull wins when both did on the same tick) */
+export const LOST_HULL = 0;
+export const LOST_FUEL = 1;
+
 // a ship that runs out of hull or fuel never arrives; the report explains it
 registerRule("flight", (state, _inputs, now) => {
   if (state.ship.hull > 0 && state.ship.fuel > 0) return;
-  logEvent(state, "ship_lost", now, { value: state.ship.hull <= 0 ? 0 : 1 });
+  logEvent(state, "ship_lost", now, { value: state.ship.hull <= 0 ? LOST_HULL : LOST_FUEL });
   enterPhase(state, "report", now);
 });
 
