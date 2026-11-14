@@ -3,7 +3,7 @@ import type { EventKind } from "../../core/events";
 import type { Input } from "../../core/input";
 import type { GameEvent } from "../../core/state";
 import {
-  answerEngineOff, BASE_WATTS, createBus, draw, powered, RESET_SECONDS, secondsToTrip, stepBus, TRIP_SECONDS,
+  answerEngineOff, BASE_WATTS, createBus, draw, overloaded, powered, RESET_SECONDS, secondsToTrip, stepBus, TRIP_SECONDS,
   type Bus,
 } from "./bus";
 
@@ -163,6 +163,23 @@ describe("power bus", () => {
     const bus = createBus(1, { id: "rtg", watts: 450 }, [loads[0]]);
     expect(bus.loads).toHaveLength(1);
     expect(powered(bus, "payload")).toBe(false);
+  });
+
+  it("keeps the cursor at the top when the bus has no loads to select", () => {
+    const bus = createBus(1, { id: "rtg", watts: 450 }, []);
+    stepBus(bus, down, 0.1, () => {});
+    stepBus(bus, press, 0.1, () => {});
+    expect(bus.cursor).toBe(0);
+  });
+
+  it("reads as over supply only while the draw is over, not while the strain eases", () => {
+    const bus = busOn(100);
+    stepBus(bus, still, 2, () => {});
+    expect(overloaded(bus)).toBe(true);
+    bus.supply = 1_000;
+    stepBus(bus, still, 0.1, () => {});
+    expect(bus.strain).toBeGreaterThan(0);
+    expect(overloaded(bus)).toBe(false);
   });
 
   it("trips a small solar array much more often than an RTG with the same loads", () => {

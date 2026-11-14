@@ -1,5 +1,5 @@
 import type { DeepReadonly } from "../../core/scene";
-import { draw as busDraw, secondsToTrip, type Bus } from "./bus";
+import { draw as busDraw, overloaded, secondsToTrip, type Bus } from "./bus";
 
 /** where on the canvas a station draws; the flight shell (S4-01) decides */
 export interface Area {
@@ -18,7 +18,8 @@ const BAD = "#e0605a";
 export function drawBus(ctx: CanvasRenderingContext2D, bus: DeepReadonly<Bus>, area: Area): void {
   const { x, y, w } = area;
   const watts = busDraw(bus);
-  const load = watts / bus.supply;
+  // a dead power part still has to draw as fully loaded, not as NaN
+  const load = bus.supply > 0 ? watts / bus.supply : watts > 0 ? Infinity : 0;
 
   ctx.font = "16px sans-serif";
   ctx.fillStyle = TEXT;
@@ -34,15 +35,18 @@ export function drawBus(ctx: CanvasRenderingContext2D, bus: DeepReadonly<Bus>, a
   ctx.fillStyle = load > 1 ? BAD : load > 0.85 ? WARN : OK;
   ctx.fillRect(x, barY, w * Math.min(load, 1), 18);
   ctx.fillStyle = TEXT;
-  ctx.fillText(`${Math.round(load * 100)}% load`, x + 6, barY + 14);
+  ctx.fillText(Number.isFinite(load) ? `${Math.round(load * 100)}% load` : "No supply", x + 6, barY + 14);
 
-  ctx.fillStyle = bus.tripped > 0 || bus.strain > 0 ? BAD : DIM;
+  const over = overloaded(bus);
+  ctx.fillStyle = bus.tripped > 0 || over ? BAD : DIM;
   const breaker =
     bus.tripped > 0
       ? `Breaker tripped, resets in ${Math.ceil(bus.tripped)} s`
-      : bus.strain > 0
+      : over
         ? `${secondsToTrip(bus).toFixed(1)} s from tripping`
-        : "Breaker closed";
+        : bus.strain > 0
+          ? "Breaker cooling down"
+          : "Breaker closed";
   ctx.fillText(breaker, x, barY + 40);
   if (bus.engineOffAsked) {
     ctx.fillStyle = WARN;

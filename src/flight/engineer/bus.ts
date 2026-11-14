@@ -85,6 +85,11 @@ export function powered(bus: DeepReadonly<Bus>, slot: Slot): boolean {
   return bus.tripped === 0 && bus.loads.some((l) => l.slot === slot && l.on);
 }
 
+/** the draw is over supply right now; strain can still be easing off after it drops back */
+export function overloaded(bus: DeepReadonly<Bus>): boolean {
+  return draw(bus) > bus.supply;
+}
+
 export function secondsToTrip(bus: DeepReadonly<Bus>): number {
   return (1 - bus.strain) * TRIP_SECONDS;
 }
@@ -105,8 +110,7 @@ export function stepBus(bus: Bus, input: Input, dt: number, emit: Emit): void {
     bus.tripped = Math.max(0, bus.tripped - dt);
     return;
   }
-  const over = draw(bus) > bus.supply;
-  bus.strain = Math.min(1, Math.max(0, bus.strain + (over ? dt : -dt) / TRIP_SECONDS));
+  bus.strain = Math.min(1, Math.max(0, bus.strain + (overloaded(bus) ? dt : -dt) / TRIP_SECONDS));
   if (bus.strain >= 1) {
     emit("breaker_tripped", { part: bus.source, value: Math.round(draw(bus)) });
     bus.strain = 0;
@@ -116,7 +120,8 @@ export function stepBus(bus: Bus, input: Input, dt: number, emit: Emit): void {
 
 function steer(bus: Bus, input: Input, emit: Emit): void {
   if (input.dy !== 0 && input.dy !== bus.heldDy) {
-    bus.cursor = Math.min(bus.loads.length - 1, Math.max(0, bus.cursor + input.dy));
+    // max last, so a bus with no loads keeps the cursor at 0 rather than -1
+    bus.cursor = Math.max(0, Math.min(bus.loads.length - 1, bus.cursor + input.dy));
   }
   bus.heldDy = input.dy;
   const load = bus.loads[bus.cursor];
