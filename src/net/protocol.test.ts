@@ -41,12 +41,13 @@ describe("parseFromHost", () => {
   it("accepts welcome, snapshot and end", () => {
     const state = createState(1, "moon");
     expect(parseFromHost({ t: "welcome", playerId: "p2" })).toEqual({ t: "welcome", playerId: "p2" });
-    expect(parseFromHost({ t: "snapshot", state })).toEqual({ t: "snapshot", state });
+    expect(parseFromHost({ t: "snapshot", state, hostNow: 5 })).toEqual({ t: "snapshot", state, hostNow: 5 });
     expect(parseFromHost({ t: "end", reason: "Host left" })).toEqual({ t: "end", reason: "Host left" });
   });
 
   it("rejects a snapshot without a state that looks like a run", () => {
-    expect(parseFromHost({ t: "snapshot", state: { phase: "campus" } })).toBeNull();
+    expect(parseFromHost({ t: "snapshot", state: { phase: "campus" }, hostNow: 5 })).toBeNull();
+    expect(parseFromHost({ t: "snapshot", state: createState(1, "moon") })).toBeNull();
     expect(parseFromHost({ t: "snapshot" })).toBeNull();
   });
 });

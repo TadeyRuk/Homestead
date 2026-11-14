@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Input } from "./input";
 import { enterPhase } from "./phases";
 import { createState, type Player } from "./state";
-import { PLAYER_SPEED, step } from "./step";
+import { PLAYER_SPEED, registerRule, step } from "./step";
 
 const still: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
 const player = (id: string, x = 100, y = 100): Player => ({
@@ -62,5 +62,27 @@ describe("step", () => {
     s.players.push(player("a"));
     step(s, { a: { ...still, dx: 1 } }, 1_000, 0.5);
     expect(s.players[0].x).toBe(100);
+  });
+
+  it("runs a seat's registered rule during its phase, with every player's input", () => {
+    const seen: string[] = [];
+    registerRule("surface", (state, inputs) => {
+      for (const p of state.players) if (inputs[p.id]?.interact) seen.push(p.id);
+    });
+    const s = createState(1, "mars");
+    enterPhase(s, "surface", 0);
+    s.players.push(player("a"), player("b"));
+    step(s, { b: { ...still, interact: true } }, 1_000, 0.016);
+    expect(seen).toEqual(["b"]);
+  });
+
+  it("does not run a rule outside its phase", () => {
+    let ran = false;
+    registerRule("report", () => {
+      ran = true;
+    });
+    const s = campusWith(player("a"));
+    step(s, {}, 1_000, 0.016);
+    expect(ran).toBe(false);
   });
 });

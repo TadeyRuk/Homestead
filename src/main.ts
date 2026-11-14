@@ -44,8 +44,14 @@ function startHosting(name: string, closePeer: () => void) {
   let last = performance.now();
   const ticker = setInterval(() => {
     const now = performance.now();
-    // up to 1 s per tick: a background tab only gets about one tick a second, and the run must not slow down
-    session.tick(now, Math.min((now - last) / 1000, 1), input.read());
+    // up to 1 s per tick, so normal background-tab throttling (about one tick a second) doesn't slow the run
+    try {
+      session.tick(now, Math.min((now - last) / 1000, 1), input.read());
+    } catch (e) {
+      // a rule that throws every tick would otherwise freeze the run silently
+      console.error("host tick failed", e);
+      session.end("The game hit an error");
+    }
     last = now;
   }, TICK_MS);
   mode = {
@@ -143,6 +149,16 @@ document.addEventListener("visibilitychange", () => {
 let last = performance.now();
 
 function frame(now: number) {
+  requestAnimationFrame(frame); // first, so one bad frame can't stop drawing for good
+  try {
+    draw(now);
+  } catch (e) {
+    console.error("frame failed", e);
+    if (mode) backToLobby("The game hit an error");
+  }
+}
+
+function draw(now: number) {
   const dt = Math.max(0, Math.min((now - last) / 1000, 0.1));
   last = now;
 
@@ -177,9 +193,9 @@ function frame(now: number) {
     drawn = followPhase(drawn, state);
     const scene = sceneFor(state.phase);
     scene.update?.(state, dt);
-    scene.draw(ctx!, state, { playerId: me });
-    // the host's clock is not this tab's clock, so clients skip the timer until sync carries it
-    const left = mode?.kind === "host" ? timeLeft(state, now) : Infinity;
+    const hostNow = mode?.kind === "client" ? mode.client.hostNow() : now;
+    scene.draw(ctx!, state, { playerId: me, now: hostNow });
+    const left = timeLeft(state, hostNow);
     if (Number.isFinite(left)) {
       ctx!.fillStyle = "#8a93a6";
       ctx!.font = "14px sans-serif";
@@ -188,7 +204,5 @@ function frame(now: number) {
       ctx!.textAlign = "left";
     }
   }
-
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

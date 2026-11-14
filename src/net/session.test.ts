@@ -190,4 +190,47 @@ describe("host and client", () => {
     hostSide.close();
     expect(ended.filter((e) => e.startsWith("host"))).toEqual(["host: Run complete"]);
   });
+
+  it("tells a joiner the host's clock, so phase timers read right on every tab", () => {
+    const { state, host, join, clock } = setup();
+    const { client } = join("Ada");
+    enterPhase(state, "campus", 0);
+    clock.now = 1_000;
+    host.tick(50_000, 0.016, still);
+    expect(client.hostNow()).toBe(50_000);
+    clock.now = 1_500;
+    expect(client.hostNow()).toBe(50_500);
+  });
+
+  it("stays connected while snapshots keep arriving", () => {
+    const { state, host, join, ended, clock } = setup();
+    const { client } = join("Ada");
+    enterPhase(state, "campus", 0);
+    clock.now = 9_000;
+    host.tick(9_000, 0.016, still);
+    clock.now = 15_000;
+    client.check();
+    expect(ended).toEqual([]);
+  });
+
+  it("ignores a second hello on the same connection", () => {
+    const { state, host, ended } = setup();
+    const [hostSide, clientSide] = pair();
+    host.addConnection(hostSide);
+    const welcomes: unknown[] = [];
+    clientSide.onData((m) => (m as { t: string }).t === "welcome" && welcomes.push(m));
+    clientSide.send({ t: "hello", name: "Ada" });
+    clientSide.send({ t: "hello", name: "Ada again" });
+    expect(state.players).toHaveLength(2);
+    expect(welcomes).toHaveLength(1);
+    expect(ended).toEqual([]);
+  });
+
+  it("ignores input sent before hello", () => {
+    const { host } = setup();
+    const [hostSide, clientSide] = pair();
+    host.addConnection(hostSide);
+    clientSide.send({ t: "input", input: { ...still, dx: 1 } });
+    expect(host.inputs()).toEqual({});
+  });
 });

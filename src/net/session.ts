@@ -13,7 +13,8 @@ export interface Conn {
 
 const MAX_CREW = 4;
 const SNAPSHOT_MS = 66; // about 15 a second
-// a closed tab may never fire close, so silence counts as leaving; long enough to survive a background tab
+// a closed tab may never fire close, so silence counts as leaving; covers normal background-tab
+// throttling, though Chrome's heavier throttling after minutes hidden can still trip it
 export const DROP_MS = 10_000;
 export const PING_MS = 1_000;
 type Clock = () => number;
@@ -35,6 +36,7 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
   const heard: Record<string, number> = {};
   let nextId = 2;
   let lastSnapshot = -Infinity;
+  let hostNow = clock(); // the latest tick time; snapshots carry it
   let ended = false;
 
   const send = (conn: Conn, msg: FromHost) => conn.send(msg);
@@ -68,7 +70,7 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
         crew.set(id, conn);
         heard[id] = clock();
         send(conn, { t: "welcome", playerId: id });
-        broadcast({ t: "snapshot", state });
+        broadcast({ t: "snapshot", state, hostNow });
       } else if (msg.t === "input" && id !== null) {
         // or-in presses so one sent just before a newer input still reaches the next tick
         const prev = inputs[id];
@@ -91,6 +93,7 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
 
   function tick(now: number, dt: number, hostInput: Input) {
     if (ended) return;
+    hostNow = now;
     for (const id of crew.keys()) {
       if (clock() - heard[id] > DROP_MS) return left(id);
     }
@@ -104,7 +107,7 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
     }
     if (now - lastSnapshot >= SNAPSHOT_MS) {
       lastSnapshot = now;
-      broadcast({ t: "snapshot", state });
+      broadcast({ t: "snapshot", state, hostNow: now });
     }
   }
 
@@ -114,6 +117,7 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
 export function createClient(conn: Conn, name: string, onEnd: (reason: string) => void, clock: Clock = realClock) {
   let playerId: string | null = null;
   let latest: GameState | null = null;
+  let offset = 0; // host clock minus this tab's clock
   let ended = false;
   let heard = clock();
 
@@ -125,10 +129,17 @@ export function createClient(conn: Conn, name: string, onEnd: (reason: string) =
 
   conn.onData((raw) => {
     const msg = parseFromHost(raw);
-    if (!msg) return;
+    if (!msg) {
+      // the host is trusted, so an unreadable message most likely means two different builds
+      console.error("unreadable message from host", raw);
+      return;
+    }
     heard = clock();
     if (msg.t === "welcome") playerId = msg.playerId;
-    else if (msg.t === "snapshot") latest = msg.state;
+    else if (msg.t === "snapshot") {
+      latest = msg.state;
+      offset = msg.hostNow - clock();
+    }
     else {
       finish(msg.reason);
       conn.close();
@@ -139,6 +150,8 @@ export function createClient(conn: Conn, name: string, onEnd: (reason: string) =
 
   return {
     playerId: () => playerId,
+    /** now on the host's clock, for timeLeft and isUp on this tab */
+    hostNow: () => clock() + offset,
     state: () => latest,
     sendInput: (input: Input) => {
       if (!ended) conn.send({ t: "input", input });

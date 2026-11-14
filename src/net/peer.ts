@@ -12,7 +12,7 @@ function wrap(dc: DataConnection): Conn {
       try {
         dc.send(msg);
       } catch (e) {
-        // a send that throws must not kill the host's frame loop; treat it as this peer dropping
+        // a send that throws must not kill the host's tick; treat it as this peer dropping
         console.error("send failed, closing connection", e);
         dc.close();
       }
@@ -22,7 +22,11 @@ function wrap(dc: DataConnection): Conn {
     },
     onClose: (cb) => {
       dc.on("close", cb);
-      dc.on("error", cb);
+      dc.on("error", (err) => {
+        // logged so a transport fault can be told apart from someone closing their tab
+        console.error("data channel error", err);
+        cb();
+      });
     },
     close: () => dc.close({ flush: true }), // let a final "end" reason arrive before the close
   };
@@ -59,9 +63,16 @@ export function host(attempts = 3): Promise<Hosting> {
         close: () => peer.destroy(),
       });
     });
-    // after open, errors belong to single connections, which report through their own close
+    // losing the code server leaves running games alone but stops new joins, so reconnect
+    peer.on("disconnected", () => {
+      console.warn("lost the code server, reconnecting");
+      if (!peer.destroyed) peer.reconnect();
+    });
     peer.on("error", (err) => {
-      if (settled) return;
+      if (settled) {
+        console.error("peer error while hosting", err);
+        return;
+      }
       settled = true;
       clearTimeout(timer);
       peer.destroy();

@@ -1,6 +1,6 @@
 export type Action = "up" | "down" | "left" | "right" | "interact" | "panel" | "switch";
 
-/** what one player sends to the host each tick */
+/** one player's keys; joiners send it to the host when it changes, rules read it from step()'s inputs */
 export interface Input {
   /** -1, 0 or 1 */
   dx: number;

@@ -5,7 +5,8 @@ export type FromClient = { t: "hello"; name: string } | { t: "input"; input: Inp
 
 export type FromHost =
   | { t: "welcome"; playerId: string }
-  | { t: "snapshot"; state: GameState }
+  /** hostNow lets joiners read phase timers, which are on the host's clock */
+  | { t: "snapshot"; state: GameState; hostNow: number }
   | { t: "end"; reason: string };
 
 const NAME_MAX = 16;
@@ -44,8 +45,14 @@ export function parseFromHost(raw: unknown): FromHost | null {
   if (!isObj(raw)) return null;
   if (raw.t === "welcome" && typeof raw.playerId === "string") return { t: "welcome", playerId: raw.playerId };
   if (raw.t === "end" && typeof raw.reason === "string") return { t: "end", reason: raw.reason };
-  if (raw.t === "snapshot" && isObj(raw.state) && typeof raw.state.phase === "string" && Array.isArray(raw.state.players)) {
-    return { t: "snapshot", state: raw.state as unknown as GameState };
+  if (
+    raw.t === "snapshot" &&
+    typeof raw.hostNow === "number" &&
+    isObj(raw.state) &&
+    typeof raw.state.phase === "string" &&
+    Array.isArray(raw.state.players)
+  ) {
+    return { t: "snapshot", state: raw.state as unknown as GameState, hostNow: raw.hostNow };
   }
   return null;
 }

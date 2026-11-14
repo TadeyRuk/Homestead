@@ -78,8 +78,10 @@ Seat 1 lands this in `src/core/` at hour 1.5. Until then, code against these nam
 - All randomness goes through the seeded RNG in `src/core/rng.ts`. No `Math.random()` in game logic.
 - Part and mission numbers live in `src/data/` only. No magic numbers for part stats in scene code.
 - Read time through `timeLeft` and `isUp` in `src/core/timer.ts`; they handle a null `phaseEndsAt`.
-- Game rules go into `step()` in `src/core/step.ts` (host only). Scenes draw and register with `registerScene` at startup.
-- Read keys through `createInput().read()` in `src/core/input.ts`, never from `window`.
+- Game rules are registered from your own folder with `registerRule(phase, (state, inputs, now, dt) => ...)` from `src/core/step.ts`. They run on the host only, each tick of that phase.
+- Scenes register with `registerScene(phase, scene)` at startup. They get read-only state and draw it. A scene never changes state; that belongs in a rule.
+- Rules read each player's keys from `inputs[player.id]`. Never call `createInput()` yourself or listen to `window`; `src/main.ts` owns the one keyboard listener.
+- For timers, use `timeLeft(state, view.now)` in scenes and the `now` given to rules. Both are on the host's clock, so they read right on every tab.
 
 ### State shape (first pass)
 
