@@ -160,3 +160,39 @@ export function drawPlayers(ctx: Ctx, players: readonly Drawable[], me: string):
     ctx.globalAlpha = 1;
   }
 }
+
+/**
+ * The extraction ship coming down on the lander. `t` runs 0 (out of sight above) to 1 (landed);
+ * its shadow grows on the ground as it nears.
+ */
+export function drawShip(ctx: Ctx, lander: Point, t: number): void {
+  if (t <= 0) return;
+  const lift = (1 - t) * 420;
+  ctx.globalAlpha = 0.25 + 0.35 * t;
+  ctx.fillStyle = "#0b0e14";
+  ctx.beginPath();
+  ctx.ellipse(lander.x, lander.y + 6, 26 + 30 * t, 10 + 10 * t, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  const x = lander.x;
+  const y = lander.y - 20 - lift;
+  ctx.fillStyle = "#f2f4f8";
+  ctx.beginPath();
+  ctx.moveTo(x, y - 46);
+  ctx.lineTo(x + 22, y + 10);
+  ctx.lineTo(x - 22, y + 10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#ff8a3a";
+  ctx.beginPath();
+  ctx.moveTo(x - 10, y + 10);
+  ctx.lineTo(x + 10, y + 10);
+  ctx.lineTo(x, y + 30 + 6 * Math.sin(t * 140)); // flicker from the descent, so no Math.random()
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#e6e9ef";
+  ctx.font = "600 12px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Extraction", x, y - 54);
+  ctx.textAlign = "left";
+}
