@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PHASE_ORDER } from "./phases";
 import { followPhase, registerScene, sceneFor, type Scene } from "./scene";
 import { createState } from "./state";
@@ -37,5 +37,16 @@ describe("followPhase", () => {
     s.phase = "flight";
     expect(followPhase("flight", s)).toBe("flight");
     expect(calls).toEqual([]);
+  });
+});
+
+describe("double registration", () => {
+  it("warns when a second scene replaces one a seat already registered", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    registerScene("surface", { draw: () => {} });
+    expect(warn).not.toHaveBeenCalled();
+    registerScene("surface", { draw: () => {} });
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
   });
 });

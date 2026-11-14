@@ -1,25 +1,23 @@
 # Seat 4: Pilot and Comms
 
 **Owner:** open (add your GitHub login here and in `docs/team/README.md` when you take it)
-**Folders:** `src/flight/` (the shell), `src/flight/pilot/`, `src/flight/comms/`, `src/flight/events/`
+**Folders:** `src/flight/pilot/`, `src/flight/comms/`, `src/flight/events/`
 
-The flight phase shell and two of its four stations. Each station's difficulty comes from the parts mounted on the campus.
+Two of the four flight stations, plus flight events. The flight shell (S4-01) is done and seat 1's: register your stations with `registerStation` (see `docs/team/README.md`). Each station's difficulty comes from the parts mounted on the campus.
 
 ## Needs from others
 
 - Seat 1: `GameState`, phase switching, input map (S1-01, S1-02, S1-06).
 - Seat 3: part stats in `src/data/parts.json` (S3-01), and the crew strip (S3-07) that shows your stations' trouble.
-- Seat 5: their stations plug into your shell.
 
 ## If still open at hour 3
 
-Seat 3 (TadeyRuk) takes S4-02 and S4-03. Seat 1 takes S4-01, S4-04, S4-05, S4-06, S4-09 and S4-10. S4-07 and S4-08 are cut. See the fallback table in `docs/team/README.md`.
+Seat 3 (TadeyRuk) takes S4-02 and S4-03. Seat 1 takes S4-04, S4-05, S4-06, S4-09 and S4-10. S4-07 and S4-08 are cut. See the fallback table in `docs/team/README.md`.
 
 ## Issues
 
-### S4-01 Flight shell and station switching (hour 6)
-The flight scene that hosts four stations. Each player sees the station for their role. Anyone holding more than one role switches with Tab. Each station writes its trouble to `GameState` for seat 3's crew strip. Transit length from the engine and the destination.
-**Done when:** a solo player can Tab through four stub stations, and the phase ends when transit ends.
+### S4-01 Flight shell and station switching (done by seat 1, #33)
+Shipped in `src/flight/`. Transit length is still the fixed 180 s; tying it to the engine and destination waits on seat 3's data.
 
 ### S4-02 Pilot: steering and debris (hour 6)
 The ship from outside, steering through debris. Engine and total mass decide handling: a solid motor steers in pulses, chemical is responsive, ion is slow. Hits damage the hull by section. Logs `debris_hit`, `hull_breach`.

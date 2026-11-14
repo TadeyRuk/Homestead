@@ -1,5 +1,5 @@
 import type { Input } from "../core/input";
-import { dealRoles, startRun, takeRole, type MissionChoice } from "../core/lobby";
+import { dealRoles, joinCrew, startRun, takeRole, type MissionChoice } from "../core/lobby";
 import type { GameState, Player, Role } from "../core/state";
 import { step } from "../core/step";
 import { parseFromClient, parseFromHost, type FromHost } from "./protocol";
@@ -68,7 +68,7 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
         if (state.players.length >= MAX_CREW) return refuse(conn, "Crew is full");
         id = `p${nextId++}`;
         state.players.push(newPlayer(id, msg.name, state.players.length));
-        dealRoles(state);
+        joinCrew(state, id);
         crew.set(id, conn);
         heard[id] = clock();
         send(conn, { t: "welcome", playerId: id });
@@ -131,6 +131,7 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
       mission = choice;
     },
     start: (now: number) => {
+      if (state.phase !== "lobby") return; // a second Start would wipe the run in progress
       startRun(state, mission, now);
       broadcast({ t: "snapshot", state, hostNow: now });
     },

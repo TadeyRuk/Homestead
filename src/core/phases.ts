@@ -21,6 +21,10 @@ export function enterPhase(state: GameState, phase: Phase, now: number): void {
   const seconds = PHASE_SECONDS[phase];
   // null, not Infinity: snapshots go through JSON, which turns Infinity into null anyway
   state.phaseEndsAt = Number.isFinite(seconds) ? now + seconds * 1000 : null;
+  // each map has its own loose parts; campus spawns refill on entry (S1-09)
+  if (phase === "campus" || phase === "surface") state.parts = [];
+  // seat everyone at their first station as flight starts, so no flight rule ever sees a null station
+  for (const p of state.players) p.station = phase === "flight" ? (p.roles[0] ?? null) : null;
   if (phase === "brief") {
     // fresh clock and empty log for the report; resetting the ship and crew is the lobby's job (S1-05)
     state.runStartedAt = now;

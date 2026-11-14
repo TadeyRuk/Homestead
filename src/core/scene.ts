@@ -45,7 +45,12 @@ const scenes: Record<Phase, Scene> = {
   report: stub("Report"),
 };
 
+const claimed = new Set<Phase>();
+
+// two seats registering the same phase would otherwise mean whichever file loads last silently wins
 export function registerScene(phase: Phase, scene: Scene): void {
+  if (claimed.has(phase)) console.warn(`registerScene: "${phase}" was already registered; replacing it`);
+  claimed.add(phase);
   scenes[phase] = scene;
 }
 

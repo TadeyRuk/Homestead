@@ -10,7 +10,6 @@ Everyone else waits on S1-01, so it lands first and nobody branches before it.
 
 - Seat 3: `src/data/parts.json` and `missions.json` shapes by hour 1.5, so the state can hold part ids.
 - Seat 3: the lobby screens (S3-03) that call your host and join functions.
-- Seat 4: the flight shell's entry function, so phase switching can call it.
 
 ## Issues
 
@@ -57,4 +56,4 @@ Lives in `src/build/launch.ts`, reading seat 2's pad slots (S2-10). Anyone at th
 ## Fallback load (if seat 4 is still open at hour 3)
 
 - Comms dish minigame (S4-04, S4-05)
-- Flight shell, event director, solo station switching, arrival and solo pacing (S4-01, S4-06, S4-09, S4-10)
+- Event director, arrival and solo pacing (S4-06, S4-09, S4-10). The flight shell (S4-01) is already done.

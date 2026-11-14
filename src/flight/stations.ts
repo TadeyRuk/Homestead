@@ -1,5 +1,6 @@
+import type { Input } from "../core/input";
 import type { DeepReadonly, View } from "../core/scene";
-import type { GameState, Role } from "../core/state";
+import type { GameState, Player, Role } from "../core/state";
 
 /** one role's screen during flight; its rules go through registerRule("flight", ...) */
 export interface Station {
@@ -24,7 +25,11 @@ const stations: Record<Role, Station> = {
 };
 
 // seats 4 and 5 call this from a *.register.ts file in their own folder
+const claimed = new Set<Role>();
+
 export function registerStation(role: Role, station: Station): void {
+  if (claimed.has(role)) console.warn(`registerStation: "${role}" was already registered; replacing it`);
+  claimed.add(role);
   stations[role] = station;
 }
 
@@ -34,6 +39,19 @@ export function stationFor(role: Role): Station {
 
 export function stationLabel(role: Role): string {
   return LABEL[role];
+}
+
+const STILL: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
+
+/** the player looking at this station right now, or null when nobody is */
+export function whoIsAt(state: DeepReadonly<GameState> | GameState, role: Role): Player | null {
+  return (state.players.find((p) => p.station === role) as Player | undefined) ?? null;
+}
+
+// a solo player holds every role, so a station must read only the keys of whoever is looking at it
+export function stationInput(state: GameState, inputs: Record<string, Input>, role: Role): Input {
+  const p = whoIsAt(state, role);
+  return (p && inputs[p.id]) || STILL;
 }
 
 /** the station after `current` among this player's roles; the first one when current is null or not theirs */

@@ -1,6 +1,8 @@
 import { logEvent } from "../core/events";
+import { mapFor } from "../core/map";
+import { placePart } from "../core/parts";
 import { rng } from "../core/rng";
-import type { GameState } from "../core/state";
+import type { GameState, LoosePart } from "../core/state";
 
 /** credits per roll, from the proposal's build rules */
 export const KIOSK_PRICE = 20;
@@ -9,19 +11,22 @@ export const KIOSK_PRICE = 20;
 const KIOSK_STREAM = 0x6b696f73;
 
 /**
- * Charges one roll and returns the part id it rolled, or null when the crew can't pay.
- * Placing the part at the kiosk is the caller's job, through the loose-parts state seat 1 adds with spawns.
+ * Charges one roll and drops the part it rolled at the kiosk, returning that piece.
+ * Null when it is not the campus phase or the crew can't pay; nothing is charged then.
  */
 export function buyFromKiosk(
   state: GameState,
   partIds: readonly string[],
   now: number,
   playerId?: string,
-): string | null {
-  if (state.credits < KIOSK_PRICE || partIds.length === 0) return null;
+): LoosePart | null {
+  // an empty list means the parts data never reached the caller; a crew that can't pay is a different case
+  if (partIds.length === 0) throw new Error("buyFromKiosk needs at least one part id");
+  const kiosk = mapFor("campus").kiosk;
+  if (state.phase !== "campus" || state.credits < KIOSK_PRICE) return null;
   const bought = state.log.filter((e) => e.kind === "kiosk_bought").length;
   const part = rng((state.seed ^ KIOSK_STREAM) + bought).pick(partIds);
   state.credits -= KIOSK_PRICE;
   logEvent(state, "kiosk_bought", now, { part, player: playerId, value: KIOSK_PRICE });
-  return part;
+  return placePart(state, part, kiosk, "k");
 }

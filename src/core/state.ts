@@ -71,17 +71,24 @@ export interface GameState {
   runStartedAt: number;
   credits: number;
   players: Player[];
-  /** loose parts on the current map */
+  /** loose parts on the current map; cleared whenever the map changes */
   parts: LoosePart[];
+  /** counter behind loose-part ids; use placePart in src/core/parts.ts, not this */
+  partSeq: number;
   ship: Ship;
   data: { collected: number; uplinked: number; target: number };
   objectives: Record<string, boolean>;
+  /**
+   * flight minigame state, one plain-data entry per minigame (for example `bus`, `weld`, `core`, `converter`);
+   * written by host rules, so every tab gets it in snapshots
+   */
+  flight: Record<string, unknown>;
   /** each flight station's current problem in a few words, for the crew strip; absent when fine */
   trouble: Partial<Record<Role, string>>;
   log: GameEvent[];
 }
 
-// credits and data target stay 0 until seat 3's missions.json fills them at the brief
+// credits and data target stay 0 until startRun fills them from missionInfo
 export function createState(seed: number, mission: MissionId): GameState {
   return {
     seed,
@@ -92,6 +99,7 @@ export function createState(seed: number, mission: MissionId): GameState {
     credits: 0,
     players: [],
     parts: [],
+    partSeq: 0,
     ship: {
       slots: { propulsion: null, power: null, comms: null, payload: null },
       salvaged: [],
@@ -104,6 +112,7 @@ export function createState(seed: number, mission: MissionId): GameState {
     },
     data: { collected: 0, uplinked: 0, target: 0 },
     objectives: {},
+    flight: {},
     trouble: {},
     log: [],
   };

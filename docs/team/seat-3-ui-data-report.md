@@ -16,7 +16,8 @@ Every HTML/CSS screen and the HUD, the part and mission data everyone reads, and
 
 ### S3-01 Parts and mission data (hour 1.5)
 `src/data/parts.json` with the twelve parts from proposal section 04: slot, mass, power, flight and surface effects, the real hardware it is based on. `missions.json` for Moon and Mars: transit, radio delay, credits, data target, objectives, hazard.
-**Done when:** seats 2, 4 and 5 read part stats from the data file.
+Register each mission's starting credits and data target with `registerMissionInfo` from `src/core/missions.ts`, so `startRun` hands them to the crew.
+**Done when:** seats 2, 4 and 5 read part stats from the data file, and a run starts with your mission's credits.
 
 ### S3-02 UI kit (hour 1.5)
 An HTML overlay above the canvas in `src/ui/`, with colour and type tokens, and panel, meter bar and button components.

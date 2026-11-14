@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dealRoles, ROLES, startRun, takeRole } from "./lobby";
+import { dealRoles, joinCrew, ROLES, startRun, takeRole } from "./lobby";
 import { createState, type Player, type Role } from "./state";
 
 const p = (id: string, roles: Role[] = []): Player => ({
@@ -94,4 +94,51 @@ describe("startRun", () => {
     expect(s.log).toEqual([]);
     expect(s.players[0]).toMatchObject({ down: false, oxygen: 1, carrying: null, station: null, roles: ["pilot", "comms"] });
   });
+
+describe("joinCrew", () => {
+  function grow(...ids: string[]) {
+    const s = createState(7, "mars");
+    s.players.push(p(ids[0]));
+    dealRoles(s);
+    for (const id of ids.slice(1)) {
+      s.players.push(p(id));
+      joinCrew(s, id);
+    }
+    return s;
+  }
+
+  it("gives a newcomer roles taken from whoever holds the most", () => {
+    expect(grow("a", "b").players.map((x) => x.roles)).toEqual([["pilot", "engineer"], ["comms", "science"]]);
+  });
+
+  it("keeps a role someone picked when another player joins", () => {
+    const s = grow("a", "b");
+    takeRole(s, "b", "pilot");
+    s.players.push(p("c"));
+    joinCrew(s, "c");
+    expect(s.players.find((x) => x.id === "b")!.roles).toContain("pilot");
+  });
+
+  it("keeps every role held exactly once as the crew grows to four", () => {
+    const s = grow("a", "b", "c", "d");
+    expect(held(s)).toEqual([...ROLES].sort());
+    expect(s.players.every((x) => x.roles.length === 1)).toBe(true);
+  });
+});
+
+describe("startRun resets everything it doesn't deliberately keep", () => {
+  it("leaves no field of the last run behind", () => {
+    const KEEP = ["seed", "players", "phase", "phaseEndsAt", "runStartedAt", "mission", "credits", "data"];
+    const s = crew(2);
+    const dirty = createState(99, "moon") as unknown as Record<string, unknown>;
+    for (const key of Object.keys(dirty)) {
+      if (!KEEP.includes(key)) (s as unknown as Record<string, unknown>)[key] = { stale: true };
+    }
+    startRun(s, "mars", 1_000);
+    const fresh = createState(s.seed, "mars") as unknown as Record<string, unknown>;
+    for (const key of Object.keys(fresh)) {
+      if (!KEEP.includes(key)) expect([key, (s as unknown as Record<string, unknown>)[key]]).toEqual([key, fresh[key]]);
+    }
+  });
+});
 });

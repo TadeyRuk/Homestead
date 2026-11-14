@@ -3,22 +3,22 @@
 **Owner:** Emyol
 **Folders:** `src/flight/engineer/`, `src/flight/science/`
 
-Four small minigames, two per role. They plug into seat 4's flight shell and are the most independent work in the project, so a late joiner can pick this up cold.
+Four small minigames, two per role. They plug into the flight shell (seat 1, on main) through `registerStation` and are the most independent work in the project, so a late joiner can pick this up cold.
 
 ## Needs from others
 
 - Seat 1: `GameState`, input map (S1-01, S1-06).
 - Seat 3: part power and heat numbers in `src/data/parts.json` (S3-01).
-- Seat 4: the flight shell's station interface (S4-01). Until it lands, build each minigame as a standalone scene.
+- Seat 1: `registerStation`, `stationInput` and `state.flight` (see `docs/team/README.md`). Keep each minigame's state in `state.flight` and step it from a `registerRule("flight", ...)` rule.
 
 ## Where to start
 
-S5-09 (station sandbox) first: it loads one station on its own, so nothing waits on seat 4's flight shell. Then S5-01, S5-02, S5-05 and S5-06 (hour 6).
+S5-09 (station sandbox) first: it loads one station on its own, which makes the minigames quick to test. Then S5-01, S5-02, S5-05 and S5-06 (hour 6).
 
 ## Issues
 
 ### S5-01 Station stubs (hour 1.5)
-Engineer and Science station scenes that seat 4's shell can host, each with a placeholder screen.
+The flight shell already shows a stub for each role. Replace the Engineer and Science stubs with `registerStation("engineer", ...)` and `registerStation("science", ...)` from a `.register.ts` file in your folders.
 **Done when:** both stations show up when Tab-switching in flight.
 
 ### S5-02 Engineer: power bus (hour 6)
