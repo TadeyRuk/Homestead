@@ -4,6 +4,13 @@ import { createInterpolator, createPrediction } from "./smooth";
 const SPEED = 180;
 
 describe("own-player prediction", () => {
+  it("tracks only the position, never other fields of the player it was handed", () => {
+    const p = createPrediction(SPEED);
+    const player = { x: 100, y: 100, station: null as string | null, carrying: "rtg" };
+    p.reconcile(player, false, 0);
+    expect(p.position()).toEqual({ x: 100, y: 100 });
+  });
+
   it("moves the instant a key is held, before any snapshot", () => {
     const p = createPrediction(SPEED);
     p.reconcile({ x: 100, y: 100 }, false, 0);
