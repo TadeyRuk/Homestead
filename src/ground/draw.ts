@@ -231,3 +231,16 @@ export function drawCountdown(ctx: Ctx, pad: Point, secondsLeft: number): void {
   ctx.fillText(`Launch in ${secondsLeft}`, pad.x, pad.y - 130);
   ctx.textAlign = "left";
 }
+
+/** a player's suit as two thin bars over their head: oxygen, then power; red when low */
+export function drawSuitBars(ctx: Ctx, p: Point & { readonly oxygen: number; readonly power: number }): void {
+  const w = 22;
+  const bar = (y: number, v: number, colour: string) => {
+    ctx.fillStyle = "#0b0e14";
+    ctx.fillRect(p.x - w / 2 - 1, y - 1, w + 2, 4);
+    ctx.fillStyle = v < 0.25 ? "#ff5a5a" : colour;
+    ctx.fillRect(p.x - w / 2, y, w * Math.max(0, Math.min(1, v)), 2);
+  };
+  bar(p.y - PLAYER_HALF - 30, p.oxygen, "#4fd8ff");
+  bar(p.y - PLAYER_HALF - 25, p.power, "#ffd84a");
+}

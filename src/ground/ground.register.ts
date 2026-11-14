@@ -1,5 +1,6 @@
 // seat 2's rules and scenes; loaded at startup by src/register.ts
 import { padRule } from "../build/pad";
+import { onEnterPhase } from "../core/phases";
 import { registerScene } from "../core/scene";
 import { registerRule } from "../core/step";
 import { CAMPUS } from "./campus";
@@ -7,6 +8,7 @@ import { carryRule } from "./carry";
 import { extractionRule } from "./extraction";
 import { groundRule } from "./player";
 import { groundScene } from "./scene";
+import { fillSuits, suitRule } from "./suit";
 import { SURFACE } from "./surface";
 import { registerGround } from "./world";
 
@@ -20,8 +22,11 @@ registerRule("campus", carryRule);
 registerRule("surface", carryRule);
 // E at the pad while carrying mounts (S2-10); seat 1's launch rule takes empty-handed E there
 registerRule("campus", padRule);
+registerRule("surface", suitRule);
 // last on the surface, so it sees every suit and every carried part as the tick ends
 registerRule("surface", extractionRule);
+
+onEnterPhase("surface", fillSuits);
 
 registerScene("campus", groundScene("campus"));
 registerScene("surface", groundScene("surface"));
