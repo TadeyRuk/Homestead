@@ -59,7 +59,8 @@ Seat 3 draws every HTML/CSS screen and the HUD from `GameState`. The seat that o
 | `src/ui/` | seat 3: every HTML/CSS screen and the HUD |
 | `src/report/` | seat 3: report logic and score |
 | `src/data/` | seat 3: `parts.json`, `missions.json` |
-| `src/flight/` (shell), `src/flight/pilot/`, `src/flight/comms/`, `src/flight/events/` | seat 4 |
+| `src/flight/shell.register.ts`, `src/flight/stations.ts` | seat 1 (taken early from seat 4, since seat 5 needs it) |
+| `src/flight/pilot/`, `src/flight/comms/`, `src/flight/events/` | seat 4 |
 | `src/flight/engineer/`, `src/flight/science/` | seat 5 |
 | `public/assets/` | seat 6: art and sound, file names agreed with each owner |
 | `README.md`, `docs/` | seat 6 (this folder: anyone, for their own seat file) |
@@ -77,6 +78,8 @@ Seat 1 lands this in `src/core/` at hour 1.5. Until then, code against these nam
 - Part and mission numbers live in `src/data/` only. No magic numbers for part stats in scene code.
 - Read time through `timeLeft` and `isUp` in `src/core/timer.ts`; they handle a null `phaseEndsAt`.
 - Game rules are registered from your own folder with `registerRule(phase, (state, inputs, now, dt) => ...)` from `src/core/step.ts`. They run on the host only, each tick of that phase.
+- Put your `registerRule`, `registerScene` and `registerStation` calls in a file ending `.register.ts` inside your own folder, for example `src/flight/engineer/engineer.register.ts`. Every such file loads at startup, so nobody edits `src/main.ts` to plug in.
+- Flight stations register with `registerStation(role, { draw })` from `src/flight/stations.ts`. The flight shell (`src/flight/shell.register.ts`) shows each player the station for `player.station` and moves it on Tab. Write your station's current problem to `state.trouble[role]` from a rule, and delete it when fixed.
 - Scenes register with `registerScene(phase, scene)` at startup. They get read-only state and draw it. A scene never changes state; that belongs in a rule.
 - Rules read each player's keys from `inputs[player.id]`. Never call `createInput()` yourself or listen to `window`; `src/main.ts` owns the one keyboard listener.
 - For timers, use `timeLeft(state, view.now)` in scenes and the `now` given to rules. Both are on the host's clock, so they read right on every tab.
@@ -93,6 +96,7 @@ interface Player {
   id: string;
   name: string;
   roles: Role[];            // solo holds all four
+  station: Role | null;     // flight station this player is looking at; Tab moves it
   x: number; y: number;
   carrying: string | null;  // part id
   oxygen: number;           // suit, 0..1, surface phase
@@ -130,6 +134,7 @@ interface GameState {
   ship: Ship;
   data: { collected: number; uplinked: number; target: number };
   objectives: Record<string, boolean>;
+  trouble: Partial<Record<Role, string>>; // each flight station's current problem, for the crew strip
   log: GameEvent[];
 }
 ```

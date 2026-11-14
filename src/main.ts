@@ -1,3 +1,4 @@
+import "./register";
 import { createInput, type Input } from "./core/input";
 import { enterPhase } from "./core/phases";
 import { followPhase, sceneFor } from "./core/scene";

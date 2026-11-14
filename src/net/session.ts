@@ -26,7 +26,7 @@ const ALL_ROLES: Role[] = ["pilot", "engineer", "comms", "science"];
 
 function newPlayer(id: string, name: string, index: number, roles: Role[] = []): Player {
   // placeholder spawn in a row until seat 2's maps give real spawn points
-  return { id, name, roles, x: 420 + index * 40, y: 270, carrying: null, oxygen: 1, power: 1, down: false };
+  return { id, name, roles, station: null, x: 420 + index * 40, y: 270, carrying: null, oxygen: 1, power: 1, down: false };
 }
 
 export function createHost(state: GameState, hostName: string, onEnd: (reason: string) => void, clock: Clock = realClock) {

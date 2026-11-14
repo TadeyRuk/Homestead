@@ -6,7 +6,7 @@ import { PLAYER_SPEED, registerRule, step } from "./step";
 
 const still: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
 const player = (id: string, x = 100, y = 100): Player => ({
-  id, name: id, roles: [], x, y, carrying: null, oxygen: 1, power: 1, down: false,
+  id, name: id, roles: [], station: null, x, y, carrying: null, oxygen: 1, power: 1, down: false,
 });
 
 function campusWith(...players: Player[]) {
