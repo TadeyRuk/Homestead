@@ -33,9 +33,14 @@ describe("part catalog", () => {
 
   it("refuses a part list that would break launch, at registration rather than at the timeout", async () => {
     const { registerParts } = await import("./catalog");
-    const good = buildable();
-    expect(() => registerParts(good)).toThrow(/salvage/);
-    expect(() => registerParts([{ id: "e", slot: "propulsion", mass: 1, power: 0 }])).toThrow();
+    const salvage = (["propulsion", "power", "comms", "payload"] as const).map((slot) => partInfo(salvageFor(slot)));
+    const full = [...buildable(), ...salvage];
+    expect(() => registerParts(buildable())).toThrow(/salvage/);
+    const liftless = full.map((p) => (p.id === "ion-drive" ? { ...p, lift: undefined } : p));
+    expect(() => registerParts(liftless)).toThrow(/ion-drive.*lift/);
+    // a complete list registers; it is the same list, so later tests see the same catalog
+    expect(() => registerParts(full)).not.toThrow();
+    expect(partInfo("ion-drive").lift).toBe(500);
   });
 
   it("gives payload and power parts a heat rate for the energy core", () => {
