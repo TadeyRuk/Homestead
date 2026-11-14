@@ -1,6 +1,6 @@
 export type Action = "up" | "down" | "left" | "right" | "interact" | "panel" | "switch";
 
-/** what one player sends to the host each tick */
+/** one player's keys; joiners send it to the host when it changes, rules read it from step()'s inputs */
 export interface Input {
   /** -1, 0 or 1 */
   dx: number;
@@ -26,9 +26,12 @@ export function keyToAction(code: string): Action | null {
   return KEYS[code] ?? null;
 }
 
-function isTyping(target: unknown): boolean {
+const CONTROLS = new Set(["INPUT", "TEXTAREA", "SELECT", "BUTTON", "A"]);
+
+// keys aimed at a form control belong to the page (typing, Tab between fields), not the game
+function onControl(target: unknown): boolean {
   const el = target as { tagName?: string; isContentEditable?: boolean } | null;
-  return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || !!el.isContentEditable);
+  return !!el && (CONTROLS.has(el.tagName ?? "") || !!el.isContentEditable);
 }
 
 // the only keyboard listener in the game; seats read input through read()
@@ -41,7 +44,7 @@ export function createInput(target: EventTarget = window): { read(): Input; disp
     const { code, ctrlKey, metaKey, altKey } = e as KeyboardEvent;
     const action = keyToAction(code);
     // modifier combos are browser shortcuts, and macOS drops keyup for keys released under Cmd
-    if (!action || ctrlKey || metaKey || altKey || isTyping(e.target)) return;
+    if (!action || ctrlKey || metaKey || altKey || onControl(e.target)) return;
     e.preventDefault(); // stops Tab moving browser focus
     if (!held(action)) pressed.add(action);
     down.add(code);

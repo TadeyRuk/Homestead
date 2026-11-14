@@ -88,4 +88,13 @@ describe("createInput", () => {
     target.dispatchEvent(new Event("blur"));
     expect(input.read().interact).toBe(false);
   });
+
+  it("lets Tab and arrows work on a focused button, so the lobby form stays keyboard-usable", () => {
+    const { target, input } = harness();
+    const e = Object.assign(new Event("keydown", { cancelable: true }), { code: "Tab" });
+    Object.defineProperty(e, "target", { value: { tagName: "BUTTON" } });
+    target.dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(false);
+    expect(input.read().switch).toBe(false);
+  });
 });

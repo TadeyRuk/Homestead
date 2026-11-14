@@ -1,16 +1,24 @@
-import { enterPhase } from "./phases";
 import type { GameState, Phase } from "./state";
+
+/** read-only all the way down, so a scene can't write state that a joiner's next snapshot would undo */
+export type DeepReadonly<T> = T extends (infer U)[]
+  ? readonly DeepReadonly<U>[]
+  : T extends object
+    ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+    : T;
 
 /** what a scene draws for; each screen follows only its own player */
 export interface View {
   playerId: string;
+  /** now on the host's clock; pass this to timeLeft and isUp */
+  now: number;
 }
 
-// scenes draw state and may animate locally; only the host's step() changes GameState
+// scenes draw and may animate locally; state changes belong in a rule (registerRule in step.ts)
 export interface Scene {
-  enter?(state: GameState): void;
-  update?(state: GameState, dt: number): void;
-  draw(ctx: CanvasRenderingContext2D, state: GameState, view: View): void;
+  enter?(state: DeepReadonly<GameState>): void;
+  update?(state: DeepReadonly<GameState>, dt: number): void;
+  draw(ctx: CanvasRenderingContext2D, state: DeepReadonly<GameState>, view: View): void;
   exit?(): void;
 }
 
@@ -29,7 +37,7 @@ const stub = (label: string): Scene => ({
 });
 
 const scenes: Record<Phase, Scene> = {
-  lobby: stub("Lobby"),
+  lobby: { draw: () => {} }, // the lobby is the HTML form; the canvas stays empty behind it
   brief: stub("Brief"),
   campus: stub("Campus"),
   flight: stub("Flight"),
@@ -45,9 +53,10 @@ export function sceneFor(phase: Phase): Scene {
   return scenes[phase];
 }
 
-/** the one way to change phase, so every scene gets its exit and enter */
-export function changePhase(state: GameState, phase: Phase, now: number): void {
-  sceneFor(state.phase).exit?.();
-  enterPhase(state, phase, now);
-  sceneFor(phase).enter?.(state);
+// the host changes the phase; each tab calls this per frame so its scenes get exit and enter
+export function followPhase(drawn: Phase, state: GameState): Phase {
+  if (drawn === state.phase) return drawn;
+  sceneFor(drawn).exit?.();
+  sceneFor(state.phase).enter?.(state);
+  return state.phase;
 }

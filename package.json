@@ -10,8 +10,12 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "happy-dom": "^15.11.7",
     "typescript": "^5.9.3",
     "vite": "^6.4.6",
     "vitest": "^3.2.7"
+  },
+  "dependencies": {
+    "peerjs": "^1.5.5"
   }
 }
