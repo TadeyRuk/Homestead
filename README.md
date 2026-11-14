@@ -109,6 +109,7 @@ The mission cards, part stats, hazards and report lines come from these sources.
 | [Rocket Parts, Beginner's Guide to Aeronautics (NASA Glenn)](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/rocket-parts/) | The idea of grouping a rocket into systems, behind the four part slots, and plain-language part descriptions. Index: [Guide to Rockets](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/guide-to-rockets/). |
 | [Moon Facts (NASA Science)](https://science.nasa.gov/moon/facts/) | Lunar card distance and gravity, and the solar radiation hazard. |
 | [Mars Facts (NASA Science)](https://science.nasa.gov/mars/facts/) | Mars card sunlight and the dust storm hazard. |
+| [Mars Fact Sheet (NASA NSSDC)](https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html) | Earth to Mars distance range, behind the radio delay on the Mars card. |
 | [Opportunity (NASA Science)](https://science.nasa.gov/mission/mer-opportunity/) | The 2018 dust storm that ended the rover's mission, used by the Mars hazard and the report. |
 | [Apollo 11 (NASA)](https://www.nasa.gov/mission/apollo-11/) | Transit time on the Lunar card. |
 | [Mars 2020: Perseverance (NASA Science)](https://science.nasa.gov/mission/mars-2020-perseverance/) | Transit time on the Mars card. |
@@ -140,7 +141,7 @@ The mission cards, part stats, hazards and report lines come from these sources.
 | Moon: solar particles reach the surface | Moon Facts: the atmosphere gives no protection from the Sun's radiation, and the magnetic field is very weak. | Matches. |
 | Mars: about 7 months away | Perseverance launched 30 July 2020 and landed 18 Feb 2021, about 6.7 months. | Matches. |
 | Mars: sunlight about 43% of Earth's | Mars Facts: Mars is 1.5 AU from the Sun. Sunlight falls with distance squared, so 1 / 1.52² is about 43%. | Matches, computed. |
-| Mars: radio delay 3 to 22 minutes | Earth and Mars are about 55 to 401 million km apart. Divided by the speed of light, that is 3 to 22 minutes. | Matches, computed. The distance range still needs a NASA page to cite. |
+| Mars: radio delay 3 to 22 minutes | Mars Fact Sheet: Earth and Mars are 54.6 to 401.4 million km apart. Divided by the speed of light, that is 3.0 to 22.3 minutes. | Matches, computed. |
 | Mars: a planet-wide dust storm ended Opportunity in 2018 | Opportunity page: it stopped talking to Earth after a Mars-wide dust storm in June 2018. | Matches. |
 | High-gain dish: MRO carries a 3 m dish | MRO's dish is 3 m (10 ft) across, per the [MRO launch press kit (JPL)](https://www.jpl.nasa.gov/news/press_kits/mro-launch-Aug05.pdf). | Matches. The MRO page above does not state the size. |
 
