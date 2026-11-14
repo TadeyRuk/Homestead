@@ -7,6 +7,11 @@ You build the top-down layer that phase 1 (campus) and phase 3 (surface) run on,
 
 Spawns, launch, meter math, kiosk and hazards went to other seats to even out the load. They still run on your maps and pad, so keep the spawn points and slot API stable.
 
+## What seat 1 expects from you
+
+- Register your maps from a `*.register.ts` file in `src/ground/`: `registerMap("campus", layout)` and `registerMap("surface", layout)`, using the `MapLayout` type in `src/core/map.ts`. Include about a dozen `spawnPoints`, the `pad` and the `kiosk` on the campus.
+- Carrying (S2-03) and the pad (S2-10) work on `state.parts` (loose pieces) and `ship.slots`. Seat 1 fills `state.parts` from your spawn points (S1-09) and reads `ship.slots` at launch (S1-10).
+
 ## Needs from others
 
 - Seat 1: `GameState`, input map, timers (S1-01, S1-06).

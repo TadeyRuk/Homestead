@@ -42,6 +42,7 @@ export function startRun(state: GameState, choice: MissionChoice, now: number): 
   state.data = fresh.data;
   state.objectives = fresh.objectives;
   state.trouble = fresh.trouble;
+  state.parts = fresh.parts;
   for (const p of state.players) {
     Object.assign(p, { station: null, carrying: null, oxygen: 1, power: 1, down: false });
   }

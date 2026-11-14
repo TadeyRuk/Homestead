@@ -80,6 +80,8 @@ Seat 1 lands this in `src/core/` at hour 1.5. Until then, code against these nam
 - Game rules are registered from your own folder with `registerRule(phase, (state, inputs, now, dt) => ...)` from `src/core/step.ts`. They run on the host only, each tick of that phase.
 - Put your `registerRule`, `registerScene` and `registerStation` calls in a file ending `.register.ts` inside your own folder, for example `src/flight/engineer/engineer.register.ts`. Every such file loads at startup, so nobody edits `src/main.ts` to plug in.
 - Flight stations register with `registerStation(role, { draw })` from `src/flight/stations.ts`. The flight shell (`src/flight/shell.register.ts`) shows each player the station for `player.station` and moves it on Tab. Write your station's current problem to `state.trouble[role]` from a rule, and delete it when fixed.
+- Maps: seat 2 registers the real campus and surface with `registerMap("campus" | "surface", layout)` from `src/core/map.ts`. A layout gives `spawnPoints`, `pad` and `kiosk` (campus) or `lander` and `sites` (surface). Until then a placeholder sized to the canvas is used. Use `nearest(points, player, reach)` for "is the player at the pad or next to a part".
+- Loose parts live in `state.parts`. Seat 1 seeds them onto the spawn points at the start of campus (S1-09). Picking up (seat 2, S2-03) removes the piece and sets `player.carrying` to its part id; dropping or swapping puts a piece back. A kiosk purchase (seat 6) adds a piece at `kiosk`. Mounting at the pad (S2-10) writes `ship.slots`, which launch (S1-10) reads.
 - A run starts only through `startRun` in `src/core/lobby.ts`: it resolves the mission, resets the ship, data, objectives, trouble and log, and resets each player's suit, keeping the crew and their roles. Roles are dealt with `dealRoles` and swapped one-for-one with `takeRole`, so every role is held exactly once. Read a player's jobs from `player.roles`.
 - Scenes register with `registerScene(phase, scene)` at startup. They get read-only state and draw it. A scene never changes state; that belongs in a rule.
 - Rules read each player's keys from `inputs[player.id]`. Never call `createInput()` yourself or listen to `window`; `src/main.ts` owns the one keyboard listener.
@@ -132,6 +134,7 @@ interface GameState {
   runStartedAt: number;       // ms on the host clock; event times count from here
   credits: number;
   players: Player[];
+  parts: LoosePart[];       // parts lying on the map: { id, part, x, y }
   ship: Ship;
   data: { collected: number; uplinked: number; target: number };
   objectives: Record<string, boolean>;
