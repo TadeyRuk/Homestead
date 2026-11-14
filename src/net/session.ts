@@ -12,7 +12,8 @@ export interface Conn {
 }
 
 const MAX_CREW = 4;
-const SNAPSHOT_MS = 66; // about 15 a second
+// about 30 a second; ticks come every ~16 ms, so 30 lands on every other tick (66 gave every fifth, 80 ms)
+const SNAPSHOT_MS = 30;
 // a closed tab may never fire close, so silence counts as leaving; covers normal background-tab
 // throttling, though Chrome's heavier throttling after minutes hidden can still trip it
 export const DROP_MS = 10_000;
@@ -114,7 +115,13 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
   return { addConnection, tick, end, inputs: () => inputs };
 }
 
-export function createClient(conn: Conn, name: string, onEnd: (reason: string) => void, clock: Clock = realClock) {
+export function createClient(
+  conn: Conn,
+  name: string,
+  onEnd: (reason: string) => void,
+  clock: Clock = realClock,
+  onSnapshot?: (state: GameState, hostNow: number) => void,
+) {
   let playerId: string | null = null;
   let latest: GameState | null = null;
   let offset = 0; // host clock minus this tab's clock
@@ -139,6 +146,7 @@ export function createClient(conn: Conn, name: string, onEnd: (reason: string) =
     else if (msg.t === "snapshot") {
       latest = msg.state;
       offset = msg.hostNow - clock();
+      onSnapshot?.(msg.state, msg.hostNow);
     }
     else {
       finish(msg.reason);

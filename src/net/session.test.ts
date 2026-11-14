@@ -80,7 +80,7 @@ describe("host and client", () => {
     expect(state.players[1].x).toBe(x0);
   });
 
-  it("broadcasts snapshots about 15 times a second, not every tick", () => {
+  it("broadcasts snapshots about 30 times a second, every other tick", () => {
     const { state, host, join } = setup();
     const { client } = join("Ada");
     enterPhase(state, "campus", 0);
@@ -88,8 +88,19 @@ describe("host and client", () => {
     const seen = client.state()!.players[0].x;
     host.tick(1_016, 0.016, { ...still, dx: 1 });
     expect(client.state()!.players[0].x).toBe(seen);
-    host.tick(1_070, 0.016, { ...still, dx: 1 });
+    host.tick(1_033, 0.016, { ...still, dx: 1 });
     expect(client.state()!.players[0].x).toBeGreaterThan(seen);
+  });
+
+  it("hands each snapshot to the joiner with the host's time, for smoothing", () => {
+    const { state, host } = setup();
+    const [hostSide, clientSide] = pair();
+    host.addConnection(hostSide);
+    const got: number[] = [];
+    createClient(clientSide, "Ada", () => {}, () => 0, (_s, hostNow) => got.push(hostNow));
+    enterPhase(state, "campus", 0);
+    host.tick(2_000, 0.016, still);
+    expect(got.at(-1)).toBe(2_000);
   });
 
   it("refuses to add a joiner once the run has started", () => {
