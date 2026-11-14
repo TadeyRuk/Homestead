@@ -94,6 +94,7 @@ describe("startRun", () => {
     expect(s.log).toEqual([]);
     expect(s.players[0]).toMatchObject({ down: false, oxygen: 1, carrying: null, station: null, roles: ["pilot", "comms"] });
   });
+});
 
 describe("joinCrew", () => {
   function grow(...ids: string[]) {
@@ -140,7 +141,6 @@ describe("startRun resets everything it doesn't deliberately keep", () => {
       if (!KEEP.includes(key)) expect([key, (s as unknown as Record<string, unknown>)[key]]).toEqual([key, fresh[key]]);
     }
   });
-});
 
   it("cancels a countdown left over from the last run", () => {
     const s = crew(1);
