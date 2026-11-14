@@ -97,6 +97,8 @@ export interface GameState {
   /** ms timestamp on the host clock */
   runStartedAt: number;
   credits: number;
+  /** fuel and hull as the ship landed, for the score; null until it lands (S4-09) */
+  arrival: { fuel: number; hull: number } | null;
   /** host-clock ms when the rocket lifts off; null while no countdown is running */
   launchAt: number | null;
   players: Player[];
@@ -128,6 +130,7 @@ export function createState(seed: number, mission: MissionId): GameState {
     phaseEndsAt: null, // the lobby waits for Start, not a timer
     runStartedAt: 0,
     credits: 0,
+    arrival: null,
     launchAt: null,
     players: [],
     parts: [],

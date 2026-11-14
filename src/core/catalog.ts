@@ -11,6 +11,8 @@ export interface PartInfo {
   lift?: number;
   /** energy core temperature added per second while mounted (payload and power parts); 0 when absent */
   heat?: number;
+  /** comms parts: how far a pilot turn knocks the antenna off Earth, 0..1 */
+  drift?: number;
   /** the weak part a slot gets when the build timer runs out; never spawns on the campus */
   salvage?: boolean;
 }
@@ -24,16 +26,17 @@ let parts: PartInfo[] = [
   { id: "large-solar", slot: "power", mass: 150, power: 600 },
   // "runs hot" in the proposal; heat values are placeholders for seat 3 and seat 5 to balance
   { id: "rtg", slot: "power", mass: 110, power: 450, heat: 0.02 },
-  { id: "low-gain", slot: "comms", mass: 15, power: -20 },
-  { id: "high-gain", slot: "comms", mass: 70, power: -80 },
-  { id: "laser", slot: "comms", mass: 40, power: -120 },
+  // proposal: low-gain "hardly drifts", the dish "drifts when the pilot turns", the laser is "hardest to keep on target"
+  { id: "low-gain", slot: "comms", mass: 15, power: -20, drift: 0.1 },
+  { id: "high-gain", slot: "comms", mass: 70, power: -80, drift: 0.5 },
+  { id: "laser", slot: "comms", mass: 40, power: -120, drift: 0.9 },
   { id: "camera", slot: "payload", mass: 30, power: -40, heat: 0.01 },
   { id: "spectrometer", slot: "payload", mass: 80, power: -110, heat: 0.03 },
   { id: "radar", slot: "payload", mass: 160, power: -200, heat: 0.06 },
   // salvage: worse than anything on the campus, so running out the clock always costs something
   { id: "salvage-motor", slot: "propulsion", mass: 250, power: -20, lift: 550, salvage: true },
   { id: "salvage-battery", slot: "power", mass: 90, power: 150, salvage: true },
-  { id: "salvage-antenna", slot: "comms", mass: 25, power: -40, salvage: true },
+  { id: "salvage-antenna", slot: "comms", mass: 25, power: -40, drift: 0.3, salvage: true },
   { id: "salvage-camera", slot: "payload", mass: 40, power: -60, heat: 0.02, salvage: true },
 ];
 

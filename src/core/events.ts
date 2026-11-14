@@ -9,6 +9,7 @@ export const EVENT_KINDS = [
   "core_overheated", "core_too_cold", "oxygen_low", "converter_jammed",
   "site_scanned", "sample_collected", "data_uplinked", "objective_done",
   "hazard_hit", "player_down", "extraction",
+  "landed", "ship_lost",
 ] as const;
 
 export type EventKind = (typeof EVENT_KINDS)[number];

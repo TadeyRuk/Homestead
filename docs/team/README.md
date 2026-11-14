@@ -84,6 +84,10 @@ Seat 1 lands this in `src/core/` at hour 1.5. Until then, code against these nam
 - Station state lives in `state.flight`, one plain-data entry per minigame (`state.flight.bus`, `state.flight.weld`, ...), created and stepped by your flight rule, so joiners see it in snapshots. Drive it with `stationInput(state, inputs, role)`, which returns only the keys of the player looking at that station: a solo player holds all four roles and must not drive all four at once. `whoIsAt(state, role)` gives that player.
 - A role with two minigames registers one station that draws both, and one rule that steps both. Split the keys between them (for example arrows for one, E for the other) or show one at a time and flip with the panel key.
 - Write your station's current problem to `state.trouble[role]` from a rule, and delete it when fixed.
+- Flight events (debris, solar flares, load spikes) are planned per seed as flight starts, into `state.flight.events`. Read the running ones with `activeEvents(state, now)` from `src/flight/events/director.ts`. Mars gets more than the Moon, a solo crew fewer.
+- Scale a station's drift or decay by `stationPace(state, role)`: 1 while someone is at it, gentler while nobody watches, so a solo player can keep four stations alive.
+- The comms dish lives in `state.flight.dish` and sets `ship.linkLocked`. The Pilot shows `debrisWarnings(state, now)` from `src/flight/comms/link.ts`, which only returns upcoming debris while the link holds; `linkRate(state)` is 2 while locked.
+- A ship with zero hull or fuel in flight logs `ship_lost` (value `LOST_HULL` 0 or `LOST_FUEL` 1, from `src/flight/flight.register.ts`) and goes to the report. Landing logs `landed` and records `state.arrival`.
 - Registering the same scene, station or map twice logs a warning, and the dev console lists every `.register.ts` file that loaded; a file that isn't listed is misnamed.
 - Maps: seat 2 registers the real campus and surface with `registerMap("campus", CampusLayout)` and `registerMap("surface", SurfaceLayout)` from `src/core/map.ts`. A campus needs `spawnPoints`, `pad` and `kiosk`; a surface needs `lander` and `sites`. All are required, so a missing pad is a type error. Until then a placeholder sized to the canvas is used. Use `nearest(points, player, reach)` for "is the player at the pad or next to a part".
 - Loose parts live in `state.parts` and are cleared on every phase change. Put a piece down only with `placePart(state, part, at, source)` from `src/core/parts.ts`, which gives it an id no other piece has had this run. Seat 1 seeds pieces onto the spawn points at the start of campus (S1-09). Picking up (seat 2, S2-03) removes the piece and sets `player.carrying` to its part id; dropping or swapping calls `placePart` again. `buyFromKiosk` (seat 6) places its piece at `kiosk` itself. Mounting at the pad (S2-10) writes `ship.slots`, which launch (S1-10) reads.
@@ -145,6 +149,7 @@ interface GameState {
   credits: number;
   players: Player[];
   launchAt: number | null;  // host ms of liftoff while the countdown runs
+  arrival: { fuel: number; hull: number } | null; // as the ship landed, for the score
   parts: LoosePart[];       // parts lying on the map: { id, part, x, y }
   partSeq: number;          // behind loose-part ids; use placePart, not this
   ship: Ship;
@@ -169,6 +174,7 @@ breaker_tripped  load_shed  link_lost  link_locked
 core_overheated  core_too_cold  oxygen_low  converter_jammed
 site_scanned  sample_collected  data_uplinked  objective_done
 hazard_hit  player_down  extraction
+landed  ship_lost
 ```
 
 ## Checkpoints
