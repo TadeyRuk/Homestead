@@ -51,14 +51,16 @@ function drawArrow(ctx: CanvasRenderingContext2D, a: EdgeArrow, name: string): v
   ctx.fill();
   ctx.restore();
 
-  // the label sits on the screen side of the arrow, upright
-  const lx = a.x - Math.cos(a.angle) * 34;
-  const ly = a.y - Math.sin(a.angle) * 26 + 4;
+  // the label sits upright on the screen side of the arrow, pushed back far enough to clear it
+  const text = `${name} ${Math.round(a.distance / PX_PER_M)} m`;
   ctx.font = "600 12px sans-serif";
+  const half = ctx.measureText(text).width / 2;
+  const lx = a.x - Math.cos(a.angle) * (28 + half);
+  const ly = a.y - Math.sin(a.angle) * 36 + 4;
   ctx.textAlign = "center";
   ctx.fillStyle = "#0b0e14";
-  ctx.fillText(`${name} ${Math.round(a.distance / PX_PER_M)} m`, lx + 1, ly + 1);
+  ctx.fillText(text, lx + 1, ly + 1);
   ctx.fillStyle = "#7ef0d0";
-  ctx.fillText(`${name} ${Math.round(a.distance / PX_PER_M)} m`, lx, ly);
+  ctx.fillText(text, lx, ly);
   ctx.textAlign = "left";
 }

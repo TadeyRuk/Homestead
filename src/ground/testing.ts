@@ -64,6 +64,7 @@ export function recordingCtx(width = 960, height = 540) {
   const ctx = new Proxy(target, {
     get(t, key) {
       if (key in t) return t[key as string];
+      if (key === "measureText") return (text: string) => ({ width: text.length * 7 });
       return (...args: unknown[]) => {
         calls.push({ name: String(key), args });
       };
