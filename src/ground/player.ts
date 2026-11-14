@@ -41,6 +41,8 @@ export function enterGround(state: GameState): boolean {
   if (placed.has(key)) return false;
   placed.add(key);
   placeCrew(state, map);
+  // campus parts stay on Earth (enterPhase already empties the map); the crew lands empty-handed
+  if (state.phase === "surface") for (const p of state.players) p.carrying = null;
   return true;
 }
 
