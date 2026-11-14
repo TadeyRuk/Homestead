@@ -17,7 +17,7 @@ export function logEvent(
   state: GameState,
   kind: EventKind,
   now: number,
-  fields: Pick<GameEvent, "part" | "player" | "value"> = {},
+  fields: Pick<GameEvent, "part" | "player" | "value" | "objective"> = {},
 ): void {
   state.log.push({ t: (now - state.runStartedAt) / 1000, phase: state.phase, kind, ...fields });
 }

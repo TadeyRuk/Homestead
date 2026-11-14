@@ -102,7 +102,8 @@ describe("surface phase", () => {
       expect(dist(p)).toBeLessThan(120);
       expect(p.carrying).toBeNull();
     }
-    expect(s.parts).toEqual([]);
+    // only the instrument waiting at the lander (S2-14), nothing from the campus
+    expect(s.parts.map((x) => x.part)).toEqual(["weather-station"]);
   });
 
   it("draws the lander, the sites and the mission's own sample in the right palette", () => {

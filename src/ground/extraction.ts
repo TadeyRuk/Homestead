@@ -1,6 +1,7 @@
 import { logEvent } from "../core/events";
 import type { GameState } from "../core/state";
 import { isUp, timeLeft } from "../core/timer";
+import { flushUplinks } from "../missions/objectives";
 
 /** seconds before the surface timer ends that the extraction ship starts coming down */
 export const SHIP_DESCENT_S = 10;
@@ -18,6 +19,8 @@ export function extractionRule(state: GameState, _inputs: unknown, now: number):
   const crew = state.players;
   if (crew.length > 0 && crew.every((p) => p.down) && !isUp(state, now)) state.phaseEndsAt = now;
   if (!isUp(state, now)) return;
+  // data sent in the last seconds counts in data.uplinked, so it has to be in the log too
+  flushUplinks(state, now);
   logEvent(state, "extraction", now, { value: crew.filter((p) => !p.down).length });
   for (const p of crew) {
     logEvent(state, "extraction", now, {

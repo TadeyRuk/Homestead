@@ -55,6 +55,7 @@ export function startRun(state: GameState, choice: MissionChoice, now: number): 
   state.ship = fresh.ship;
   state.data = { ...fresh.data, target: missionInfo(mission).dataTarget };
   state.objectives = fresh.objectives;
+  state.surface = fresh.surface;
   state.flight = fresh.flight;
   state.launchAt = fresh.launchAt;
   state.trouble = fresh.trouble;

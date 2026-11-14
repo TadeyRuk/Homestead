@@ -244,3 +244,43 @@ export function drawSuitBars(ctx: Ctx, p: Point & { readonly oxygen: number; rea
   bar(p.y - PLAYER_HALF - 34, p.oxygen, "#4fd8ff");
   bar(p.y - PLAYER_HALF - 27, p.power, "#ffd84a");
 }
+
+/** a ring filling round a player while a timed job runs, with what it is */
+export function drawTaskRing(ctx: Ctx, at: Point, progress: number, label: string): void {
+  ctx.strokeStyle = "#0b0e14";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(at.x, at.y, 16, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = "#7ef0d0";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(at.x, at.y, 16, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+  ctx.stroke();
+  ctx.textAlign = "center";
+  ctx.font = "600 10px sans-serif";
+  ctx.fillStyle = "#7ef0d0";
+  ctx.fillText(`${label} ${Math.round(progress * 100)}%`, at.x, at.y + PLAYER_HALF + 26);
+  ctx.textAlign = "left";
+}
+
+/** data units a player is carrying back to the lander */
+export function drawHeldData(ctx: Ctx, at: Point, units: number): void {
+  ctx.textAlign = "center";
+  ctx.font = "600 10px sans-serif";
+  ctx.fillStyle = "#b48cff";
+  ctx.fillText(`${Math.ceil(units)} data`, at.x, at.y - PLAYER_HALF - 36);
+  ctx.textAlign = "left";
+}
+
+/** a deployed instrument: a mast with a cross-bar */
+export function drawInstrument(ctx: Ctx, at: Point, name: string): void {
+  ctx.fillStyle = "#e6e9ef";
+  ctx.fillRect(at.x - 1, at.y - 26, 3, 26);
+  ctx.fillRect(at.x - 10, at.y - 26, 21, 3);
+  ctx.fillStyle = "#b48cff";
+  ctx.font = "600 10px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(`${name} deployed`, at.x, at.y + 14);
+  ctx.textAlign = "left";
+}

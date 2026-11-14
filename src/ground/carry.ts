@@ -26,6 +26,15 @@ export function atKiosk(state: GameState, p: Player): boolean {
   return state.phase === "campus" && !!nearest([groundFor("campus").kiosk], p, KIOSK_REACH);
 }
 
+/** says whether an E press belongs to something else, such as a scan or a deploy on the surface */
+export type PressClaim = (state: GameState, p: Player) => boolean;
+const claims: PressClaim[] = [];
+
+/** other rules take E presses from carrying here; a claimed press never picks up or drops */
+export function registerPressClaim(claim: PressClaim): void {
+  claims.push(claim);
+}
+
 /**
  * Does this E press belong to carrying? Bought parts land on the kiosk, so at the kiosk a part
  * in reach is picked up first, and only a press with nothing lying there is left to buying.
@@ -33,6 +42,7 @@ export function atKiosk(state: GameState, p: Player): boolean {
  */
 export function isCarryPress(state: GameState, p: Player): boolean {
   if (p.down || atPad(state, p)) return false;
+  if (claims.some((claim) => claim(state, p))) return false;
   if (atKiosk(state, p)) return !!nearest(state.parts, p, PICK_REACH);
   return true;
 }

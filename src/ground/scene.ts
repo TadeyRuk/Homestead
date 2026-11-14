@@ -1,11 +1,15 @@
 import type { Scene } from "../core/scene";
 import { edgeArrow, follow, PX_PER_M, type EdgeArrow } from "./camera";
 import { SLOTS, slotSpot } from "../build/pad";
-import { drawCountdown, drawGround, drawMarker, drawPadSlots, drawParts, drawPlayers, drawShip, drawSuitBars, paletteFor } from "./draw";
+import { drawCountdown, drawGround, drawMarker, drawPadSlots, drawParts, drawPlayers, drawShip, drawSuitBars, drawTaskRing, drawHeldData, drawInstrument, paletteFor } from "./draw";
+import { bonusSpot } from "../missions/objectives";
+import { missionList } from "../missions/stats";
 import { shipDescent } from "./extraction";
 import { LANDER_REACH } from "./suit";
 import { SURFACE } from "./surface";
 import { groundFor, type Ground, type GroundMap } from "./world";
+
+const TASK_LABELS = { scan: "Scanning", drill: "Drilling", deploy: "Deploying", photo: "Photographing" } as const;
 
 /**
  * The top-down scene shared by the campus and the surface; it only draws. Each screen
@@ -42,19 +46,36 @@ export function groundScene(which: Ground): Scene {
         }
         if (map.kiosk) drawMarker(ctx, map.kiosk, "#ff5fae", "Kiosk", 16);
       } else {
+        const sv = state.surface;
         for (const site of map.sites ?? []) {
-          drawMarker(ctx, site, site.rich ? "#ffd84a" : "#c9ced8", site.rich ? "Rich site" : "Site", site.rich ? 20 : 14);
+          const done = sv.scanned.includes(site.id);
+          const colour = done ? "#5d636c" : site.rich ? "#ffd84a" : "#c9ced8";
+          const name = `${site.rich ? "Rich site" : "Site"}${done ? " (scanned)" : ""}`;
+          drawMarker(ctx, site, colour, name, site.rich ? 20 : 14);
         }
         if (map === SURFACE) {
-          drawMarker(ctx, SURFACE.sampleSites[state.mission], "#ff7b3a", state.mission === "mars" ? "Core sample" : "Regolith", 14);
-          drawMarker(ctx, SURFACE.deploySpot, "#b48cff", state.mission === "mars" ? "Weather station" : "Seismometer", 14);
+          const list = missionList(state.mission);
+          const sample = state.mission === "mars" ? "Core sample" : "Regolith";
+          if (!sv.sampleDrilled) drawMarker(ctx, SURFACE.sampleSites[state.mission], "#ff7b3a", sample, 14);
+          if (sv.deployed) drawInstrument(ctx, SURFACE.deploySpot, list.instrument);
+          else drawMarker(ctx, SURFACE.deploySpot, "#b48cff", state.mission === "mars" ? "Weather station" : "Seismometer", 14);
+          if (!state.objectives.bonus) drawMarker(ctx, bonusSpot(state), "#ffffff", "Photo spot", 12);
         }
         // the ring is the recharge zone
         if (map.lander) drawMarker(ctx, map.lander, "#7ef0d0", "Lander", LANDER_REACH);
       }
       drawParts(ctx, state.parts);
       drawPlayers(ctx, state.players, view.playerId);
-      if (which === "surface") for (const p of state.players) if (!p.down) drawSuitBars(ctx, p);
+      if (which === "surface") {
+        for (const p of state.players) {
+          if (p.down) continue;
+          drawSuitBars(ctx, p);
+          const task = state.surface.tasks[p.id];
+          if (task) drawTaskRing(ctx, p, task.progress, TASK_LABELS[task.kind]);
+          const held = state.surface.held[p.id] ?? 0;
+          if (held > 0) drawHeldData(ctx, p, held);
+        }
+      }
       if (which === "surface" && map.lander) drawShip(ctx, map.lander, shipDescent(state, view.now));
       ctx.restore();
 
