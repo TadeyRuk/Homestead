@@ -196,3 +196,38 @@ export function drawShip(ctx: Ctx, lander: Point, t: number): void {
   ctx.fillText("Extraction", x, y - 54);
   ctx.textAlign = "left";
 }
+
+/** the four slots round the pad, each with its mounted part, salvage marked */
+export function drawPadSlots(
+  ctx: Ctx,
+  slots: readonly { name: string; at: Point; part: string | null; salvaged: boolean }[],
+): void {
+  for (const s of slots) {
+    ctx.fillStyle = "#0b0e14cc";
+    ctx.fillRect(s.at.x - 26, s.at.y - 10, 52, 30);
+    ctx.strokeStyle = s.part ? (s.salvaged ? "#ff9f43" : "#7ef0d0") : "#5d636c";
+    ctx.lineWidth = 2;
+    ctx.setLineDash(s.part ? [] : [4, 3]);
+    ctx.strokeRect(s.at.x - 26, s.at.y - 10, 52, 30);
+    ctx.setLineDash([]);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#8a93a6";
+    ctx.font = "9px sans-serif";
+    ctx.fillText(s.name, s.at.x, s.at.y + 1);
+    ctx.fillStyle = s.part ? "#e6e9ef" : "#5d636c";
+    ctx.font = "600 9px sans-serif";
+    ctx.fillText(s.part ?? "empty", s.at.x, s.at.y + 14);
+    ctx.textAlign = "left";
+  }
+}
+
+/** the launch countdown over the pad while it runs */
+export function drawCountdown(ctx: Ctx, pad: Point, secondsLeft: number): void {
+  ctx.textAlign = "center";
+  ctx.font = "700 22px sans-serif";
+  ctx.fillStyle = "#0b0e14";
+  ctx.fillText(`Launch in ${secondsLeft}`, pad.x + 1, pad.y - 129);
+  ctx.fillStyle = "#ffb347";
+  ctx.fillText(`Launch in ${secondsLeft}`, pad.x, pad.y - 130);
+  ctx.textAlign = "left";
+}

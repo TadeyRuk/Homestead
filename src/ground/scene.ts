@@ -1,6 +1,7 @@
 import type { Scene } from "../core/scene";
 import { edgeArrow, follow, PX_PER_M, type EdgeArrow } from "./camera";
-import { drawGround, drawMarker, drawParts, drawPlayers, drawShip, paletteFor } from "./draw";
+import { SLOTS, slotSpot } from "../build/pad";
+import { drawCountdown, drawGround, drawMarker, drawPadSlots, drawParts, drawPlayers, drawShip, paletteFor } from "./draw";
 import { shipDescent } from "./extraction";
 import { SURFACE } from "./surface";
 import { groundFor, type Ground, type GroundMap } from "./world";
@@ -23,7 +24,21 @@ export function groundScene(which: Ground): Scene {
       ctx.translate(-Math.round(cam.x), -Math.round(cam.y));
       drawGround(ctx, map, paletteFor(which, state.mission));
       if (which === "campus") {
-        if (map.pad) drawMarker(ctx, map.pad, "#7ef0d0", "Launch pad");
+        if (map.pad) {
+          const pad = map.pad;
+          drawMarker(ctx, pad, "#7ef0d0", "Launch pad");
+          drawPadSlots(
+            ctx,
+            SLOTS.map((slot) => ({
+              name: slot,
+              at: slotSpot(pad, slot),
+              part: state.ship.slots[slot],
+              salvaged: state.ship.salvaged.includes(slot),
+            })),
+          );
+          // the stub scene used to show this; seat 1's countdown lives in state.launchAt
+          if (state.launchAt !== null) drawCountdown(ctx, pad, Math.max(0, Math.ceil((state.launchAt - view.now) / 1000)));
+        }
         if (map.kiosk) drawMarker(ctx, map.kiosk, "#ff5fae", "Kiosk", 16);
       } else {
         for (const site of map.sites ?? []) {
