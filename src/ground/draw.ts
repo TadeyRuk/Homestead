@@ -66,6 +66,31 @@ export function drawMarker(ctx: Ctx, at: Point, colour: string, name: string, ra
   ctx.textAlign = "left";
 }
 
+interface Loose extends Point {
+  readonly part: string;
+}
+
+/** loose parts as small crates, labelled until the art pass gives each part its own sprite */
+export function drawParts(ctx: Ctx, parts: readonly Loose[]): void {
+  for (const piece of parts) {
+    ctx.fillStyle = "#0b0e14";
+    ctx.beginPath();
+    ctx.ellipse(piece.x, piece.y + 7, 10, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#f2f4f8";
+    ctx.save();
+    ctx.translate(piece.x, piece.y);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(-6, -6, 12, 12);
+    ctx.restore();
+    ctx.fillStyle = "#c9ced8";
+    ctx.font = "10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(piece.part, piece.x, piece.y + 22);
+    ctx.textAlign = "left";
+  }
+}
+
 interface Drawable extends Point {
   readonly id: string;
   readonly name: string;
