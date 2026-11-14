@@ -2,10 +2,12 @@ import { createInput, type Input } from "./core/input";
 import { enterPhase } from "./core/phases";
 import { followPhase, sceneFor } from "./core/scene";
 import { createState, type GameState, type Phase } from "./core/state";
+import { PLAYER_SPEED } from "./core/step";
 import { timeLeft } from "./core/timer";
 import { renderLobby } from "./lobby/lobby";
 import { host, join } from "./net/peer";
 import { createClient, createHost, HOST_ID, PING_MS } from "./net/session";
+import { createInterpolator, createPrediction } from "./net/smooth";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game");
 const ui = document.querySelector<HTMLElement>("#ui");
@@ -17,11 +19,20 @@ const input = createInput();
 const STILL: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
 const TICK_MS = 1000 / 60;
 const FLUSH_MS = 250; // time for a final "end" message to leave before the peer is destroyed
+// other players are drawn this far in the past, so two snapshots (about 33 ms apart) are always on hand
+const INTERP_DELAY_MS = 100;
 
 // what this tab is doing right now; null while sitting in the lobby form
 type Mode =
   | { kind: "host"; run: number; state: GameState; close(): void }
-  | { kind: "client"; run: number; client: ReturnType<typeof createClient>; close(): void };
+  | {
+      kind: "client";
+      run: number;
+      client: ReturnType<typeof createClient>;
+      prediction: ReturnType<typeof createPrediction>;
+      others: ReturnType<typeof createInterpolator>;
+      close(): void;
+    };
 let mode: Mode | null = null;
 let run = 0; // bumps every run, so callbacks from an old run can't end a new one
 let drawn: Phase = "lobby";
@@ -97,13 +108,18 @@ function openLobby(message = "") {
         const joined = await join(code);
         const thisRun = ++run;
         input.read(); // drop presses made while the lobby form had the screen
-        const client = createClient(joined.conn, name, endedBy(thisRun));
+        const others = createInterpolator();
+        const client = createClient(joined.conn, name, endedBy(thisRun), undefined, (s, hostNow) =>
+          others.push(hostNow, s.players),
+        );
         // an interval, not the frame loop, so pings keep going while this tab is in the background
         const pinger = setInterval(client.ping, PING_MS);
         mode = {
           kind: "client",
           run: thisRun,
           client,
+          prediction: createPrediction(PLAYER_SPEED),
+          others,
           close: () => {
             clearInterval(pinger);
             client.leave();
@@ -158,6 +174,29 @@ function frame(now: number) {
   }
 }
 
+// what a joiner draws: its own player from its keys, everyone else slid between snapshots
+function smoothed(
+  joined: Extract<Mode, { kind: "client" }>,
+  state: GameState,
+  me: string,
+  i: Input,
+  dt: number,
+): GameState {
+  const mine = state.players.find((p) => p.id === me);
+  if (mine) {
+    // the host keeps players still in the lobby and when down; predict the same
+    if (state.phase !== "lobby" && !mine.down) joined.prediction.step(i, dt);
+    joined.prediction.reconcile(mine, i.dx !== 0 || i.dy !== 0, dt);
+  }
+  const past = joined.others.at(joined.client.hostNow() - INTERP_DELAY_MS);
+  return {
+    ...state,
+    players: state.players.map((p) =>
+      p.id === me ? { ...p, ...joined.prediction.position() } : { ...p, ...(past.get(p.id) ?? p) },
+    ),
+  };
+}
+
 function draw(now: number) {
   const dt = Math.max(0, Math.min((now - last) / 1000, 0.1));
   last = now;
@@ -184,6 +223,7 @@ function draw(now: number) {
       state = joined.client.state();
       me = joined.client.playerId() ?? "";
       if (state && state.phase !== "lobby") lobby.hide();
+      if (state) state = smoothed(joined, state, me, i, dt);
     }
   }
 
