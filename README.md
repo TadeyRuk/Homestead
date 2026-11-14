@@ -74,6 +74,66 @@ Scaffold only: a canvas with one square that moves with WASD.
 - Every outside resource (fonts, sounds) is listed with its licence.
 - Submit before 11:59 PM local time on 15 Nov 2026.
 
+## NASA data and resources
+
+The mission cards, part stats, hazards and report lines come from these sources. This list goes into the project page's NASA Data field as it stands.
+
+### Facts behind the missions
+
+| Resource | What the game takes from it |
+| --- | --- |
+| [Rocket Parts, Beginner's Guide to Aeronautics (NASA Glenn)](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/rocket-parts/) | The idea of grouping a rocket into systems, behind the four part slots, and plain-language part descriptions. Index: [Guide to Rockets](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/guide-to-rockets/). |
+| [Moon Facts (NASA Science)](https://science.nasa.gov/moon/facts/) | Lunar card distance and gravity, and the solar radiation hazard. |
+| [Mars Facts (NASA Science)](https://science.nasa.gov/mars/facts/) | Mars card sunlight and the dust storm hazard. |
+| [Opportunity (NASA Science)](https://science.nasa.gov/mission/mer-opportunity/) | The 2018 dust storm that ended the rover's mission, used by the Mars hazard and the report. |
+| [Apollo 11 (NASA)](https://www.nasa.gov/mission/apollo-11/) | Transit time on the Lunar card. |
+| [Mars 2020: Perseverance (NASA Science)](https://science.nasa.gov/mission/mars-2020-perseverance/) | Transit time on the Mars card. |
+
+### Real hardware behind each part
+
+| Part | Based on | Source |
+| --- | --- | --- |
+| Solid motor | SLS solid rocket boosters | [Space Launch System Solid Rocket Booster](https://www.nasa.gov/reference/space-launch-system-solid-rocket-booster/) |
+| Chemical engine | RL10 upper-stage engine | [Space Launch System RL10 Engine](https://www.nasa.gov/reference/space-launch-system-rl10-engine/) |
+| Ion drive | Dawn's ion propulsion | [Dawn: Ion Propulsion](https://science.nasa.gov/mission/dawn/technology/ion-propulsion/) |
+| Small solar array | InSight lander arrays | [InSight Lander](https://science.nasa.gov/mission/insight/) |
+| Large solar array | Juno's arrays | [Juno](https://science.nasa.gov/mission/juno/) |
+| Radioisotope generator | MMRTG on Curiosity and Perseverance | [Radioisotope Power Systems](https://rps.nasa.gov/power-and-thermal-systems/power-systems/current/), [Curiosity](https://science.nasa.gov/mission/msl-curiosity/) |
+| Low-gain antenna | Rover low-gain antennas | [Curiosity](https://science.nasa.gov/mission/msl-curiosity/) |
+| High-gain dish | Mars Reconnaissance Orbiter's 3 m dish | [Mars Reconnaissance Orbiter](https://science.nasa.gov/mission/mars-reconnaissance-orbiter/) |
+| Laser terminal | Deep Space Optical Communications on Psyche | [DSOC](https://www.nasa.gov/mission/deep-space-optical-communications-dsoc/), [Psyche](https://science.nasa.gov/mission/psyche/) |
+| Camera | HiRISE on Mars Reconnaissance Orbiter | [MRO Science Instruments](https://science.nasa.gov/mission/mars-reconnaissance-orbiter/science-instruments/) |
+| Spectrometer | SuperCam on Perseverance | [Perseverance Science Instruments](https://science.nasa.gov/mission/mars-2020-perseverance/science-instruments/) |
+| Radar sounder | SHARAD on Mars Reconnaissance Orbiter | [MRO Science Instruments](https://science.nasa.gov/mission/mars-reconnaissance-orbiter/science-instruments/) |
+
+### Mission card numbers, checked
+
+| On the card | Checked against | Result |
+| --- | --- | --- |
+| Moon: gravity one sixth of Earth's | Moon Facts: "one-sixth of Earth's" | Matches. |
+| Moon: radio delay about 1.3 seconds | Moon Facts: average distance 384,400 km. Divided by the speed of light, that is 1.28 s. | Matches, computed. |
+| Moon: about 3 days away | Apollo flights took about three days to reach the Moon. The Apollo 11 page lists launch and splashdown dates, not the transit time. | Fine for a game card. A page that states the transit time directly would be stronger. |
+| Moon: solar particles reach the surface | Moon Facts: the atmosphere gives no protection from the Sun's radiation, and the magnetic field is very weak. | Matches. |
+| Mars: about 7 months away | Perseverance launched 30 July 2020 and landed 18 Feb 2021, about 6.7 months. | Matches. |
+| Mars: sunlight about 43% of Earth's | Mars Facts: Mars is 1.5 AU from the Sun. Sunlight falls with distance squared, so 1 / 1.52² is about 43%. | Matches, computed. |
+| Mars: radio delay 3 to 22 minutes | Earth and Mars are about 55 to 401 million km apart. Divided by the speed of light, that is 3 to 22 minutes. | Matches, computed. The distance range still needs a NASA page to cite. |
+| Mars: a planet-wide dust storm ended Opportunity in 2018 | Opportunity page: it stopped talking to Earth after a Mars-wide dust storm in June 2018. | Matches. |
+| High-gain dish: MRO carries a 3 m dish | MRO's dish is 3 m (10 ft) across, per the [MRO launch press kit (JPL)](https://www.jpl.nasa.gov/news/press_kits/mro-launch-Aug05.pdf). | Matches. The MRO page above does not state the size. |
+
+### Challenge resources
+
+| Resource | What we take from it |
+| --- | --- |
+| [Mission Design Lab (NASA Goddard)](https://etd.gsfc.nasa.gov/capabilities/integrated-design-center/mission-design-lab/) | The idea of a trade study, which is how the report explains what was traded for what. |
+| [Concept Maturity Levels (NASA Science)](https://science.nasa.gov/wp-content/uploads/2023/11/03-ziemer-mission-development-101-cmls.pdf) | Same as above. |
+| [CubeSat 101 (NASA CubeSat Launch Initiative)](https://www.nasa.gov/wp-content/uploads/2017/03/nasa_csli_cubesat_101_508.pdf) | A check on how we describe power, comms and payload to beginners. |
+| [GMAT, General Mission Analysis Tool (NASA Goddard)](https://etd.gsfc.nasa.gov/capabilities/capabilities-listing/general-mission-analysis-tool-gmat/) | Reference for transit times only. Not built into the game. |
+| [Design and Develop Science Missions (NASA SmallSat Institute)](https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf) | The four mission segments. Launch and space segments are the build, operations are the flight and surface, and the user segment is the report. |
+| [A Learning Game About Telescopes (NASA Webb)](https://science.nasa.gov/mission/webb/game-build-it-yourself/) | Ending the report on a real mission that made the same choice as the player. |
+| [NASA Mission Viz](https://nasa.github.io/mission-viz/) | Reference for transit times only. |
+
+Challenge page: [Space Mission Design Game](https://www.spaceappschallenge.org/2026/challenges/space-mission-design-game/).
+
 ## AI use
 
 _To be filled in by the team: where AI tools were used for code, art or data._
