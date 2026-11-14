@@ -30,6 +30,12 @@ describe("parseFromClient (the host never trusts a joiner)", () => {
     expect(parseFromClient({ t: "ping" })).toEqual({ t: "ping" });
   });
 
+  it("accepts a request for one of the four roles, and nothing else", () => {
+    expect(parseFromClient({ t: "role", role: "pilot" })).toEqual({ t: "role", role: "pilot" });
+    expect(parseFromClient({ t: "role", role: "captain" })).toBeNull();
+    expect(parseFromClient({ t: "role" })).toBeNull();
+  });
+
   it("rejects unknown types and non-objects", () => {
     expect(parseFromClient({ t: "snapshot", state: {} })).toBeNull();
     expect(parseFromClient("hello")).toBeNull();

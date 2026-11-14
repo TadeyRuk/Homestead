@@ -17,7 +17,11 @@
   font: 16px/1.5 system-ui, sans-serif;
   display: grid;
   gap: 8px;
+  max-height: calc(100dvh - 64px);
+  overflow-y: auto; /* a short window must still reach Start */
 }
+.lobby-name { display: grid; gap: 8px; }
+.lobby-name[hidden] { display: none; }
 .lobby h1 { margin: 0 0 8px; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
 .lobby label, .lobby-label { color: var(--muted); font-size: 14px; font-weight: 500; margin: 8px 0 0; }
 .lobby-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
@@ -54,10 +58,18 @@
 .lobby-error:empty { min-height: 0; }
 .lobby-pre { display: grid; gap: 8px; }
 .lobby-pre[hidden] { display: none; }
-.lobby-hosting { display: grid; gap: 4px; }
-.lobby-hosting[hidden] { display: none; }
+.lobby-room { display: grid; gap: 4px; }
+.lobby-room[hidden], .lobby-host-only[hidden] { display: none; }
+.lobby-crew { margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.lobby-roles { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 8px; }
+.lobby-roles button { padding: 0 12px; }
+.lobby-roles button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.lobby-mission { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; margin-top: 8px; }
+.lobby-mission label { margin: 0; }
+.lobby-mission select { min-height: 44px; padding: 0 8px; background: #0b0e14; border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; }
+.lobby-seed { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
 /* the one oddity: the code is big and mono, because players read it out loud */
 .lobby-code { margin: 0; font: 600 44px/1.1 ui-monospace, monospace; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
-.lobby-crew, .lobby-status { margin: 0; color: var(--muted); font-size: 14px; }
+.lobby-status { margin: 0; color: var(--muted); font-size: 14px; }
 .lobby-status:empty { display: none; }
-.lobby-hosting button { justify-self: start; margin-top: 12px; }
+.lobby-room [data-act=start] { margin-top: 12px; }

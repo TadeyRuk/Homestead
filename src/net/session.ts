@@ -1,4 +1,5 @@
 import type { Input } from "../core/input";
+import { dealRoles, startRun, takeRole, type MissionChoice } from "../core/lobby";
 import type { GameState, Player, Role } from "../core/state";
 import { step } from "../core/step";
 import { parseFromClient, parseFromHost, type FromHost } from "./protocol";
@@ -22,16 +23,15 @@ type Clock = () => number;
 const realClock: Clock = () => performance.now();
 export const HOST_ID = "host";
 
-const ALL_ROLES: Role[] = ["pilot", "engineer", "comms", "science"];
-
-function newPlayer(id: string, name: string, index: number, roles: Role[] = []): Player {
+function newPlayer(id: string, name: string, index: number): Player {
   // placeholder spawn in a row until seat 2's maps give real spawn points
-  return { id, name, roles, station: null, x: 420 + index * 40, y: 270, carrying: null, oxygen: 1, power: 1, down: false };
+  return { id, name, roles: [], station: null, x: 420 + index * 40, y: 270, carrying: null, oxygen: 1, power: 1, down: false };
 }
 
 export function createHost(state: GameState, hostName: string, onEnd: (reason: string) => void, clock: Clock = realClock) {
-  // the host covers every station until the lobby splits roles (S1-05)
-  state.players.push(newPlayer(HOST_ID, hostName, 0, [...ALL_ROLES]));
+  state.players.push(newPlayer(HOST_ID, hostName, 0));
+  dealRoles(state); // solo holds all four until someone joins
+  let mission: MissionChoice = "random";
   const crew = new Map<string, Conn>();
   const inputs: Record<string, Input> = {};
   const heard: Record<string, number> = {};
@@ -68,9 +68,14 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
         if (state.players.length >= MAX_CREW) return refuse(conn, "Crew is full");
         id = `p${nextId++}`;
         state.players.push(newPlayer(id, msg.name, state.players.length));
+        dealRoles(state);
         crew.set(id, conn);
         heard[id] = clock();
         send(conn, { t: "welcome", playerId: id });
+        broadcast({ t: "snapshot", state, hostNow });
+      } else if (msg.t === "role" && id !== null) {
+        if (state.phase !== "lobby") return;
+        takeRole(state, id, msg.role);
         broadcast({ t: "snapshot", state, hostNow });
       } else if (msg.t === "input" && id !== null) {
         // or-in presses so one sent just before a newer input still reaches the next tick
@@ -112,7 +117,24 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
     }
   }
 
-  return { addConnection, tick, end, inputs: () => inputs };
+  return {
+    addConnection,
+    tick,
+    end,
+    inputs: () => inputs,
+    takeRole: (role: Role) => {
+      if (state.phase !== "lobby") return;
+      takeRole(state, HOST_ID, role);
+      broadcast({ t: "snapshot", state, hostNow });
+    },
+    setMission: (choice: MissionChoice) => {
+      mission = choice;
+    },
+    start: (now: number) => {
+      startRun(state, mission, now);
+      broadcast({ t: "snapshot", state, hostNow: now });
+    },
+  };
 }
 
 export function createClient(
@@ -163,6 +185,9 @@ export function createClient(
     state: () => latest,
     sendInput: (input: Input) => {
       if (!ended) conn.send({ t: "input", input });
+    },
+    pickRole: (role: Role) => {
+      if (!ended) conn.send({ t: "role", role });
     },
     ping: () => {
       if (!ended) conn.send({ t: "ping" });

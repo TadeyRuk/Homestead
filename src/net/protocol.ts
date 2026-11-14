@@ -1,7 +1,12 @@
 import type { Input } from "../core/input";
-import type { GameState } from "../core/state";
+import { ROLES } from "../core/lobby";
+import type { GameState, Role } from "../core/state";
 
-export type FromClient = { t: "hello"; name: string } | { t: "input"; input: Input } | { t: "ping" };
+export type FromClient =
+  | { t: "hello"; name: string }
+  | { t: "input"; input: Input }
+  | { t: "ping" }
+  | { t: "role"; role: Role };
 
 export type FromHost =
   | { t: "welcome"; playerId: string }
@@ -33,6 +38,7 @@ export function parseFromClient(raw: unknown): FromClient | null {
     return name ? { t: "hello", name } : null;
   }
   if (raw.t === "ping") return { t: "ping" };
+  if (raw.t === "role") return ROLES.includes(raw.role as Role) ? { t: "role", role: raw.role as Role } : null;
   if (raw.t === "input") {
     const input = parseInput(raw.input);
     return input ? { t: "input", input } : null;

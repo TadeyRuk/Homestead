@@ -244,4 +244,37 @@ describe("host and client", () => {
     clientSide.send({ t: "input", input: { ...still, dx: 1 } });
     expect(host.inputs()).toEqual({});
   });
+
+  it("deals roles again as each joiner arrives", () => {
+    const { state, join } = setup();
+    join("Ada");
+    expect(state.players.map((p) => p.roles)).toEqual([["pilot", "comms"], ["engineer", "science"]]);
+  });
+
+  it("lets a joiner take a role in the lobby, swapping with its holder", () => {
+    const { state, join } = setup();
+    const { client } = join("Ada");
+    client.pickRole("pilot");
+    expect(state.players.map((p) => p.roles)).toEqual([["engineer", "comms"], ["pilot", "science"]]);
+    expect(client.state()!.players[1].roles).toEqual(["pilot", "science"]);
+  });
+
+  it("ignores role requests once the run has started", () => {
+    const { state, host, join } = setup();
+    const { client } = join("Ada");
+    host.start(0);
+    client.pickRole("pilot");
+    expect(state.players[1].roles).toEqual(["engineer", "science"]);
+  });
+
+  it("starts the run on the host's mission pick, and the host can take a role too", () => {
+    const { state, host, join } = setup();
+    join("Ada");
+    host.takeRole("science");
+    host.setMission("moon");
+    host.start(1_000);
+    expect(state.phase).toBe("brief");
+    expect(state.mission).toBe("moon");
+    expect(state.players[0].roles).toEqual(["comms", "science"]); // swaps away pilot, its first other role
+  });
 });
