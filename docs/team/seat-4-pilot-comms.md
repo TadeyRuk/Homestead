@@ -13,7 +13,7 @@ The flight phase shell and two of its four stations. Each station's difficulty c
 
 ## If still open at hour 3
 
-Seat 3 (TadeyRuk) takes S4-02 and S4-03. Seat 1 takes S4-01, S4-04, S4-05 and S4-06. See the fallback table in `docs/team/README.md`.
+Seat 3 (TadeyRuk) takes S4-02 and S4-03. Seat 1 takes S4-01, S4-04, S4-05, S4-06, S4-09 and S4-10. S4-07 and S4-08 are cut. See the fallback table in `docs/team/README.md`.
 
 ## Issues
 
@@ -40,3 +40,19 @@ A steady lock doubles the send rate and gives the pilot early debris warning.
 ### S4-06 Event director (hour 8)
 Seeded flight events: debris fields, solar flares hitting solar arrays, load spikes. More events on Mars than the Moon, fewer in solo.
 **Done when:** the same seed gives the same events, and Mars has more of them.
+
+### S4-07 Part effects in flight (hour 8)
+Mounted parts change the flight beyond handling: a large solar array is a bigger debris target, solar flares from the event director cut solar array output, an RTG ignores flares. Read every number from `src/data/parts.json`.
+**Done when:** the same debris field hits a large-array ship more often than a small-array one, and a flare drops supply only on solar builds.
+
+### S4-08 Engine-off handshake (hour 8)
+When the Engineer tries to switch off the engine on the power bus (S5-02), the Pilot gets a prompt to agree or refuse. Refusing keeps the load on. Solo players see the prompt on their next Pilot visit.
+**Done when:** the engine only sheds after the Pilot agrees, in both two-player and solo runs.
+
+### S4-09 Arrival and landing (hour 6)
+When transit ends, record fuel and hull on arrival for the score, play a short landing, and hand off to the surface phase. A ship that runs out of fuel or hull before arrival ends the run here instead.
+**Done when:** every run that survives the flight lands on the surface with arrival fuel and hull in `GameState`.
+
+### S4-10 Solo pacing and two-role crews (hour 8)
+Solo players hold all four stations, so events come more slowly and stations not on screen drift more gently. With two or three players, anyone holding two roles switches between just their own stations. Most judges will play solo, so this is what they see.
+**Done when:** a solo player can survive a Mars flight by switching stations, and a two-player run only cycles each player's own stations.

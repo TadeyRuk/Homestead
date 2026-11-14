@@ -30,7 +30,7 @@ If seat 4 or 5 still has no owner at hour 3, the flight phase drops to one minig
 | Engineer power bus (seat 5) | seat 6, acmrsu |
 | Science oxygen converter only (seat 5) | seat 1, Seedlign |
 
-The hull weld and energy core minigames are cut. Seat 4's event director and solo station switching go to seat 1.
+The hull weld and energy core minigames are cut, along with S4-07, S4-08, S5-07, S5-09 and S5-10. Seat 4's event director, solo station switching, arrival and solo pacing go to seat 1. The power bus numbers (S5-06) go with the power bus to acmrsu, and cabin oxygen failure (S5-08) goes with the converter to seat 1.
 
 ## Who draws what
 

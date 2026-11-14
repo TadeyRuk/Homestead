@@ -57,5 +57,5 @@ Lives in `src/build/launch.ts`, reading seat 2's pad slots (S2-10). Anyone at th
 ## Fallback load (if seats 4 or 5 are still open at hour 3)
 
 - Comms dish minigame (S4-04, S4-05)
-- Science oxygen converter only (S5-05)
-- Event director and solo station switching (S4-06, S4-01)
+- Science oxygen converter and cabin oxygen failure (S5-05, S5-08)
+- Event director, solo station switching, arrival and solo pacing (S4-06, S4-01, S4-09, S4-10)

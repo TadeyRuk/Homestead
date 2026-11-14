@@ -13,7 +13,7 @@ Four small minigames, two per role. They plug into seat 4's flight shell and are
 
 ## If still open at hour 3
 
-Seat 6 (acmrsu) takes S5-02. Seat 1 takes S5-05. S5-03 and S5-04 are cut. See the fallback table in `docs/team/README.md`.
+Seat 6 (acmrsu) takes S5-02 and S5-06. Seat 1 takes S5-05 and S5-08. S5-03, S5-04, S5-07, S5-09 and S5-10 are cut. See the fallback table in `docs/team/README.md`.
 
 ## Issues
 
@@ -36,3 +36,23 @@ Keep the core in its safe band with a coolant valve. Too hot damages the instrum
 ### S5-05 Science: oxygen converter (hour 6)
 Flick items from a tray into the intake: ice and CO2 cartridges help, food waste helps a little, a wrench jams it. Keeps cabin oxygen up. Logs `oxygen_low`, `converter_jammed`.
 **Done when:** cabin oxygen falls unless the player feeds the right items.
+
+### S5-06 Part-driven numbers (hour 6)
+Bus supply from the power part and draw from every mounted part, core heat per payload and from an RTG, all read from `src/data/parts.json`. No part numbers in station code.
+**Done when:** swapping a part on the campus changes the bus margin and the core heat rate in flight.
+
+### S5-07 Core and power coupling (hour 8, cut item 2)
+The two Engineer and Science systems affect each other: a core run too cold lowers bus supply, an RTG adds heat to the core, shedding the payload on the bus slows core heating.
+**Done when:** letting the core go cold trips the breaker sooner, and an RTG build runs the core hotter than a solar build.
+
+### S5-08 Cabin oxygen failure (hour 8)
+A low cabin oxygen warning reaches the crew strip. At zero the crew is lost and the run ends, logged as `oxygen_low` with the cause.
+**Done when:** ignoring the converter ends the run, and the report can name it.
+
+### S5-09 Station sandbox (hour 6)
+A debug URL such as `?station=engineer&parts=ion,rtg,lowgain,radar` that loads one flight station on its own with chosen parts. For building the minigames before the flight shell lands, and for seat 6's balance runs. Works for all four stations.
+**Done when:** each station opens on its own from the URL with the parts given.
+
+### S5-10 Station trouble states (hour 8)
+Each Engineer and Science station writes its current trouble to `GameState` for seat 3's crew strip (S3-07), and every event it logs names the part that caused it, so the report (S3-08) can trace it.
+**Done when:** the crew strip shows a tripping breaker or hot core, and each logged event carries a `part`.

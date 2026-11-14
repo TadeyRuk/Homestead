@@ -56,4 +56,4 @@ Moon solar flare: warning, then radiation on open ground, safe at the lander or 
 
 ## Fallback load (if seat 5 is still open at hour 3)
 
-- Engineer power bus (S5-02). A small switch panel: loads against supply, switch them off before the breaker trips. Ask Seedlign or TadeyRuk to pair on it if it's your first game code.
+- Engineer power bus and its part numbers (S5-02, S5-06). A small switch panel: loads against supply, switch them off before the breaker trips. Ask Seedlign or TadeyRuk to pair on it if it's your first game code.
