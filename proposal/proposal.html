@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Homestead proposal</title>
+<style>
+  @page { size: A4; margin: 15mm 15mm 15mm 15mm; }
+  :root {
+    --ink: #17222c; --muted: #56636e; --line: #d3dbe0; --paper: #ffffff;
+    --navy: #12283b; --accent: #c4532c; --ground: #f2f5f7;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+    font: 10.3pt/1.55 "Segoe UI", system-ui, sans-serif; }
+  h1, h2, h3 { font-family: "Bahnschrift", "Segoe UI", sans-serif; margin: 0; text-wrap: balance; }
+  h2 { font-size: 18pt; font-weight: 600; letter-spacing: -0.01em; color: var(--navy); margin: 0 0 3mm; break-after: avoid; }
+  h3 { font-size: 11.5pt; font-weight: 600; color: var(--navy); margin: 5mm 0 1.5mm; break-after: avoid; }
+  p { margin: 0 0 2.4mm; text-wrap: pretty; }
+  ul, ol { margin: 0 0 2.6mm; padding-left: 5mm; }
+  li { margin-bottom: 1mm; }
+  a { color: var(--navy); }
+  code { font: 8.8pt Consolas, monospace; }
+  section { break-before: page; }
+  section.cont { break-before: auto; margin-top: 8mm; }
+  .num { font: 600 9pt Consolas, monospace; color: var(--accent); margin-bottom: 1mm; }
+  .muted { color: var(--muted); }
+  .small { font-size: 9pt; }
+
+  .cover { background: var(--navy); color: #fff; height: 267mm; padding: 13mm 13mm 11mm; display: flex; flex-direction: column; }
+  .cover .eyebrow { font: 600 8.5pt Consolas, monospace; color: #e7b7a3; }
+  .cover h1 { font-size: 76pt; line-height: .92; letter-spacing: -0.02em; font-weight: 700; margin-top: 14mm; }
+  .cover .tagline { font-size: 14pt; line-height: 1.3; margin-top: 4mm; max-width: 150mm; color: #f1d9cf; }
+  .cover .pitch { margin-top: 7mm; max-width: 165mm; font-size: 10.8pt; color: #d5dee6; }
+  .cover .phases { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4mm; margin-top: 8mm; }
+  .cover .phase img { width: 100%; height: 46mm; object-fit: cover; display: block; border: 1px solid #3c5670; }
+  .cover .phase b { display: block; font: 600 11pt Bahnschrift, sans-serif; margin: 2.5mm 0 1mm; }
+  .cover .phase span { font-size: 9pt; color: #c9d4de; line-height: 1.45; display: block; }
+  .cover .loopline { margin-top: 7mm; font-size: 9.6pt; color: #d5dee6; border-top: 1px solid #3c5670; padding-top: 4mm; }
+  .cover .foot { margin-top: auto; display: flex; justify-content: space-between; font-size: 8.6pt; color: #aebdca; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1mm 0 3mm; font-size: 9.1pt; font-variant-numeric: tabular-nums; break-inside: avoid; }
+  table.flow { break-inside: auto; }
+  table.flow tr { break-inside: avoid; }
+  table.tight { font-size: 8.7pt; }
+  table.tight td { padding: 1.1mm 2mm; }
+  th { text-align: left; background: var(--navy); color: #fff; padding: 1.6mm 2mm; font-weight: 600; }
+  td { padding: 1.5mm 2mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr.grp td { background: var(--ground); font-weight: 600; color: var(--navy); }
+  td.n { font-family: Consolas, monospace; white-space: nowrap; }
+
+  .note { background: var(--ground); padding: 3mm 4mm; margin: 3mm 0; break-inside: avoid; }
+  .note p:last-child { margin-bottom: 0; }
+  .shot { margin: 2.5mm 0 3.5mm; break-inside: avoid; }
+  .shot img { width: 100%; display: block; border: 1px solid var(--navy); }
+  .shot figcaption { font-size: 8.6pt; color: var(--muted); margin-top: 1.2mm; }
+  .role { break-inside: avoid; margin: 3mm 0 4mm; display: grid; grid-template-columns: 1.55fr 1fr; grid-template-rows: auto 1fr; column-gap: 5mm; }
+  .role figure { grid-column: 1; grid-row: 1 / 3; margin: 0; }
+  .role h3 { grid-column: 2; grid-row: 1; margin: 0 0 1.5mm; }
+  .role p { grid-column: 2; grid-row: 2; font-size: 9.6pt; }
+  .shot.narrow img { width: 82%; }
+  .shot.narrower img { width: 66%; }
+  .loop { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2mm; margin: 2mm 0 4mm; break-inside: avoid; }
+  .loop div { border-top: 3px solid var(--navy); padding-top: 1.6mm; font-size: 8.9pt; }
+  .loop b { display: block; font: 600 10.5pt Bahnschrift, sans-serif; color: var(--navy); }
+  .loop i { font: normal 8pt Consolas, monospace; color: var(--accent); }
+  .chain { border-left: 2px solid var(--line); margin: 2mm 0 2mm 1mm; padding-left: 3.5mm; }
+  .mock { border: 1px solid var(--navy); margin: 2mm 0 3mm; break-inside: avoid; font-size: 9pt; }
+  .mock .bar { background: var(--navy); color: #fff; padding: 1.2mm 2.5mm; font: 8pt Consolas, monospace; }
+  .mock .body { padding: 2.5mm 3mm; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="eyebrow">NASA SPACE APPS CHALLENGE 2026 / SPACE MISSION DESIGN GAME / TEAM PROPOSAL</div>
+  <h1>Homestead</h1>
+  <div class="tagline">Finish the Mission Given by Mission Control So We Can Go Home to Our Families</div>
+  <div class="pitch">Mission Control hands four astronauts a job on the Moon or Mars, and no rocket. They have three minutes to scavenge parts across a launch campus and bolt a spacecraft together. Then they fly whatever they built, each person working their own station, and land to do the job. When the clock runs out a ship from Earth picks them up, finished or not, and the mission report explains which design choice made the run go the way it did.</div>
+  <div class="phases">
+    <div class="phase"><img src="refs/p1-split.png" alt=""><b>1. Explore and build</b><span>Search a big campus for rocket parts, or gamble credits at the kiosk. Every part changes mass, power, data, comms and cost.</span></div>
+    <div class="phase"><img src="refs/p2-pilot.png" alt=""><b>2. Travel and maintain</b><span>Pilot, Rocket Engineer, Comms Engineer and Science Officer each play their own minigame. The parts you mounted decide how hard each one is.</span></div>
+    <div class="phase"><img src="refs/p3-split.png" alt=""><b>3. Sortie and homestead</b><span>Split up on the surface and work through Mission Control's list before extraction. Dust storms and solar flares punish anyone who strays too far.</span></div>
+  </div>
+  <div class="loopline">One run takes about ten minutes. Parts spawn in different places every run, so no two rockets come out the same. It plays solo or with up to four people online, and every run ends with a report that teaches one real mission design trade-off.</div>
+  <div class="foot"><span>Proposal for the team, 14 Nov 2026</span><span>Submissions close 15 Nov 2026, 11:59 PM local time</span></div>
+</div>
+
+<section>
+  <div class="num">01</div>
+  <h2>How Homestead answers the challenge</h2>
+  <p>The challenge asks for a game where players design a whole mission, run into real constraints, and learn why the mission worked or failed. Our three phases map onto that. The build phase is the design, the flight and the surface are where the design gets tested, and the report closes the loop by explaining the result.</p>
+  <p>The rule we hold ourselves to: every part the crew mounts has to change something later in the run. If a choice on the campus does not show up in the flight or on the surface, it is decoration and we cut it.</p>
+
+  <h3>What the judges score</h3>
+  <p class="small muted">Space Apps scores every project from 1 to 5 on these five criteria, taken from the 2026 Judging and Awards Guide.</p>
+  <table>
+    <tr><th style="width:17%">Criterion</th><th style="width:36%">What it rewards</th><th>Where Homestead earns it</th></tr>
+    <tr><td><b>Impact</b></td><td>A real problem, and how many people it helps or inspires</td><td>Students rarely get to try a whole mission end to end. Homestead lets a group with no space background do it in ten minutes.</td></tr>
+    <tr><td><b>Creativity</b></td><td>An original idea or a meaningful improvement on existing ones</td><td>Most mission design tools are spreadsheets. Here you scavenge the parts under a timer and then live with them as a crew.</td></tr>
+    <tr><td><b>Validity</b></td><td>Grounded in science, feasible, usable</td><td>Every part is based on real hardware, and the trade-offs between them follow real physics: heavier means more fuel, a bigger antenna costs power.</td></tr>
+    <tr><td><b>Relevance</b></td><td>Answers the challenge directly, with NASA data at the core</td><td>Mission cards, part stats and planet hazards come from NASA sources listed in section 09. The report names the real mission that made the same trade.</td></tr>
+    <tr><td><b>Presentation</b></td><td>Clear, well told story in the demo and project page</td><td>The 30-second video shows one choice, its consequence and the report naming it. The title gives judges a reason to click.</td></tr>
+  </table>
+
+  <h3>The brief, item by item</h3>
+  <table>
+    <tr><th style="width:42%">The brief asks for</th><th>Where it is in the game</th></tr>
+    <tr><td>Define a mission objective first</td><td>Each run opens on a mission card from Mission Control: destination, objectives, data required, credits.</td></tr>
+    <tr><td>Trade off mass, power, budget, data, communications and time</td><td>Six meters on the launch pad. Each one comes back later in the flight or on the surface.</td></tr>
+    <tr><td>Every decision has a consequence</td><td>A heavy rocket burns more fuel, a weak power source trips breakers, a slow antenna leaves data stuck on the surface.</td></tr>
+    <tr><td>No single perfect solution, random events</td><td>Parts spawn somewhere new each run, so the crew designs around what it found.</td></tr>
+    <tr><td>Solo or teams of up to four with different roles</td><td>Four roles with their own screens. A solo player switches between them.</td></tr>
+    <tr><td>Explain why a mission succeeded or failed</td><td>The mission report traces each outcome back to the part that caused it.</td></tr>
+  </table>
+</section>
+
+<section>
+  <div class="num">02</div>
+  <h2>Space Apps rules we have to follow</h2>
+  <p>These come from the 2026 Project Submission Guide and the Judging and Awards Guide, both published 13 November. Breaking the first one makes the project ineligible for global judging, so it is first on the list.</p>
+  <table>
+    <tr><th style="width:38%">Rule</th><th>What we do</th></tr>
+    <tr><td>The demo is a video of 30 seconds or less, or at most 7 slides. Going over makes us ineligible for global judging.</td><td>A video cut to 28 seconds, following the guide's outline: team and challenge, title and tagline, how it works, what it could become.</td></tr>
+    <tr><td>Everything is in English. A video in another language needs English subtitles.</td><td>English voice-over with burned-in English subtitles.</td></tr>
+    <tr><td>Videos and files are hosted elsewhere, on a public link that needs no login.</td><td>Video on YouTube (unlisted), build and code on a public GitHub repo. Both links tested in a private browser window before we submit.</td></tr>
+    <tr><td>At least one NASA data source or resource, needed for a global award. The Relevance score rewards NASA data that is central to the project.</td><td>NASA facts drive the mission cards, part stats and hazards. Full list in section 09, copied into the project page's NASA Data field.</td></tr>
+    <tr><td>AI tools are allowed, but not for coming up with the idea. AI-made images and video need a visible watermark. AI-written code and data must be noted in text and metadata.</td><td>The concept is our team's. AI helped review scope, draw mocks and write code. Every AI-made image and the video carry a watermark, and the README has a section saying where AI was used.</td></tr>
+    <tr><td>AI-generated content may not contain NASA logos, flags or mission identifiers.</td><td>No NASA logos, flags or mission patches in any art. Real mission names appear only as plain text in the report.</td></tr>
+    <tr><td>List every outside resource, even free ones. No copyrighted material without permission.</td><td>The game screenshots we used as style references stay out of the build, video and repo. Fonts and sounds come from free licences and are listed.</td></tr>
+    <tr><td>At most six members, all registered at the same Local Event.</td><td>Everyone checks their registration tonight.</td></tr>
+    <tr><td>No images, video or voices of anyone under 18.</td><td>Checked before the video is recorded.</td></tr>
+    <tr><td>Press "Submit for Judging" before 11:59 PM local time on 15 November, after ticking the terms and original-work boxes.</td><td>Seat 6 submits at hour 12.5 of the build, with the rest as buffer. We can resubmit until the deadline.</td></tr>
+  </table>
+</section>
+
+<section>
+  <div class="num">03</div>
+  <h2>One run, start to finish</h2>
+  <div class="loop">
+    <div><i>20 s</i><b>Brief</b>Mission card from Mission Control.</div>
+    <div><i>up to 3 min</i><b>Explore and build</b>Find parts, mount them, launch.</div>
+    <div><i>about 3 min</i><b>Travel</b>Four stations keep the ship alive.</div>
+    <div><i>3 min</i><b>Homestead</b>Do the job, then extraction.</div>
+    <div><i>1 min</i><b>Report</b>Why it went the way it did.</div>
+  </div>
+
+  <h3>Two missions, both using NASA numbers</h3>
+  <table>
+    <tr><th style="width:15%">Mission</th><th style="width:30%">On the mission card</th><th style="width:28%">In the game</th><th>Builds that do well</th></tr>
+    <tr><td><b>Lunar survey</b></td><td>About 3 days away. Radio delay about 1.3 seconds. Gravity one sixth of Earth's.</td><td>Short flight with few events. Fewer credits, less data needed.</td><td>Light and simple, launched early.</td></tr>
+    <tr><td><b>Mars survey</b></td><td>About 7 months away. Radio delay 3 to 22 minutes. Sunlight about 43% of Earth's.</td><td>Long flight with many events. Solar arrays lose power. More data needed.</td><td>Spare power and a strong antenna.</td></tr>
+  </table>
+
+  <h3>Six meters, each with a job later in the run</h3>
+  <table>
+    <tr><th style="width:12%">Meter</th><th style="width:28%">On the campus</th><th style="width:30%">In flight</th><th>On the surface</th></tr>
+    <tr><td><b>Mass</b></td><td>Total of mounted parts, against what the engine can lift</td><td>Over the limit, the launch fails. Near it, the ship turns slowly and burns more fuel.</td><td></td></tr>
+    <tr><td><b>Power</b></td><td>Supply against what the other parts draw</td><td>Little spare power means the breaker keeps tripping</td><td>How fast suits recharge at the lander</td></tr>
+    <tr><td><b>Budget</b></td><td>Mission credits, spent only at the kiosk</td><td></td><td>Unspent credits add to the score</td></tr>
+    <tr><td><b>Data</b></td><td>What the payload collects per reading</td><td>An overheated core damages the instrument</td><td>Readings taken at sites and carried back</td></tr>
+    <tr><td><b>Comms</b></td><td>How fast the antenna sends data</td><td>A held link warns the pilot of debris early</td><td>How fast data uploads at the lander</td></tr>
+    <tr><td><b>Time</b></td><td>The build timer. Launching early scores.</td><td>Transit length, from engine and destination</td><td>The surface timer before extraction</td></tr>
+  </table>
+  <p class="small muted">Crew oxygen sits alongside these: the Science Officer keeps it up in flight, and each suit has its own supply on the surface.</p>
+
+  <h3>The roguelike part</h3>
+  <p>One seed decides the mission, where each part spawns, what the kiosk hands out, and which events hit the flight and the surface. The host sends the seed to everyone so all four screens agree. Losing the hull, running out of fuel or losing the whole crew ends the run on the spot, and nothing carries over to the next one. Sharing a seed lets two teams race the same problem.</p>
+</section>
+
+<section>
+  <div class="num">04 / phase 1</div>
+  <h2>Explore and build</h2>
+  <p>The campus is several screens wide and each player's camera follows only them, so the crew has to split up to cover it. Astronauts are small against the map on purpose. Everyone finds different parts, and what you find decides what you can build.</p>
+  <figure class="shot"><img src="refs/p1-split.png" alt=""><figcaption>Four players' screens side by side. Online, each person sees only their own. The Pilot is in the hangar yard with two engines nearby, the Rocket Engineer is at the tracking station with power parts, the Comms Engineer is about to swap antennas, and the Science Officer is at the kiosk. Arrows point back to the launch pad.</figcaption></figure>
+  <figure class="shot narrower"><img src="refs/p1-map.png" alt=""><figcaption>The whole campus with each player's camera drawn on it. Each camera covers about a tenth of the map. Parts are colour coded by slot.</figcaption></figure>
+
+  <h3>Rules</h3>
+  <ul>
+    <li>Three minutes on the clock, which is too little time to see every part and compare.</li>
+    <li>You carry one part at a time, and anyone can carry anything. Picking up a second part drops the first.</li>
+    <li>The rocket has four slots: propulsion, power, comms and payload. Mounting a part in a full slot swaps it out, and the old part drops beside the pad.</li>
+    <li>The kiosk sells one random part for 20 credits. It might be the part you need, a duplicate or something worse. It is the fast option, and you pay for it out of the mission budget.</li>
+    <li>Anyone at the pad can start a five-second launch countdown, and anyone can cancel it. Time left on the clock adds to the score.</li>
+    <li>If time runs out with a slot empty, it gets a weak salvage part and the rocket launches anyway. The report names every salvage part.</li>
+    <li>Launch is never blocked. The pad warns you, but a rocket too heavy for its engine still lifts off and fails, and the report says so.</li>
+  </ul>
+
+  <h3>Parts, starting values</h3>
+  <p class="small muted">The numbers are a first pass for balancing and live in one data file. The last column is the real hardware each part is based on, which the report can name.</p>
+  <table class="flow tight">
+    <tr><th style="width:17%">Part</th><th style="width:7%">Mass</th><th style="width:9%">Power</th><th style="width:25%">In flight</th><th style="width:20%">On the surface</th><th>Based on</th></tr>
+    <tr class="grp"><td colspan="6">Propulsion, mounted by the Pilot</td></tr>
+    <tr><td>Solid motor</td><td class="n">180</td><td class="n">-10 W</td><td>Lifts 600 kg. Steers in fixed pulses.</td><td class="muted">Fuel left scores</td><td>Solid rocket boosters (Space Shuttle, SLS)</td></tr>
+    <tr><td>Chemical engine</td><td class="n">300</td><td class="n">-30 W</td><td>Lifts 900 kg. Responsive, thirsty.</td><td class="muted">Fuel left scores</td><td>RL10 upper-stage engine</td></tr>
+    <tr><td>Ion drive</td><td class="n">120</td><td class="n">-250 W</td><td>Lifts 500 kg. Slow, sips fuel.</td><td class="muted">Fuel left scores</td><td>Ion propulsion on Dawn</td></tr>
+    <tr class="grp"><td colspan="6">Power, mounted by the Rocket Engineer</td></tr>
+    <tr><td>Small solar array</td><td class="n">60</td><td class="n">+300 W</td><td>Drops in solar flares</td><td>Slow suit recharge, weak at Mars</td><td>InSight lander arrays</td></tr>
+    <tr><td>Large solar array</td><td class="n">150</td><td class="n">+600 W</td><td>Plenty of power, bigger debris target</td><td>Fast recharge, weak at Mars</td><td>Juno's arrays</td></tr>
+    <tr><td>Radioisotope generator</td><td class="n">110</td><td class="n">+450 W</td><td>Steady, ignores flares, runs hot</td><td>Steady anywhere</td><td>MMRTG on Curiosity and Perseverance</td></tr>
+    <tr class="grp"><td colspan="6">Comms, mounted by the Comms Engineer</td></tr>
+    <tr><td>Low-gain antenna</td><td class="n">15</td><td class="n">-20 W</td><td>Hardly drifts, short warning</td><td>Slow upload</td><td>Rover low-gain antennas</td></tr>
+    <tr><td>High-gain dish</td><td class="n">70</td><td class="n">-80 W</td><td>Drifts when the pilot turns</td><td>Fast upload</td><td>Mars Reconnaissance Orbiter's 3 m dish</td></tr>
+    <tr><td>Laser terminal</td><td class="n">40</td><td class="n">-120 W</td><td>Hardest to keep on target</td><td>Fastest upload</td><td>Deep Space Optical Comms on Psyche</td></tr>
+    <tr class="grp"><td colspan="6">Payload, mounted by the Science Officer</td></tr>
+    <tr><td>Camera</td><td class="n">30</td><td class="n">-40 W</td><td>Barely heats the core</td><td>Quick scans, little data</td><td>HiRISE on Mars Reconnaissance Orbiter</td></tr>
+    <tr><td>Spectrometer</td><td class="n">80</td><td class="n">-110 W</td><td>Needs cooling</td><td>Medium scans, good data</td><td>SuperCam on Perseverance</td></tr>
+    <tr><td>Radar sounder</td><td class="n">160</td><td class="n">-200 W</td><td>Overheats fast</td><td>Slow scans, most data</td><td>SHARAD on Mars Reconnaissance Orbiter</td></tr>
+  </table>
+</section>
+
+<section>
+  <div class="num">05 / phase 2</div>
+  <h2>Travel and maintain</h2>
+  <p>Once the rocket launches, each player gets their own screen and their own problem. Nobody can fix someone else's station, and every station leans on another one, so the crew has to talk. The parts mounted on the campus set how hard each minigame is.</p>
+
+  <div class="role">
+    <h3>Pilot</h3>
+    <figure class="shot"><img src="refs/p2-pilot.png" alt=""><figcaption>The Pilot sees the rocket from outside: speed against the transfer target, fuel, and hull integrity by section. The crew list at the top right shows what everyone else is dealing with.</figcaption></figure>
+    <p>Steers through debris and keeps speed near the transfer target without wasting fuel. The engine and total mass decide how the ship handles. The Pilot cannot repair anything, so a hit means calling the Rocket Engineer.</p>
+  </div>
+
+  <div class="role">
+    <h3>Rocket Engineer</h3>
+    <figure class="shot"><img src="refs/p2-engineer.png" alt=""><figcaption>Left: the power bus at 96% load, four seconds from tripping. Right: welding a hull crack while cabin pressure falls.</figcaption></figure>
+    <p>Two minigames. The power bus shows the total load against supply, and the Engineer switches loads off before the breaker trips. Switching off the engine needs the Pilot to agree, and switching off the antenna annoys Comms. Hull breaches open a welding job where you trace the crack, and every second off the line wastes sealant. The power part chosen on the campus sets how close to the limit the bus runs.</p>
+  </div>
+
+  <div class="role">
+    <h3>Comms Engineer</h3>
+    <figure class="shot"><img src="refs/p2-comms.png" alt=""><figcaption>Balancing the dish. The Pilot's turn has pushed the beam off Earth, and the Comms Engineer leans it back.</figcaption></figure>
+    <p>A balancing game. The dish sits on a pivot and drifts every time the Pilot turns, and the Comms Engineer leans it back so Earth stays inside the beam. Holding a steady lock doubles the send rate. While the link holds, the Pilot gets early warning of debris. A low-gain antenna barely drifts, and a laser terminal is the hardest to hold.</p>
+  </div>
+
+  <div class="role">
+    <h3>Science Officer</h3>
+    <figure class="shot"><img src="refs/p2-science.png" alt=""><figcaption>Left: the energy core running hot, cooled with the coolant valve. Right: throwing an ice block into the oxygen converter while cabin oxygen falls.</figcaption></figure>
+    <p>Two jobs. The energy core has to stay in its safe band: too hot and the instrument loses accuracy before landing, too cold and the ship loses power. The oxygen converter keeps the cabin breathable. You flick items from a tray into the intake: ice and CO2 cartridges help, food waste helps a little, and a stray wrench jams it. A radar sounder heats the core much faster than a camera.</p>
+  </div>
+
+  <h3>Fewer than four players</h3>
+  <table>
+    <tr><th style="width:18%">Players</th><th>How it works</th></tr>
+    <tr><td>Solo</td><td>Host a game with nobody else, cover all four roles and switch stations with Tab. Events come more slowly. This is how most judges will play.</td></tr>
+    <tr><td>2 or 3</td><td>Roles are split in the lobby, and anyone holding two roles switches between their two stations.</td></tr>
+    <tr><td>4</td><td>One role each, which is how the game is meant to be played.</td></tr>
+  </table>
+</section>
+
+<section>
+  <div class="num">06 / phase 3</div>
+  <h2>Sortie and homestead</h2>
+  <p>The lander touches down and the crew splits up across a surface map as large as the campus. Each player again sees only their own area. Mission Control's list has to be done before the extraction ship arrives, and it leaves on time whether the list is finished or not.</p>
+  <figure class="shot"><img src="refs/p3-split.png" alt=""><figcaption>Four players on Mars. The Pilot carries a core sample home, the Rocket Engineer deploys the weather station on the ridge, the Comms Engineer uplinks data at the lander, and the Science Officer scans a rich site at the edge of a dust storm with 31% oxygen left.</figcaption></figure>
+  <figure class="shot narrow"><img src="refs/p3-panel.png" alt=""><figcaption>The mission list and the suit readout share one panel. Q flips between them, so the screen never shows both at once.</figcaption></figure>
+
+  <h3>Objectives from Mission Control</h3>
+  <table>
+    <tr><th style="width:15%">Mission</th><th>Objectives</th></tr>
+    <tr><td><b>Mars</b></td><td>Scan 3 rich sites. Drill a core at the crater rim and carry it to the lander. Deploy the weather station on the ridge. Uplink 40 data units. Bonus: photograph a dust devil.</td></tr>
+    <tr><td><b>Moon</b></td><td>Scan 2 rich sites. Collect a regolith sample from a crater floor. Deploy a seismometer. Uplink 25 data units. Bonus: photograph Earth from the surface.</td></tr>
+  </table>
+
+  <h3>Rules</h3>
+  <ul>
+    <li>Rich sites are far from the lander and poor ones are close. Scan time and data per scan come from the payload, and an instrument damaged in flight gives less.</li>
+    <li>Data and samples only count once they reach the lander. The antenna sets how fast data uploads.</li>
+    <li>Suit oxygen and power drain slowly everywhere and fast inside a hazard. They recharge at the lander, at a speed set by the power part.</li>
+    <li>A player whose suit runs out is down until extraction and loses whatever they were carrying. If the whole crew goes down, the run ends.</li>
+  </ul>
+
+  <h3>Hazards</h3>
+  <table>
+    <tr><th style="width:15%">Planet</th><th style="width:43%">Hazard</th><th>The real thing</th></tr>
+    <tr><td><b>Moon</b></td><td>Solar flare. After a warning, radiation sweeps the open ground. Shelter at the lander or behind rock.</td><td>The Moon has no thick atmosphere or global magnetic field, so solar particles reach the surface.</td></tr>
+    <tr><td><b>Mars</b></td><td>Dust storm. A wall of dust crosses the map, cutting sight and draining suits fast.</td><td>A planet-wide dust storm in 2018 cut off power to the Opportunity rover, and the mission ended.</td></tr>
+  </table>
+</section>
+
+<section class="cont">
+  <div class="num">07</div>
+  <h2>The mission report</h2>
+  <p>Every phase writes to one event log: which part went where, every breaker trip, hit, lost link, overheated core and downed player, each tagged with the part that caused it. The report finds the biggest loss and walks it back to a choice the crew made, in plain words.</p>
+  <div class="mock">
+    <div class="bar">MISSION REPORT / MARS SURVEY / PARTIAL SUCCESS / SCORE 540</div>
+    <div class="body">
+      <b>You uplinked 22 of the 40 data units Mission Control asked for.</b>
+      <div class="chain">
+        12 units were still in someone's hands when the extraction ship arrived.<br>
+        Uploads were slow because the comms slot held a salvage antenna.<br>
+        The slot was still empty when the build timer ran out, with 40 credits unspent.
+      </div>
+      <b>What real missions do:</b> Mars Reconnaissance Orbiter carries a 3 m dish so its cameras' data can get home. A strong instrument needs a link that can keep up.
+    </div>
+  </div>
+  <p>The score counts data uplinked against the target first, then crew standing at extraction, unspent credits, build time left, and fuel and hull on arrival.</p>
+</section>
+
+<section>
+  <div class="num">08</div>
+  <h2>Online play and art</h2>
+  <p>One player presses Host and their machine runs the game. Nothing is deployed and nothing costs money. The host's address becomes a six-character join code that the others type in, like a lobby code. The host keeps the one true copy of the game state: timers, parts, events and scores. Everyone else sends inputs. That keeps four machines from disagreeing.</p>
+  <p>Some routers, especially on campus and mobile networks, refuse incoming connections. When that happens the crew runs a free virtual LAN app such as Radmin VPN or Tailscale, and the same code works over it. Install one before the demo recording.</p>
+
+  <h3>Art direction</h3>
+  <p>Top-down pixel art, smoothed with soft glow and lighting rather than hard retro pixels. The game is finished with placeholder shapes first, and generated art replaces them file for file after the feature freeze. Generated art gets a watermark, as the rules require.</p>
+  <figure class="shot"><img src="refs/d-style.png" alt=""><figcaption>Role colours, the twelve parts and one palette per setting. These are mocks for this proposal and not final art.</figcaption></figure>
+  <p class="small muted">Asset generation skill: <code>npx -y skills add eachlabs/skills --skill game-asset-generation --agent claude-code</code></p>
+</section>
+
+<section>
+  <div class="num">09</div>
+  <h2>NASA resources we use</h2>
+  <p>The rules need at least one. The Relevance score rewards NASA data that the game actually runs on, so this list goes into the project page's NASA Data field as it stands.</p>
+  <table>
+    <tr><th style="width:36%">Resource</th><th>What we take from it</th></tr>
+    <tr><td>Beginner's Guide to Aeronautics, rocket parts (NASA Glenn Research Center)<br><span class="small muted">www1.grc.nasa.gov/beginners-guide-to-aeronautics/rocket-parts/</span></td><td>The four part slots and the plain-language description of each part.</td></tr>
+    <tr><td>Moon facts (NASA Science)<br><span class="small muted">science.nasa.gov/moon/facts/</span></td><td>Distance, gravity and radio delay on the Lunar mission card, and the radiation hazard.</td></tr>
+    <tr><td>Mars facts (NASA Science)<br><span class="small muted">science.nasa.gov/mars/facts/</span></td><td>Distance, sunlight, radio delay and dust storms on the Mars mission card.</td></tr>
+    <tr><td>NASA mission pages for Dawn, Juno, InSight, Curiosity, Perseverance, Mars Reconnaissance Orbiter and Psyche</td><td>The real hardware behind each part, and the "what real missions do" line in the report. Seat 6 adds the exact links.</td></tr>
+    <tr><td>Design and Develop Science Missions (challenge resource)</td><td>The four mission segments. Launch and space segments are the build, operations are the flight and surface, and the user segment is the report.</td></tr>
+    <tr><td>Mission Design Lab and Concept Maturity Levels (challenge resources)</td><td>The idea of a trade study, which is how the report explains what was traded for what.</td></tr>
+    <tr><td>CubeSat 101 (challenge resource)</td><td>A check on how we describe power, comms and payload to beginners.</td></tr>
+    <tr><td>A Learning Game About Telescopes (challenge resource)</td><td>Ending on a real mission that made the same choice as the player.</td></tr>
+    <tr><td>GMAT and NASA Mission Viz (challenge resources)</td><td>Reference for transit times only. Neither is built into the game.</td></tr>
+  </table>
+  <p class="small muted">Challenge page: www.spaceappschallenge.org/2026/challenges/space-mission-design-game/. Facts on the mission cards get checked against these pages before we submit.</p>
+</section>
+
+<section>
+  <div class="num">10</div>
+  <h2>How we build it in a day</h2>
+  <p>Six people, each with Claude Code, building a browser game in TypeScript on HTML5 Canvas, bundled with Vite and published on itch.io. With sleep that leaves roughly 12 to 14 working hours. This version is bigger than the first draft, so the cut list at the end matters: when a checkpoint slips, we drop the next item on it instead of running late.</p>
+
+  <h3>House rules for six people in one web project</h3>
+  <ol>
+    <li>Everyone installs the same Node version (22 LTS) and runs <code>npm install</code> from the lockfile before the first commit.</li>
+    <li>The core owner commits the scaffold first: one folder and one scene per seat, the lobby, and a <code>GameState</code> module with the agreed stat and event names. Nobody branches until it lands.</li>
+    <li>Only the core owner edits <code>package.json</code>, <code>vite.config.ts</code>, the input map and <code>GameState</code>.</li>
+    <li>All game state lives in <code>GameState</code> on the host. Scenes read build stats from it and write events to it, and never reach into another seat's scene.</li>
+    <li>Test with two browser tabs from the start, one hosting and one joined.</li>
+    <li>Merge every one to two hours, and a person plays the game after each merge. Claude cannot see whether it plays right.</li>
+    <li>Placeholder shapes until the feature freeze.</li>
+  </ol>
+
+  <h3>Seats</h3>
+  <table>
+    <tr><th style="width:5%">#</th><th style="width:24%">Seat</th><th>Owns</th><th style="width:14%">Name</th></tr>
+    <tr><td class="n">1</td><td><b>Core and network</b></td><td>Scaffold, host and join by code, lobby and role pick, GameState syncing, seeds, switching between phases, merges.</td><td></td></tr>
+    <tr><td class="n">2</td><td><b>Ground and maps</b></td><td>The top-down player, carrying, per-player camera and timers shared by phases 1 and 3. The campus map and part spawns, then the surface map, hazards and extraction.</td><td></td></tr>
+    <tr><td class="n">3</td><td><b>Build, missions, report</b></td><td>Parts and mission data files, pad mounting and swapping, six meters, kiosk, launch countdown, salvage fill. Surface objectives and the mission and suit panel. Event log, report, score.</td><td></td></tr>
+    <tr><td class="n">4</td><td><b>Pilot and Comms</b></td><td>Pilot view, debris, fuel and hull, event director, the antenna balancing game, solo station switching.</td><td></td></tr>
+    <tr><td class="n">5</td><td><b>Engineer and Science</b></td><td>Power bus, hull weld, energy core and oxygen converter minigames.</td><td></td></tr>
+    <tr><td class="n">6</td><td><b>Ship it</b></td><td>Rules checklist from section 02, itch.io build tested in a clean browser, README with the AI-use section, art and sound pass, balance runs, newcomer playtest, the video, submission.</td><td></td></tr>
+  </table>
+
+  <h3>Checkpoints, in hours from kickoff</h3>
+  <table>
+    <tr><th style="width:11%">Hour</th><th style="width:21%">Checkpoint</th><th>What has to be true</th></tr>
+    <tr><td class="n">1.5</td><td>Scaffold</td><td>Repo, Vite scaffold, folders, GameState contract. Two tabs join by code over WebRTC and see each other walk.</td></tr>
+    <tr><td class="n">6</td><td>Whole loop</td><td>One player gets through brief, campus, flight, surface and report with placeholder shapes. Each minigame exists in its simplest form.</td></tr>
+    <tr><td class="n">8</td><td>Online run, bare UI</td><td>Two players on two machines finish a run. All meters and panels readable.</td></tr>
+    <tr><td class="n">9.5</td><td>Feature freeze, art in</td><td>No new mechanics after this. Generated art replaces placeholders.</td></tr>
+    <tr><td class="n">10.5</td><td>Sound, effects, test</td><td>The itch.io build runs in a fresh browser on a machine that never ran the dev server. Someone outside the team plays solo without help.</td></tr>
+    <tr><td class="n">11.5</td><td>Video</td><td>Under 30 seconds: find and mount a part, its consequence in flight or on the surface, the report naming it.</td></tr>
+    <tr><td class="n">12.5</td><td>Submit</td><td>Project page, repo, video, NASA data list, AI-use notes. The time left is buffer.</td></tr>
+  </table>
+
+  <h3>When a checkpoint slips, cut in this order</h3>
+  <ol>
+    <li>The kiosk. Found parts only, and unspent credits become a flat bonus.</li>
+    <li>The second minigame for the Rocket Engineer and the Science Officer. Each keeps one.</li>
+    <li>The Moon. Mars only.</li>
+    <li>Surface hazards. The surface becomes collect and uplink against the clock.</li>
+    <li>Online play. If two machines cannot finish a run by hour 8, we submit and record solo.</li>
+  </ol>
+  <p class="small muted">The campus build, the six meters and the report are never cut. They are what the challenge scores.</p>
+
+  <div class="note"><p><b>What we need from everyone tonight:</b> a yes or no on this plan, a name on each seat, Node 22 installed and the repo running locally, and a check that all six of us are registered at the same Local Event.</p></div>
+</section>
+
+</body>
+</html>

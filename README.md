@@ -32,13 +32,38 @@ real mission that made the same trade-off.
 
 ## Tech
 
-- Godot 4, desktop, top-down pixel art.
-- Host-authoritative online play: one player hosts, others join with a six-character code.
+Browser game, no install. Plays on itch.io.
+
+| Part | Choice |
+| --- | --- |
+| Rendering | HTML5 Canvas 2D |
+| Language | TypeScript |
+| Dev server and build | Vite |
+| UI (menus, meters, report) | HTML and CSS over the canvas |
+| Audio | Web Audio API |
+| Online play | WebRTC data channels via PeerJS, host-authoritative |
+| Publishing | itch.io (HTML5 upload of `dist/`) |
+
+- Top-down pixel art.
+- One player hosts, others join with a six-character code. No server of our own.
 - Seeded runs: one seed decides the mission, part spawns and events.
+
+## Run it
+
+Needs Node 22.
+
+```sh
+npm install
+npm run dev      # local dev server
+npm run build    # typecheck and build to dist/
+npm run preview  # serve the built dist/
+```
+
+To publish, zip the contents of `dist/` and upload it to itch.io as an HTML5 game.
 
 ## Status
 
-Scaffold not yet committed. Godot version to be agreed before the first `project.godot` lands.
+Scaffold only: a canvas with one square that moves with WASD.
 
 ## Rules checklist (Space Apps 2026)
 

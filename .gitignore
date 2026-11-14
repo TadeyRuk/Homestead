@@ -1,15 +1,27 @@
-# Godot 4
-.godot/
-.import/
-*.translation
-export.cfg
-export_credentials.cfg
-export_presets.cfg
-/builds/
-*.tmp
+# Dependencies and build output
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# Local env
+.env
+.env.*
+
+# Logs
+npm-debug.log*
 
 # OS / editor
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+
+# Local planning notes
+imp-l/
+
+# Claude
+CLAUDE.md
+claude.md
+.claude/
+AGENTS.md

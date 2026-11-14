@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homestead Walkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Pixelify+Sans:wght@500;700&display=swap">
+<style>
+  /* layout: one player column, caption under the screen, chapter rail below. single dark look, like a mission console */
+  :root {
+    --bg: #0b1320;
+    --panel: #111c2c;
+    --line: #22324a;
+    --fg: #e6edf3;
+    --muted: #93a3b5;
+    --accent: #ffb347;
+    --font-display: "Pixelify Sans", "Courier New", monospace;
+    --font-body: "IBM Plex Sans", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+    color-scheme: dark;
+  }
+  html, body { background: var(--bg); color: var(--fg); margin: 0; }
+  body {
+    font-family: var(--font-body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 20px 40px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 14px; }
+  header { display: grid; gap: 4px; }
+  header h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(30px, 5vw, 44px); letter-spacing: 0.02em; margin: 0; line-height: 1; }
+  header p { margin: 0; color: var(--muted); font-size: 15px; max-width: 75ch; }
+  .stage { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; background: #000; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .caption { min-height: 3.1em; font-size: 15.5px; line-height: 1.5; max-width: 78ch; }
+  .caption b { color: var(--accent); font-weight: 600; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; margin-right: 8px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .controls .scrub { flex: 1 1 260px; min-width: 0; display: grid; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  button, select {
+    font: 500 14px var(--font-body); color: var(--fg); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 14px; cursor: pointer;
+    transition: background-color 200ms, border-color 200ms, transform 120ms;
+  }
+  button:hover, select:hover { border-color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #play { min-width: 92px; background: var(--accent); color: #1a1206; border-color: var(--accent); font-weight: 600; }
+  .time { font: 13px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; min-width: 92px; }
+  .chapters { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; }
+  .chapters button { text-align: left; display: grid; gap: 2px; padding: 9px 12px; }
+  .chapters button span { font: 12px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chapters button[aria-current="true"] { border-color: var(--accent); background: #1a2537; }
+  .note { color: var(--muted); font-size: 13px; margin: 0; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Homestead</h1>
+    <p>A walkthrough of one ten-minute run, squeezed into under two minutes. Online, every player has their own screen, so you see four separate monitors, and the camera cuts to whichever screen matters. Nothing here is playable.</p>
+  </header>
+
+  <div class="stage"><canvas id="screen" width="1280" height="720" aria-label="Animated walkthrough of a Homestead run"></canvas></div>
+
+  <div class="caption" id="caption" aria-live="polite"></div>
+
+  <div class="controls">
+    <button id="play" type="button">Pause</button>
+    <div class="scrub"><input id="scrub" type="range" min="0" max="104" step="0.05" value="0" aria-label="Position in walkthrough"></div>
+    <span class="time" id="time">0:00 / 1:44</span>
+    <select id="speed" aria-label="Playback speed">
+      <option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option>
+      <option value="1.5">1.5x</option>
+      <option value="2">2x</option>
+    </select>
+  </div>
+
+  <div class="chapters" id="chapters"></div>
+  <p class="note">Space plays or pauses. The left and right arrow keys jump five seconds. Placeholder art drawn for the team proposal, not final art.</p>
+</div>
+
+<script>
+(() => {
+  const W = 1280, H = 720;
+  const cv = document.getElementById('screen');
+  const main = cv.getContext('2d');
+  let g = main;
+
+  // ---------- helpers
+  const R = (s) => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const ease = (t) => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+  function off(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; return [c, x]; }
+  function hex(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
+  function shade(h, f) { const [r, gg, b] = hex(h); return `rgb(${clamp(r * f, 0, 255) | 0},${clamp(gg * f, 0, 255) | 0},${clamp(b * f, 0, 255) | 0})`; }
+  function px(x, X, Y, w, h, c) { x.fillStyle = c; x.fillRect(Math.round(X), Math.round(Y), w, h); }
+  function ell(x, X, Y, rx, ry, c) { x.fillStyle = c; x.beginPath(); x.ellipse(X, Y, rx, ry, 0, 0, Math.PI * 2); x.fill(); }
+  function noise(x, w, h, r, amt, dens) {
+    const d = x.getImageData(0, 0, w, h), a = d.data;
+    for (let i = 0; i < a.length; i += 4) if (r() < dens) { const k = (r() * 2 - 1) * amt; a[i] += k; a[i + 1] += k; a[i + 2] += k; }
+    x.putImageData(d, 0, 0);
+  }
+  function fmt(s) { s = Math.max(0, s); return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); }
+  function typed(s, t, cps = 40) { return s.slice(0, Math.max(0, Math.floor(t * cps))); }
+
+  const C = { pilot: '#f08c32', eng: '#f0d246', comms: '#46d2e6', sci: '#e155b9', cyan: '#78ffdc', amber: '#ffb43c', red: '#ff5a50', white: '#ebf0f5', muted: '#96a5b4', green: '#6edc82', ink: '#080e1a' };
+  const CAT = { prop: '#f08c32', power: '#5a96f5', comms: '#e6ebf0', payload: '#e6b946' };
+  const NAME = { pilot: 'PILOT', eng: 'ROCKET ENGINEER', comms: 'COMMS ENGINEER', sci: 'SCIENCE OFFICER' };
+  const ROLES = ['pilot', 'eng', 'comms', 'sci'];
+  const CREW = {
+    pilot: { n: 1, name: 'Mara_K', suit: '#f08c32', visor: '#24386a', extra: 'antenna' },
+    eng: { n: 2, name: 'tobi.exe', suit: '#f0d246', visor: '#b8862a', extra: 'scarf' },
+    comms: { n: 3, name: 'Jun', suit: '#46d2e6', visor: '#24386a', extra: 'stripe' },
+    sci: { n: 4, name: 'rhea42', suit: '#e155b9', visor: '#2e6a4a', extra: 'none' }
+  };
+  const MONO = '"IBM Plex Mono", ui-monospace, Consolas, monospace';
+  const PIX = '"Pixelify Sans", "Courier New", monospace';
+
+  // ---------- HUD drawing (on whatever g currently is)
+  function T(s, x, y, size, col, o = {}) {
+    g.font = `${o.w || 500} ${size}px ${o.f || MONO}`; g.fillStyle = col;
+    g.textAlign = o.a || 'left'; g.textBaseline = o.b || 'alphabetic'; g.fillText(s, x, y);
+  }
+  function rr(x, y, w, h, r) { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h); }
+  function box(x, y, w, h, edge, r = 8, fill = 'rgba(8,14,26,.9)') { rr(x, y, w, h, r); g.fillStyle = fill; g.fill(); if (edge) { g.strokeStyle = edge; g.lineWidth = 2; g.stroke(); } }
+  function tag(s, x, y, col, size = 13) {
+    g.font = `600 ${size}px ${MONO}`; const w = g.measureText(s).width;
+    box(x - w / 2 - 8, y - size, w + 16, size + 12, col, 5); T(s, x, y + 1, size, col, { w: 600, a: 'center', b: 'middle' });
+  }
+  function bar(x, y, w, h, f, col) { g.fillStyle = '#1e2838'; g.fillRect(x, y, w, h); g.fillStyle = col; g.fillRect(x, y, w * clamp(f, 0, 1), h); }
+  function chip(role, x, y, extra, right) {
+    g.font = `600 14px ${MONO}`; const w1 = g.measureText(NAME[role]).width;
+    g.font = `500 13px ${MONO}`; const w2 = extra ? g.measureText(extra).width + 14 : 0;
+    const w = w1 + 24 + w2; if (right) x = x - w;
+    box(x, y, w, 30, C[role], 6); T(NAME[role], x + 12, y + 15, 14, C[role], { w: 600, b: 'middle' });
+    if (extra) T(extra, x + w1 + 26, y + 15, 13, C.white, { b: 'middle' });
+  }
+  function prompt(s, cx, cy, col) {
+    g.font = `600 13px ${MONO}`; const w = g.measureText(s).width;
+    box(cx - w / 2 - 12, cy - 15, w + 24, 30, col, 6); T(s, cx, cy, 13, col, { w: 600, a: 'center', b: 'middle' });
+  }
+  function topBox(a, b, col = C.white, cx = 320) {
+    box(cx - 106, -6, 212, 52, C.cyan, 8); T(a, cx, 14, 14, col, { w: 600, a: 'center', b: 'middle' }); T(b, cx, 33, 11, C.muted, { a: 'center', b: 'middle' });
+  }
+
+  // ---------- per-player screens and the compositor
+  const SB = {}; ROLES.forEach(r => SB[r] = off(640, 360));
+  function onScreen(role, fn) { const prev = g; g = SB[role][1]; g.save(); g.clearRect(0, 0, 640, 360); g.imageSmoothingEnabled = false; fn(); g.restore(); g = prev; }
+  function label(role, x, y, size) {
+    const c = CREW[role], a = `P${c.n}  ${c.name}`;
+    T(a, x, y, size, C.white, { w: 600 }); g.font = `600 ${size}px ${MONO}`; const w = g.measureText(a).width;
+    T(`${NAME[role]}'S SCREEN`, x + w + 12, y, size, C[role], { w: 600 });
+  }
+  function monitorAt(role, x, y, w, h, lsize) {
+    box(x - 5, y - 5, w + 10, h + 10, null, 6, '#1a2232');
+    g.imageSmoothingEnabled = true; g.drawImage(SB[role][0], x, y, w, h);
+    label(role, x, y - 12, lsize);
+  }
+  function compose(mode, since) {
+    g.fillStyle = '#04070d'; g.fillRect(0, 0, W, H);
+    if (mode === 'grid') {
+      [[40, 34], [664, 34], [40, 392], [664, 392]].forEach(([x, y], i) => monitorAt(ROLES[i], x, y, 576, 312, 13));
+    } else {
+      monitorAt(mode, 24, 96, 960, 540, 16);
+      ROLES.filter(r => r !== mode).forEach((r, i) => monitorAt(r, 1012, 96 + i * 201, 244, 137, 10));
+      T('FOCUS', 24, 52, 12, C.muted, { w: 600 });
+    }
+    if (since < .35) { g.fillStyle = `rgba(4,7,13,${(1 - since / .35) * .8})`; g.fillRect(0, 0, W, H); }
+  }
+  function sched(t, list) { let cur = list[0]; for (const s of list) if (t >= s[0]) cur = s; return { mode: cur[1], since: t - cur[0] }; }
+
+  // ---------- sprites in pixel space
+  function astro(x, X, Y, col, o = {}) {
+    X = Math.round(X); Y = Math.round(Y);
+    if (o.down) {
+      px(x, X - 6, Y + 1, 12, 2, 'rgba(0,0,0,.35)'); px(x, X - 2, Y - 2, 7, 3, col); px(x, X - 7, Y - 3, 5, 5, '#e8ecf2'); px(x, X - 6, Y - 2, 2, 2, o.visor || '#24386a');
+      px(x, X - 1, Y - 9, 1, 5, C.red); px(x, X - 3, Y - 7, 5, 1, C.red); return;
+    }
+    const step = o.walk ? (Math.floor(o.walk * 8) % 2) : 0;
+    px(x, X - 3, Y + 3, 7, 2, 'rgba(0,0,0,.35)');
+    px(x, X - 3, Y - 2, 1, 4, '#969ba5');
+    px(x, X - 2, Y - 2, 5, 4, col); px(x, X + 2, Y - 1, 1, 3, shade(col, .7));
+    px(x, X - 2, Y + 2 - (step ? 1 : 0), 2, 1, shade(col, .6)); px(x, X + 1, Y + 2 - (step ? 0 : 1), 2, 1, shade(col, .6));
+    px(x, X - 2, Y - 6, 5, 4, '#e8ecf2'); px(x, X - 3, Y - 5, 1, 2, '#e8ecf2'); px(x, X, Y - 5, 3, 2, o.visor || '#24386a'); px(x, X + 1, Y - 5, 1, 1, '#a8d4ff');
+    if (o.extra === 'antenna') { px(x, X - 2, Y - 9, 1, 3, '#9aa0aa'); px(x, X - 2, Y - 10, 1, 1, C.red); }
+    if (o.extra === 'scarf') px(x, X - 2, Y - 2, 5, 1, '#e04848');
+    if (o.extra === 'stripe') px(x, X, Y - 2, 1, 4, '#ffffff');
+    if (o.carry) { px(x, X - 2, Y - 13, 5, 4, shade(o.carry, .55)); px(x, X - 1, Y - 12, 3, 2, o.carry); }
+  }
+  const crewOpts = (role, more = {}) => Object.assign({ visor: CREW[role].visor, extra: CREW[role].extra }, more);
+  const [bigA, bax] = off(20, 28);
+  function bigAstro(x0, y0, scale, suit, visor, extra) {
+    bax.clearRect(0, 0, 20, 28);
+    ell(bax, 10, 26, 7, 1.5, 'rgba(0,0,0,.45)');
+    px(bax, 3, 13, 3, 9, '#8c929c'); px(bax, 6, 13, 9, 10, suit); px(bax, 13, 13, 2, 10, shade(suit, .72));
+    px(bax, 4, 14, 2, 6, shade(suit, .85)); px(bax, 15, 14, 2, 6, shade(suit, .7));
+    px(bax, 6, 23, 3, 3, shade(suit, .6)); px(bax, 11, 23, 3, 3, shade(suit, .6));
+    px(bax, 6, 4, 9, 9, '#e8ecf2'); px(bax, 5, 5, 11, 7, '#e8ecf2'); px(bax, 14, 5, 2, 7, '#c8ced8');
+    px(bax, 9, 6, 6, 4, visor); px(bax, 13, 6, 1, 1, '#bfe0ff');
+    if (extra === 'antenna') { px(bax, 7, 0, 1, 4, '#9aa0aa'); px(bax, 7, 0, 1, 1, C.red); }
+    if (extra === 'scarf') { px(bax, 6, 12, 9, 2, '#e04848'); px(bax, 5, 13, 2, 3, '#e04848'); }
+    if (extra === 'stripe') px(bax, 10, 13, 1, 10, '#ffffff');
+    g.imageSmoothingEnabled = false; g.drawImage(bigA, x0, y0, 20 * scale, 28 * scale);
+  }
+  function pickup(x, X, Y, col, t) {
+    const p = 4 + Math.sin(t * 4) * .6;
+    x.strokeStyle = C.cyan; x.lineWidth = 1; x.beginPath(); x.ellipse(X, Y + 3, p + 1, p * .45, 0, 0, 7); x.stroke();
+    px(x, X - 2, Y - 3, 5, 4, shade(col, .55)); px(x, X - 1, Y - 2, 3, 2, col); px(x, X - 1, Y - 2, 1, 1, '#fff');
+  }
+  function at(path, t) {
+    if (t <= path[0][0]) return { x: path[0][1], y: path[0][2], m: 0 };
+    for (let i = 1; i < path.length; i++) {
+      const [t1, x1, y1] = path[i], [t0, x0, y0] = path[i - 1];
+      if (t <= t1) { const k = (t - t0) / (t1 - t0); return { x: lerp(x0, x1, k), y: lerp(y0, y1, k), m: (x0 !== x1 || y0 !== y1) ? t : 0 }; }
+    }
+    const l = path[path.length - 1]; return { x: l[1], y: l[2], m: 0 };
+  }
+
+  // ---------- title, lobby, brief
+  const stars = (() => { const r = R(17); return Array.from({ length: 220 }, () => ({ x: r() * W, y: r() * H, s: r() < .1 ? 2 : 1, v: 4 + r() * 20, b: 90 + r() * 150 })); })();
+  function starfield(t, sp = 1) { g.fillStyle = '#060b16'; g.fillRect(0, 0, W, H); for (const s of stars) { const y = (s.y + t * s.v * sp) % H; g.fillStyle = `rgb(${s.b | 0},${s.b | 0},${Math.min(255, s.b + 30) | 0})`; g.fillRect(s.x, y, s.s * 2, s.s * 2); } }
+  function sceneTitle(t) {
+    starfield(t);
+    g.globalAlpha = seg(t, .2, 1.4); T('HOMESTEAD', 640, 300, 120, '#ffffff', { w: 700, a: 'center', b: 'middle', f: PIX });
+    g.globalAlpha = seg(t, 1.2, 2.4);
+    T('Finish the Mission Given by Mission Control', 640, 390, 26, '#f1d9cf', { a: 'center', b: 'middle', f: PIX });
+    T('So We Can Go Home to Our Families', 640, 428, 26, '#f1d9cf', { a: 'center', b: 'middle', f: PIX });
+    g.globalAlpha = seg(t, 2.6, 3.4); T('NASA Space Apps Challenge 2026  /  Space Mission Design Game  /  concept walkthrough', 640, 520, 15, C.muted, { a: 'center', b: 'middle' });
+    g.globalAlpha = 1;
+  }
+
+  const SUITS = ['#f08c32', '#f0d246', '#46d2e6', '#e155b9', '#6edc82', '#ebf0f5', '#a078ff', '#ff5a50'];
+  const VISORS = ['#24386a', '#b8862a', '#2e6a4a'];
+  const EXTRAS = ['none', 'antenna', 'scarf', 'stripe'];
+  const JOIN = [.3, 1.5, 2.7, 3.8];
+  const CODE = 'K7Q4ZM';
+  function sceneLobby(t) {
+    starfield(t, .15);
+    T('CREW LOBBY', 56, 76, 44, C.white, { w: 700, f: PIX });
+    T('Mars survey  /  seed 48213  /  hosted on Mara_K\'s computer', 58, 106, 14, C.muted);
+    box(890, 34, 334, 92, C.amber, 10);
+    T('JOIN CODE', 912, 60, 12, C.amber, { w: 600 });
+    T(CODE.slice(0, 3) + ' ' + CODE.slice(3), 912, 106, 40, C.white, { w: 700, f: PIX });
+    T(JOIN.filter(j => t >= j).length + ' / 4 crew', 1206, 60, 12, C.muted, { a: 'right' });
+    ROLES.forEach((role, i) => {
+      const x = 56 + i * 296, y = 150, w = 280, h = 470, c = CREW[role], j = JOIN[i];
+      if (t < j) {
+        g.setLineDash([6, 6]); rr(x, y, w, h, 10); g.strokeStyle = '#3a4a62'; g.lineWidth = 2; g.stroke(); g.setLineDash([]);
+        if (t > j - 1) { T('joining...', x + w / 2, y + 200, 14, C.muted, { a: 'center' }); T(typed(CODE, t - (j - 1), 7), x + w / 2, y + 236, 26, C.white, { w: 700, a: 'center', f: PIX }); }
+        else T('open slot', x + w / 2, y + 220, 14, '#4a5a72', { a: 'center' });
+        return;
+      }
+      const lockS = 4.4 + i * .5, lockE = lockS + .7, roleAt = 6.6 + i * .25, readyAt = 7.4 + i * .35;
+      const si = t < lockS ? Math.floor((t - j) * 4 + i * 3) % SUITS.length : SUITS.indexOf(c.suit);
+      const vi = t < lockS ? Math.floor((t - j) * 2.5 + i) % VISORS.length : VISORS.indexOf(c.visor);
+      const ei = t < lockE ? Math.floor((t - j) * 3 + i) % EXTRAS.length : EXTRAS.indexOf(c.extra);
+      const ready = t >= readyAt;
+      box(x, y, w, h, ready ? C.green : '#3a4a62', 10, 'rgba(14,22,36,.95)');
+      T('P' + c.n, x + 18, y + 32, 14, C.muted, { w: 600 }); T(c.name, x + 52, y + 32, 16, C.white, { w: 600 });
+      if (i === 0) T('HOST', x + w - 18, y + 32, 11, C.amber, { w: 600, a: 'right' });
+      box(x + 18, y + 48, w - 36, 176, null, 8, '#0a121e');
+      ell(g, x + w / 2, y + 206, 60, 9, '#1c283a');
+      bigAstro(x + w / 2 - 60, y + 40 + Math.sin(t * 2 + i) * 2, 6, SUITS[si], VISORS[vi], EXTRAS[ei]);
+      T('SUIT', x + 18, y + 252, 11, C.muted, { w: 600 });
+      SUITS.forEach((s, k) => { g.fillStyle = s; g.fillRect(x + 18 + k * 30, y + 260, 24, 18); if (k === si) { g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(x + 16 + k * 30, y + 258, 28, 22); } });
+      T('VISOR', x + 18, y + 302, 11, C.muted, { w: 600 });
+      VISORS.forEach((s, k) => { g.fillStyle = s; g.fillRect(x + 18 + k * 30, y + 310, 24, 18); if (k === vi) { g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(x + 16 + k * 30, y + 308, 28, 22); } });
+      T('EXTRA', x + 18, y + 352, 11, C.muted, { w: 600 });
+      EXTRAS.forEach((s, k) => { const on = k === ei; g.font = `500 11px ${MONO}`; const tw = g.measureText(s).width; const bx = x + 18 + [0, 46, 120, 180][k]; box(bx, y + 360, tw + 12, 22, on ? '#ffffff' : null, 4, on ? '#24324a' : '#141e2e'); T(s, bx + 6, y + 375, 11, on ? C.white : C.muted); });
+      T('ROLE', x + 18, y + 412, 11, C.muted, { w: 600 });
+      if (t >= roleAt) T(NAME[role], x + 70, y + 412, 13, C[role], { w: 600 }); else T('choosing...', x + 70, y + 412, 13, C.muted);
+      box(x + 18, y + 426, w - 36, 30, ready ? C.green : '#3a4a62', 6, ready ? 'rgba(110,220,130,.12)' : '#141e2e');
+      T(ready ? 'READY' : 'not ready', x + w / 2, y + 442, 13, ready ? C.green : C.muted, { w: 600, a: 'center', b: 'middle' });
+    });
+    if (t > 8.8) { box(440, 640, 400, 52, C.amber, 8); T('All four ready. Starting in ' + Math.max(1, Math.ceil(10 - t)), 640, 667, 16, C.amber, { w: 600, a: 'center', b: 'middle' }); }
+  }
+
+  function sceneBrief(t) {
+    starfield(t + 15, .3);
+    box(220, 90, 840, 540, C.cyan, 10);
+    T('MISSION CONTROL  /  INCOMING BRIEF', 256, 132, 15, C.cyan, { w: 600 });
+    T('MARS SURVEY', 256, 186, 40, C.white, { w: 700, f: PIX });
+    const lines = [['Destination', 'Mars, about 7 months away'], ['Radio delay', '3 to 22 minutes each way'], ['Sunlight', 'about 43% of what Earth gets'], ['Objectives', 'scan 3 rich sites, drill a core, deploy a'], ['', 'weather station, uplink 40 data units'], ['Budget', '40 credits'], ['Spacecraft', 'none. Build one from what you find.']];
+    lines.forEach(([a, b], i) => { const k = t - .4 - i * .45; if (k < 0) return; T(a, 256, 240 + i * 38, 16, C.muted, { w: 600 }); T(typed(b, k, 55), 440, 240 + i * 38, 17, i === 6 ? C.amber : C.white, { w: i === 6 ? 600 : 500 }); });
+    if (t > 4) T('Extraction leaves when the clock runs out, finished or not.', 256, 560, 14, C.muted);
+  }
+
+  // ---------- campus world
+  function bld(x, X, Y, w, h, roof, face) { px(x, X, Y, w, h, roof); px(x, X, Y + h, w, face, shade(roof, .68)); px(x, X, Y + h, w, 1, shade(roof, 1.35)); }
+  const PAD = { x: 545, y: 92 };
+  const campusBg = (() => {
+    const [c, x] = off(640, 400); const r = R(5);
+    px(x, 0, 0, 640, 400, '#2c584c');
+    for (let i = 0; i < 300; i++) { const s = 5 + r() * 13; ell(x, r() * 640, r() * 400, s, s * .6, ['#285046', '#326252', '#264c48'][i % 3]); }
+    px(x, 16, 22, 316, 22, '#484e5a'); for (let X = 26; X < 320; X += 16) px(x, X, 33, 7, 1, '#dee2e8');
+    x.strokeStyle = '#707884'; x.lineWidth = 9; x.lineCap = 'square';
+    [[332, 33, 380, 62], [380, 62, 380, 380], [40, 210, 630, 210], [180, 100, 380, 100], [380, 270, 560, 296], [222, 210, 222, 390], [120, 210, 120, 380], [470, 210, 470, 140]]
+      .forEach(([a, b, cc, d]) => { x.beginPath(); x.moveTo(a, b); x.lineTo(cc, d); x.stroke(); });
+    ell(x, 380, 210, 40, 22, '#707884'); ell(x, 380, 210, 24, 13, '#346454');
+    x.strokeStyle = '#969ca6'; x.lineWidth = 7; x.beginPath(); x.moveTo(372, 140); x.lineTo(506, 104); x.stroke();
+    const hexp = (R0, sy) => { x.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i; x.lineTo(PAD.x + R0 * Math.cos(a), PAD.y + R0 * sy * Math.sin(a)); } x.closePath(); x.fill(); };
+    x.fillStyle = '#9298a2'; hexp(46, .75); x.fillStyle = '#7c828c'; hexp(28, .75); px(x, 541, 98, 8, 28, '#343840');
+    bld(x, 300, 100, 72, 76, '#525a6a', 14); for (let i = 0; i < 6; i++) px(x, 306 + i * 11, 106, 7, 14, '#68728a'); px(x, 326, 176, 20, 14, '#282c36');
+    bld(x, 168, 66, 88, 32, '#606878', 10); for (let X = 174; X < 252; X += 10) px(x, X, 101, 4, 3, '#d2dc96');
+    bld(x, 48, 150, 124, 42, '#606876', 9); for (let X = 50; X < 172; X += 4) px(x, X, 150, 1, 42, '#767e8c');
+    bld(x, 196, 280, 156, 54, '#586070', 9); px(x, 236, 292, 76, 30, '#346454');
+    [[420, 232, 62, 40], [66, 300, 88, 46]].forEach(([X, Y, w, h]) => {
+      x.strokeStyle = '#a0a6b0'; x.lineWidth = 1; x.strokeRect(X + .5, Y + .5, w, h);
+      for (let i = 0; i < 9; i++) { const cx = X + 3 + r() * (w - 12), cy = Y + 3 + r() * (h - 12); px(x, cx, cy, 6, 5, '#966e46'); px(x, cx, cy, 6, 1, '#be9664'); }
+    });
+    px(x, 400, 168, 20, 9, '#d640a4'); px(x, 400, 177, 20, 9, '#54285e'); px(x, 403, 179, 14, 1, '#ff96e1');
+    [[490, 300], [548, 322], [604, 288], [520, 362], [600, 352]].forEach(([X, Y]) => { ell(x, X, Y, 11, 7, '#828892'); ell(x, X, Y - 4, 7, 6, '#e1e4ea'); ell(x, X, Y - 4, 3, 2, '#bac0ca'); });
+    const zones = [[256, 380, 50, 90], [20, 110, 60, 140], [400, 470, 20, 70], [600, 636, 20, 180], [160, 200, 120, 200], [380, 470, 300, 390], [250, 300, 200, 270], [10, 60, 220, 290], [590, 636, 230, 390], [150, 210, 340, 395], [460, 520, 150, 200]];
+    for (let i = 0; i < 90; i++) {
+      const z = zones[(r() * zones.length) | 0], X = z[0] + r() * (z[1] - z[0]), Y = z[2] + r() * (z[3] - z[2]), s = 3 + r() * 3, pink = r() < .5;
+      ell(x, X, Y, s, s, pink ? '#c43e80' : '#1e403a'); ell(x, X - 1, Y - 1, s * .55, s * .55, pink ? '#ec60a6' : '#2c5a4a');
+    }
+    noise(x, 640, 400, r, 7, .45);
+    const X = PAD.x, Y = PAD.y;
+    px(x, X - 6, Y - 36, 12, 44, '#e2e5ec'); px(x, X + 3, Y - 36, 3, 44, '#b6bac4');
+    x.fillStyle = '#e2e5ec'; x.beginPath(); x.moveTo(X - 6, Y - 36); x.lineTo(X + 6, Y - 36); x.lineTo(X, Y - 50); x.fill();
+    px(x, X - 6, Y - 20, 12, 1, '#40404c'); px(x, X - 6, Y - 4, 12, 1, '#40404c');
+    x.fillStyle = '#e8783c'; x.beginPath(); x.moveTo(X - 6, Y); x.lineTo(X - 13, Y + 10); x.lineTo(X - 6, Y + 8); x.fill();
+    x.fillStyle = '#c86432'; x.beginPath(); x.moveTo(X + 6, Y); x.lineTo(X + 13, Y + 10); x.lineTo(X + 6, Y + 8); x.fill();
+    return c;
+  })();
+  const [campus, cx] = off(640, 400);
+
+  const P1 = {
+    parts: [
+      { n: 'Solid motor', c: 'prop', x: 85, y: 218, gone: 2.4 }, { n: 'Ion drive', c: 'prop', x: 150, y: 242 },
+      { n: 'RTG', c: 'power', x: 498, y: 338, gone: 2.4 }, { n: 'Small solar array', c: 'power', x: 566, y: 298 },
+      { n: 'Laser terminal', c: 'comms', x: 180, y: 64, gone: 2.0 }, { n: 'Low-gain antenna', c: 'comms', x: 180, y: 64, from: 2.0 },
+      { n: 'Spectrometer', c: 'payload', x: 444, y: 250 }, { n: 'Chemical engine', c: 'prop', x: 330, y: 368 },
+      { n: 'Large solar array', c: 'power', x: 40, y: 372 }, { n: 'High-gain dish', c: 'comms', x: 618, y: 206 }, { n: 'Radar sounder', c: 'payload', x: 276, y: 252 }
+    ],
+    players: {
+      pilot: [[0, 112, 232], [2, 85, 218], [2.4, 85, 218], [11, 526, 150], [22, 526, 150]],
+      eng: [[0, 530, 318], [2, 498, 338], [2.4, 498, 338], [7, 536, 154], [22, 536, 154]],
+      comms: [[0, 210, 64], [1.5, 182, 64], [2, 182, 64], [13, 548, 154], [22, 548, 154]],
+      sci: [[0, 420, 224], [1.2, 410, 196], [6, 410, 196], [10.5, 558, 154], [22, 558, 154]]
+    },
+    carry: {
+      pilot: [[2.4, 11.4, 'prop', 'Solid motor']], eng: [[2.4, 7.4, 'power', 'RTG']],
+      comms: [[0, 2, 'comms', 'Low-gain antenna'], [2, 13.4, 'comms', 'Laser terminal']], sci: [[5.6, 10.9, 'payload', 'Camera']]
+    },
+    mount: [['prop', 11.4, 'Solid motor'], ['power', 7.4, 'RTG'], ['comms', 13.4, 'Laser terminal'], ['payload', 10.9, 'Camera']]
+  };
+  const SLOT = ['prop', 'power', 'comms', 'payload'];
+  const STATS = { 'Solid motor': { m: 180, p: -10, lift: 600 }, 'RTG': { m: 110, p: 450 }, 'Laser terminal': { m: 40, p: -120 }, 'Camera': { m: 30, p: -40 } };
+  const GACHA = [3, 5.6];
+  function carrying(role, t) { for (const [a, b, c, n] of P1.carry[role]) if (t >= a && t < b) return { c, n }; return null; }
+  function p1Prompt(role, t) {
+    const S = {
+      pilot: [[1.6, 2.4, '[E] pick up  Solid motor  180 kg'], [10.6, 11.6, '[E] mount  Solid motor'], [15, 21, '[L] hold to launch early']],
+      eng: [[1.6, 2.4, '[E] pick up  RTG  110 kg  +450 W'], [6.6, 7.6, '[E] mount  RTG']],
+      comms: [[1.2, 2.1, '[E] drop Low-gain, take Laser terminal'], [12.6, 13.6, '[E] mount  Laser terminal']],
+      sci: [[1.2, 3, '[E] buy a random part  20 CR'], [10.2, 11.1, '[E] mount  Camera']]
+    };
+    for (const [a, b, s] of S[role]) if (t >= a && t < b) return s; return null;
+  }
+  function padPanel(t) {
+    const parts = P1.mount.filter(m => t >= m[1]).map(m => m[2]);
+    let mass = 0, pw = 0, lift = 600; parts.forEach(n => { const s = STATS[n]; mass += s.m; pw += s.p; if (s.lift) lift = s.lift; });
+    const credits = t >= GACHA[1] - .3 ? 20 : 40, hasP = parts.includes('RTG');
+    box(392, 50, 236, 124, C.cyan, 8); T('LAUNCH PAD', 406, 70, 12, C.cyan, { w: 600 });
+    const rows = [['MASS', mass / lift, `${mass}/${lift} kg`, C.cyan], ['POWER', hasP ? (900 + pw) / 900 : .04, hasP ? `${pw >= 0 ? '+' : ''}${pw} W` : 'no source', C.eng],
+      ['BUDGET', credits / 40, `${credits} CR`, '#ff96e1'], ['DATA', parts.includes('Camera') ? .35 : 0, parts.includes('Camera') ? 'low' : 'none', C.amber],
+      ['COMMS', parts.includes('Laser terminal') ? .95 : 0, parts.includes('Laser terminal') ? 'fast' : 'none', C.comms], ['TIME', parts.includes('Solid motor') ? .55 : 0, parts.includes('Solid motor') ? 'medium' : '-', C.green]];
+    rows.forEach(([n, f, v, col], i) => { const y = 82 + i * 14; T(n, 406, y + 8, 10, C.muted, { w: 600 }); bar(458, y, 90, 8, f, col); T(v, 618, y + 8, 10, C.white, { a: 'right' }); });
+  }
+  const P1S = [[0, 'grid'], [1.2, 'comms'], [2.8, 'sci'], [6.2, 'grid'], [10, 'pilot'], [14, 'grid']];
+  function scenePhase1(t) {
+    cx.drawImage(campusBg, 0, 0);
+    P1.mount.forEach(([slot, tm]) => {
+      const X = 518 + SLOT.indexOf(slot) * 18, Y = 158;
+      px(cx, X - 6, Y - 6, 13, 13, '#141e26');
+      if (t >= tm) { px(cx, X - 3, Y - 3, 7, 7, CAT[slot]); cx.strokeStyle = C.cyan; cx.lineWidth = 1; cx.strokeRect(X - 6.5, Y - 6.5, 13, 13); }
+      else for (let k = -6; k <= 6; k += 2) { px(cx, X + k, Y - 6, 1, 1, C.amber); px(cx, X + k, Y + 6, 1, 1, C.amber); px(cx, X - 6, Y + k, 1, 1, C.amber); px(cx, X + 6, Y + k, 1, 1, C.amber); }
+    });
+    for (const p of P1.parts) { if (p.gone !== undefined && t >= p.gone) continue; if (p.from !== undefined && t < p.from) continue; pickup(cx, p.x, p.y, CAT[p.c], t); }
+    const pos = {};
+    for (const role of ROLES) { const a = at(P1.players[role], t); pos[role] = a; const cr = carrying(role, t); astro(cx, a.x, a.y, CREW[role].suit, crewOpts(role, { walk: a.m, carry: cr ? CAT[cr.c] : null })); }
+    for (const role of ROLES) onScreen(role, () => {
+      const p = pos[role], vw = 640 / 3, vh = 120;
+      const sx = clamp(p.x - vw / 2, 0, 640 - vw), sy = clamp(p.y - vh / 2, 0, 400 - vh);
+      g.drawImage(campus, sx, sy, vw, vh, 0, 0, 640, 360);
+      for (const q of P1.parts) {
+        if ((q.gone !== undefined && t >= q.gone) || (q.from !== undefined && t < q.from)) continue;
+        const X = (q.x - sx) * 3, Y = (q.y - sy) * 3;
+        if (X > 70 && X < 570 && Y > 60 && Y < 300) tag(q.n, X, Y + 30, q.c === 'comms' ? C.cyan : CAT[q.c], 12);
+      }
+      if (role === 'sci' && t < 8) { const X = (410 - sx) * 3, Y = (196 - sy) * 3; tag('PARTS KIOSK', X, Y - 92, '#ff96e1', 12); }
+      const cr = carrying(role, t);
+      chip(role, 14, 52, cr ? 'carrying ' + cr.n : 'hands empty');
+      const left = Math.max(0, 180 - t * 6.5), mounted = P1.mount.filter(m => t >= m[1]).length;
+      topBox('BUILD TIME  ' + fmt(left), `slots ${mounted} of 4`);
+      if (Math.hypot(p.x - 545, p.y - 154) < 30) padPanel(t);
+      const pr = p1Prompt(role, t); if (pr) prompt(pr, 320, 326, C[role]);
+      if (role === 'sci' && t > GACHA[0] && t < GACHA[1] + .8) {
+        const k = seg(t, GACHA[0], GACHA[1]), names = ['Radar sounder', 'Ion drive', 'High-gain dish', 'RTG', 'Spectrometer', 'Chemical engine', 'Camera'];
+        const spin = t < GACHA[1] ? Math.floor(Math.pow(k, .45) * 26) % names.length : 6;
+        box(180, 110, 280, 112, '#ff96e1', 8);
+        T('PARTS KIOSK   -20 CR', 320, 136, 13, '#ff96e1', { w: 600, a: 'center' });
+        T(names[spin], 320, 174, 22, t < GACHA[1] ? C.white : C.cyan, { w: 600, a: 'center', f: PIX });
+        T(t < GACHA[1] ? 'rolling...' : 'you got a Camera', 320, 204, 12, C.muted, { a: 'center' });
+      }
+    });
+    const s = sched(t, P1S); compose(s.mode, s.since);
+    if (t > 15.6) {
+      const n = Math.ceil(21 - t);
+      if (n > 0) { g.fillStyle = 'rgba(4,7,13,.55)'; g.fillRect(0, 0, W, H); T('LAUNCH IN ' + n, 640, 360, 64, C.amber, { w: 700, a: 'center', b: 'middle', f: PIX }); T('started by the Pilot. Anyone can cancel.', 640, 410, 16, C.muted, { a: 'center', b: 'middle' }); }
+      else { g.fillStyle = `rgba(255,255,255,${seg(t, 21, 21.6)})`; g.fillRect(0, 0, W, H); }
+    }
+  }
+
+  // ---------- launch and landing (full screen)
+  const [lp, lx] = off(320, 180);
+  const smoke = (() => { const r = R(31); return Array.from({ length: 70 }, () => ({ t0: r() * 3.4, dx: (r() - .5) * 2, s: 3 + r() * 6 })); })();
+  function sceneLaunch(t) {
+    const climb = ease(seg(t, .6, 4)) * 260;
+    for (let y = 0; y < 180; y++) { const k = clamp((y - climb * .4) / 180, 0, 1); lx.fillStyle = `rgb(${lerp(6, 70, k) | 0},${lerp(10, 120, k) | 0},${lerp(28, 190, k) | 0})`; lx.fillRect(0, y, 320, 1); }
+    const gy = 150 + climb; px(lx, 0, gy, 320, 40, '#2c584c'); px(lx, 120, gy - 6, 80, 6, '#9298a2'); px(lx, 100, gy - 60, 6, 54, '#707884');
+    const ry = 120 - ease(seg(t, .6, 4)) * 70 + Math.sin(t * 60) * (t > .4 ? .6 : 0);
+    for (const s of smoke) { const k = t - s.t0; if (k < 0 || k > 2.5) continue; const X = 160 + s.dx * k * 18, Y = gy - 6 - k * 4 + (climb * .2); ell(lx, X, Y, s.s + k * 6, (s.s + k * 6) * .6, `rgba(220,220,225,${.5 - k * .18})`); }
+    if (t > .3) { const f = 10 + (Math.floor(t * 20) % 3) * 3; lx.fillStyle = '#ff9a3c'; lx.beginPath(); lx.moveTo(156, ry + 26); lx.lineTo(164, ry + 26); lx.lineTo(160, ry + 26 + f); lx.fill(); lx.fillStyle = '#fff0c8'; lx.beginPath(); lx.moveTo(158, ry + 26); lx.lineTo(162, ry + 26); lx.lineTo(160, ry + 26 + f * .6); lx.fill(); }
+    px(lx, 156, ry - 10, 9, 36, '#e2e5ec'); px(lx, 162, ry - 10, 3, 36, '#b6bac4');
+    lx.fillStyle = '#e2e5ec'; lx.beginPath(); lx.moveTo(156, ry - 10); lx.lineTo(165, ry - 10); lx.lineTo(160.5, ry - 22); lx.fill();
+    px(lx, 156, ry + 2, 9, 1, '#40404c'); px(lx, 165, ry - 4, 3, 4, '#78ffdc');
+    lx.fillStyle = '#e8783c'; lx.beginPath(); lx.moveTo(156, ry + 18); lx.lineTo(150, ry + 27); lx.lineTo(156, ry + 26); lx.fill(); lx.beginPath(); lx.moveTo(165, ry + 18); lx.lineTo(171, ry + 27); lx.lineTo(165, ry + 26); lx.fill();
+    g.imageSmoothingEnabled = false; g.drawImage(lp, 0, 0, W, H);
+    g.fillStyle = `rgba(255,255,255,${1 - seg(t, 0, .5)})`; g.fillRect(0, 0, W, H);
+    g.globalAlpha = seg(t, .8, 1.3) * (1 - seg(t, 3.2, 3.9)); T('LIFTOFF', 640, 120, 56, C.white, { w: 700, a: 'center', b: 'middle', f: PIX });
+    T('Solid motor  /  RTG  /  Laser terminal  /  Camera   360 kg', 640, 170, 16, C.muted, { a: 'center', b: 'middle' }); g.globalAlpha = 1;
+  }
+  function sceneLand(t) {
+    for (let y = 0; y < 180; y++) { const k = y / 180; lx.fillStyle = `rgb(${lerp(40, 210, k) | 0},${lerp(24, 130, k) | 0},${lerp(30, 100, k) | 0})`; lx.fillRect(0, y, 320, 1); }
+    const gy = 180 - ease(seg(t, 0, 3)) * 50; px(lx, 0, gy, 320, 60, '#9a4a30'); for (let i = 0; i < 40; i++) px(lx, (i * 37) % 320, gy + 4 + (i * 13) % 40, 3, 2, '#6e341f');
+    const ly = lerp(-20, gy - 16, ease(seg(t, 0, 3.1)));
+    if (t < 3.1) { const f = 4 + (Math.floor(t * 20) % 2) * 3; px(lx, 158, ly + 16, 4, f, '#ff9a3c'); }
+    px(lx, 150, ly, 20, 12, '#b0924c'); px(lx, 154, ly - 5, 12, 5, '#c8aa62'); px(lx, 147, ly + 12, 2, 4, '#9a9aa4'); px(lx, 171, ly + 12, 2, 4, '#9a9aa4'); px(lx, 136, ly + 3, 12, 4, '#2c4aa0'); px(lx, 172, ly + 3, 12, 4, '#2c4aa0');
+    if (t > 3) { const k = seg(t, 3, 4); for (let i = 0; i < 14; i++) ell(lx, 160 + (i - 7) * 6 * (1 + k * 2), gy - 2 - Math.abs(i - 7) * .5, 4 + k * 6, 3 + k * 3, `rgba(220,150,110,${.6 - k * .5})`); }
+    g.imageSmoothingEnabled = false; g.drawImage(lp, 0, 0, W, H);
+    g.globalAlpha = seg(t, 3.1, 3.4); T('TOUCHDOWN', 640, 120, 56, C.white, { w: 700, a: 'center', b: 'middle', f: PIX });
+    T('Hull 80%  /  fuel 61%  /  instrument intact', 640, 170, 16, '#f1d9cf', { a: 'center', b: 'middle' }); g.globalAlpha = 1;
+  }
+
+  // ---------- phase 2 stations
+  const [q, qx] = off(160, 90);
+  const qStars = (() => { const r = R(41); return Array.from({ length: 70 }, () => ({ x: r() * 160, y: r() * 90, b: 80 + r() * 150 })); })();
+  const rocks = [{ t0: 0.4, x: 40, s: 5 }, { t0: 1.6, x: 118, s: 4 }, { t0: 3.0, x: 66, s: 6 }, { t0: 4.4, x: 132, s: 3 }, { t0: 6.42, x: 94, s: 5, hit: 1 }, { t0: 7.2, x: 30, s: 4 }, { t0: 10.4, x: 110, s: 6 }, { t0: 12.6, x: 58, s: 4 }, { t0: 14.8, x: 98, s: 5 }, { t0: 17.4, x: 44, s: 4 }, { t0: 19, x: 124, s: 5 }];
+  const rockX = (t) => 80 + 14 * Math.sin(t * .8);
+  const turns = [[2.5, 3.5, 8], [6.5, 8, 32]];
+  function dishErr(t) { let e = 0; for (const [a, b, amp] of turns) { if (t < a) continue; e += t < b ? amp * (t - a) / (b - a) : amp * Math.exp(-(t - b) * 1.1); } return e; }
+  const link = (t) => clamp(100 - dishErr(t) * 2.4, 18, 100);
+  const hull = (t) => t < 9.6 ? 100 : 80;
+  const fuel = (t) => 82 - t * .95;
+  const coolant = (t) => 20 + clamp(t * 7, 0, 35);
+  const heaterOn = (t) => t < 5.4;
+  const load = (t) => (120 + 40 + 160 + coolant(t) + 25 + (heaterOn(t) ? 50 : 0)) / 450;
+  const valve = (t) => t < 13.3 ? .15 : lerp(.15, .7, seg(t, 13.3, 14.3));
+  const temp = (t) => t < 13.3 ? 60 + t * 1.9 : Math.max(54, 85 - (t - 13.3) * 6);
+  const o2 = (t) => 80 - t * 1.1 + (t > 16.3 ? 8 : 0) + (t > 19.3 ? 5 : 0);
+  const THROWS = [[15.5, '#bee6ff', 'ice block  +8% O2'], [18.5, '#8c9096', 'CO2 cartridge  +5%']];
+  function blit() { g.imageSmoothingEnabled = false; g.drawImage(q, 0, 0, 640, 360); }
+  function interior() {
+    px(qx, 0, 0, 160, 90, '#2c3440');
+    for (let X = 0; X < 160; X += 20) px(qx, X, 0, 1, 90, '#222830');
+    for (let Y = 0; Y < 90; Y += 30) px(qx, 0, Y, 160, 1, '#222830');
+    px(qx, 0, 2, 160, 3, '#5a6470'); for (let X = 0; X < 160; X += 4) px(qx, X, 87, 2, 3, '#c8a028');
+  }
+  function monitor(X, Y, w, h) { px(qx, X - 1, Y - 1, w + 2, h + 2, '#46505e'); px(qx, X, Y, w, h, '#0a121a'); for (let y = Y; y < Y + h; y += 2) px(qx, X, y, w, 1, '#0c161f'); }
+  function transitBox(t) { topBox('MARS TRANSIT  ' + Math.round(lerp(8, 97, t / 22)) + '%', 'T+ ' + Math.round(lerp(14, 205, t / 22)) + ' days', C.white, 522); }
+
+  function qPilot(t) {
+    for (let y = 0; y < 90; y++) { const k = y / 90; qx.fillStyle = `rgb(${8 + 8 * k | 0},${12 + 12 * k | 0},${30 + 26 * k | 0})`; qx.fillRect(0, y, 160, 1); }
+    for (const s of qStars) { qx.fillStyle = `rgb(${s.b | 0},${s.b | 0},${Math.min(255, s.b + 30) | 0})`; qx.fillRect(s.x, (s.y + t * 14) % 90, 1, 1); }
+    ell(qx, 80, 150 + t * 3, 72, 72, '#1e4896'); qx.strokeStyle = '#78d2ff'; qx.lineWidth = 1; qx.beginPath(); qx.arc(80, 150 + t * 3, 73, 0, 7); qx.stroke();
+    ell(qx, 128, 14, 3 + t * .1, 3 + t * .1, '#c45c38');
+    for (const rk of rocks) { const y = -8 + (t - rk.t0) * 22; if (y < -10 || y > 100) continue; if (rk.hit && t > 9.6) continue; ell(qx, rk.x, y, rk.s, rk.s * .85, '#625c58'); ell(qx, rk.x - 1, y - 1, rk.s * .55, rk.s * .45, '#867e76'); }
+    const rx = rockX(t), ry = 62;
+    const fl = 4 + (Math.floor(t * 20) % 2) * 2; px(qx, rx - 1, ry + 7, 3, fl, '#ff9a3c'); px(qx, rx, ry + 7, 1, fl - 2, '#fff0c8');
+    px(qx, rx - 2, ry - 4, 5, 11, '#e2e5ec'); px(qx, rx + 1, ry - 4, 2, 11, '#b6bac4'); px(qx, rx - 1, ry - 7, 3, 3, '#e2e5ec'); px(qx, rx, ry - 9, 1, 2, '#e2e5ec');
+    px(qx, rx - 4, ry + 4, 2, 3, '#e8783c'); px(qx, rx + 3, ry + 4, 2, 3, '#c86432'); px(qx, rx + 3, ry - 2, 2, 2, '#78ffdc');
+    if (t > 9.6 && t < 10.4) { const k = seg(t, 9.6, 10.4); for (let i = 0; i < 10; i++) { const a = i * .63; px(qx, rx + Math.cos(a) * k * 9, ry + Math.sin(a) * k * 9, 1, 1, i % 2 ? '#ffd27a' : '#ff6a3c'); } }
+    blit();
+    if (t > 9.6 && t < 10) { g.fillStyle = 'rgba(255,60,60,.28)'; g.fillRect(0, 0, 640, 360); }
+    chip('pilot', 14, 8, 'speed, fuel, hull');
+    transitBox(t);
+    if (link(t) > 70 && ((t > 1 && t < 4) || (t > 15 && t < 19))) tag('DEBRIS IN 6 s  (link warning)', 320, 100, C.amber, 13);
+    if (link(t) <= 70 && t > 6.8 && t < 10) tag('LINK DOWN  no debris warning', 320, 100, C.red, 13);
+    const dx = 74, dy = 270, r0 = 52;
+    box(dx - r0 - 10, dy - r0 - 10, 2 * r0 + 20, 2 * r0 + 20, C.cyan, 64);
+    g.strokeStyle = '#ffffff'; g.lineWidth = 2; for (let a = 135; a <= 405; a += 27) { const ra = a * Math.PI / 180; g.beginPath(); g.moveTo(dx + Math.cos(ra) * (r0 - 8), dy + Math.sin(ra) * (r0 - 8)); g.lineTo(dx + Math.cos(ra) * r0, dy + Math.sin(ra) * r0); g.stroke(); }
+    const sp = 7.8 + Math.sin(t * 1.3) * .08, na = (135 + 270 * sp / 10) * Math.PI / 180;
+    g.strokeStyle = '#ff7a3c'; g.lineWidth = 4; g.beginPath(); g.moveTo(dx, dy); g.lineTo(dx + Math.cos(na) * (r0 - 14), dy + Math.sin(na) * (r0 - 14)); g.stroke();
+    T(sp.toFixed(2), dx, dy + 24, 18, C.white, { w: 600, a: 'center', b: 'middle' }); T('km/s', dx, dy + 40, 10, C.muted, { a: 'center', b: 'middle' });
+    box(150, 306, 330, 40, C.cyan, 6); T('FUEL', 162, 330, 12, C.muted, { w: 600 }); bar(206, 320, 210, 14, fuel(t) / 100, C.pilot); T(Math.round(fuel(t)) + '%', 468, 331, 13, C.white, { w: 600, a: 'right' });
+    box(548, 62, 80, 228, C.cyan, 6); T('HULL', 560, 90, 11, C.muted, { w: 600 }); T(hull(t) + '%', 618, 90, 12, C.white, { w: 600, a: 'right' });
+    [C.green, C.green, t > 9.6 && t < 18 ? C.red : C.green, C.green, C.green].forEach((c, i) => { g.fillStyle = c; g.fillRect(576, 102 + i * 34, 24, 30); });
+    if (t > 9.6 && t < 18) T('breach', 588, 282, 11, C.red, { w: 600, a: 'center' });
+  }
+
+  function qEng(t) {
+    interior(); monitor(4, 8, 74, 78); monitor(82, 8, 74, 78);
+    for (let i = 0; i < 6; i++) { const Y = 37 + i * 8, on = i === 5 ? heaterOn(t) : true; px(qx, 7, Y, 5, 5, '#1e2430'); px(qx, 8, on ? Y + 1 : Y + 3, 3, 1, on ? '#6edc82' : '#888'); }
+    px(qx, 88, 22, 62, 56, '#76808e'); for (let X = 90; X < 150; X += 6) for (let Y = 24; Y < 78; Y += 6) px(qx, X, Y, 1, 1, '#9aa2b0');
+    const path = [[91, 30], [100, 36], [106, 33], [114, 45], [122, 42], [129, 55], [137, 52], [143, 64], [148, 70]];
+    if (t > 9.8) {
+      qx.strokeStyle = '#141418'; qx.lineWidth = 2; qx.beginPath(); path.forEach(([X, Y], i) => i ? qx.lineTo(X, Y) : qx.moveTo(X, Y)); qx.stroke();
+      const k = seg(t, 10.5, 18) * (path.length - 1), n = Math.floor(k);
+      qx.strokeStyle = '#ffc46e'; qx.lineWidth = 2; qx.beginPath(); qx.moveTo(path[0][0], path[0][1]);
+      for (let i = 1; i <= n; i++) qx.lineTo(path[i][0], path[i][1]);
+      let hx = path[n][0], hy = path[n][1];
+      if (n < path.length - 1) { const f = k - n; hx = lerp(path[n][0], path[n + 1][0], f); hy = lerp(path[n][1], path[n + 1][1], f); qx.lineTo(hx, hy); }
+      qx.stroke();
+      if (t > 10.5 && t < 18) { px(qx, hx + 1, hy - 6, 4, 4, '#c85040'); for (let i = 0; i < 5; i++) px(qx, hx + Math.cos(t * 30 + i) * 3, hy + Math.sin(t * 27 + i) * 3, 1, 1, i % 2 ? '#fff6c8' : '#ffc85a'); }
+    }
+    blit();
+    chip('eng', 14, 8, 'power and hull');
+    transitBox(t);
+    T('POWER BUS', 28, 62, 13, C.eng, { w: 600 }); T('RTG supply 450 W', 300, 62, 10, C.muted, { a: 'right' });
+    const L = load(t);
+    for (let i = 0; i < 30; i++) { const f = i / 30 * 1.1, col = f < .8 ? C.green : f < 1 ? C.amber : C.red; g.fillStyle = f < L ? col : shade(col, .25); g.fillRect(28 + i * 9, 72, 7, 16); }
+    g.fillStyle = '#fff'; g.fillRect(28 + 270 / 1.1, 68, 2, 24);
+    T('LOAD ' + Math.round(L * 100) + '%', 28, 112, 15, L > .97 ? C.red : L > .85 ? C.amber : C.green, { w: 600 });
+    if (L > .97) T('trips in 0:01', 150, 112, 11, C.red, { w: 600 });
+    const names = [['Laser terminal', 120], ['Camera', 40], ['Life support', 160], ['Coolant pump', Math.round(coolant(t))], ['Cabin lights', 25], ['Galley heater', heaterOn(t) ? 50 : 0]];
+    names.forEach(([n, w], i) => { const y = 37 * 4 + 12 + i * 32; T(`[${i + 1}] ${n}`, 56, y, 11, i === 5 && !heaterOn(t) ? C.muted : C.white); T(w + ' W', 300, y, 11, C.muted, { a: 'right' }); });
+    if (t > 4.9 && t < 5.8) { const y = 37 * 4 + 6 + 5 * 32; g.fillStyle = '#fff'; g.beginPath(); g.moveTo(44, y); g.lineTo(44, y + 16); g.lineTo(49, y + 12); g.lineTo(54, y + 20); g.lineTo(57, y + 18); g.lineTo(52, y + 11); g.lineTo(58, y + 10); g.fill(); }
+    T('HULL PATCH', 340, 62, 13, C.eng, { w: 600 });
+    if (t < 9.8) T('no damage', 474, 200, 13, C.muted, { a: 'center' });
+    else { T('mid section breach', 600, 62, 10, C.red, { a: 'right', w: 600 }); bar(340, 324, 200, 8, seg(t, 10.5, 18), '#ffc46e'); T(Math.round(seg(t, 10.5, 18) * 100) + '% welded', 600, 332, 10, C.white, { a: 'right' }); }
+    if (t > 9.8 && t < 11.2) tag('HULL BREACH: hold the mouse and trace the crack', 320, 140, C.red, 12);
+  }
+
+  function qComms(t) {
+    interior(); monitor(4, 8, 152, 78);
+    const r = R(77); for (let i = 0; i < 50; i++) px(qx, 6 + r() * 148, 10 + r() * 74, 1, 1, '#5a6478');
+    const ex = 36, ey = 24; ell(qx, ex, ey, 5, 5, '#2858aa'); ell(qx, ex - 1, ey - 1, 2, 2, '#46885a');
+    const pxv = 96, pyv = 78, tgt = Math.atan2(ey - pyv, ex - pxv), act = tgt + dishErr(t) * Math.PI / 180;
+    for (const sg of [-1, 1]) { const a = tgt + sg * .16; for (let k = 8; k < 66; k += 5) px(qx, pxv + Math.cos(a) * k, pyv + Math.sin(a) * k, 1, 1, '#c8a46e'); }
+    for (const sg of [-1, 1]) { const a = act + sg * .16; for (let k = 6; k < 72; k += 3) px(qx, pxv + Math.cos(a) * k, pyv + Math.sin(a) * k, 1, 1, '#78ffdc'); }
+    px(qx, pxv - 1, pyv, 3, 8, '#8c94a0'); px(qx, pxv - 6, pyv + 6, 13, 2, '#646c78');
+    const ca = Math.cos(act), sa = Math.sin(act);
+    for (let s = -6; s <= 6; s++) px(qx, pxv - sa * s + ca * (Math.abs(s) * .35 - 1), pyv + ca * s + sa * (Math.abs(s) * .35 - 1), 2, 2, '#e8eaee');
+    px(qx, pxv - 1, pyv - 1, 2, 2, '#ff7a3c');
+    blit();
+    chip('comms', 14, 8, 'keep Earth in the beam');
+    transitBox(t);
+    tag('EARTH', ex * 4, ey * 4 - 34, C.cyan, 11);
+    const L = link(t);
+    box(438, 52, 186, 132, C.comms, 6);
+    T('LINK', 452, 72, 11, C.muted, { w: 600 }); T(Math.round(L) + '%', 452, 110, 32, L > 70 ? C.white : C.red, { w: 600 });
+    for (let i = 0; i < 5; i++) { g.fillStyle = L > (i + 1) * 19 ? C.comms : '#2a3446'; g.fillRect(548 + i * 14, 104 - i * 7, 10, 10 + i * 7); }
+    T('send rate ' + (L > 90 ? '2.4/s locked' : L > 70 ? '1.2/s' : '0.2/s'), 452, 140, 11, C.white);
+    T('sand dots: target', 452, 160, 10, '#c8a46e'); T('cyan dots: beam', 452, 174, 10, C.cyan);
+    const turning = turns.some(([a, b]) => t >= a && t < b);
+    if (turning) tag('Pilot is turning: the dish drifts', 320, 322, C.amber, 12);
+    else if (dishErr(t) > 3) tag('[A] [D] lean the dish back', 320, 322, C.comms, 12);
+  }
+
+  function qSci(t) {
+    interior(); monitor(4, 8, 74, 78); monitor(82, 8, 74, 78);
+    const tp = temp(t), hot = clamp((tp - 50) / 40, 0, 1);
+    px(qx, 16, 24, 20, 54, '#50545e'); for (let Y = 26; Y < 78; Y += 3) px(qx, 13, Y, 26, 1, '#7a7e8a');
+    px(qx, 20, 28, 12, 46, `rgb(255,${(200 - hot * 120) | 0},${(120 - hot * 90) | 0})`); px(qx, 22, 30, 8, 42, `rgb(255,${(235 - hot * 80) | 0},${(170 - hot * 90) | 0})`);
+    px(qx, 36, 34, 16, 2, '#4688e6'); px(qx, 36, 66, 16, 2, '#4688e6'); px(qx, 50, 34, 2, 34, '#4688e6');
+    const va = valve(t) * 6; qx.strokeStyle = '#dc4646'; qx.lineWidth = 1; qx.beginPath(); qx.arc(51, 50, 5, 0, 7); qx.stroke();
+    for (let i = 0; i < 3; i++) { const a = va + i * 2.1; px(qx, 51 + Math.cos(a) * 4, 50 + Math.sin(a) * 4, 1, 1, '#dc4646'); }
+    px(qx, 62, 14, 6, 68, '#18222e'); px(qx, 62, 14, 6, 17, '#5a1e1e'); px(qx, 62, 31, 6, 28, '#1e5032'); px(qx, 62, 59, 6, 23, '#1e325a');
+    px(qx, 60, 82 - (tp / 100) * 68, 10, 1, '#ffffff');
+    px(qx, 124, 30, 28, 46, '#5c626e'); px(qx, 126, 34, 24, 10, '#3c424e');
+    qx.fillStyle = '#464c5a'; qx.beginPath(); qx.moveTo(118, 22); qx.lineTo(158, 22); qx.lineTo(150, 30); qx.lineTo(126, 30); qx.fill(); px(qx, 130, 22, 16, 3, '#101418');
+    px(qx, 128, 52, 20, 22, '#18222e'); const lev = clamp(o2(t) / 100, 0, 1); px(qx, 128, 52 + 22 * (1 - lev), 20, 22 * lev, '#6ec8f0');
+    px(qx, 86, 76, 32, 8, '#383e4c'); if (t < THROWS[0][0]) px(qx, 89, 78, 4, 4, '#bee6ff'); if (t < THROWS[1][0]) px(qx, 96, 78, 3, 5, '#8c9096'); px(qx, 102, 79, 5, 4, '#825a3c'); px(qx, 111, 78, 1, 5, '#a0a4ac');
+    for (const [a, col] of THROWS) { if (t > a && t < a + .8) { const k = seg(t, a, a + .8); const X = lerp(92, 138, k), Y = 76 - 70 * k + 50 * k * k; px(qx, X - 2, Y - 2, 4, 4, col); } }
+    blit();
+    chip('sci', 14, 8, 'core temp and oxygen');
+    transitBox(t);
+    T('ENERGY CORE', 28, 62, 13, C.sci, { w: 600 });
+    T('TEMP ' + Math.round(tp) + '%', 28, 320, 15, tp > 78 ? C.red : C.green, { w: 600 });
+    T(tp > 78 ? 'too hot: the instrument loses accuracy' : 'in the safe band', 28, 338, 10, tp > 78 ? C.red : C.muted);
+    T('valve ' + Math.round(valve(t) * 100) + '%', 178, 320, 11, C.white);
+    T('OXYGEN CONVERTER', 340, 62, 13, C.sci, { w: 600 });
+    T('CABIN O2 ' + Math.round(o2(t)) + '%', 340, 86, 13, o2(t) < 65 ? C.amber : C.white, { w: 600 });
+    for (const [a, , s] of THROWS) if (t > a + .8 && t < a + 2.4) tag(s, 470, 112, C.cyan, 11);
+    if (t > 12.9 && t < 14.4) tag('[W] open the coolant valve', 160, 112, C.sci, 11);
+    if (t > 14.8 && t < 15.6) tag('drag the ice block, flick it at the intake', 470, 140, C.sci, 11);
+  }
+  const P2S = [[0, 'grid'], [3, 'eng'], [6, 'comms'], [8.8, 'pilot'], [10.8, 'eng'], [13, 'sci'], [17, 'grid']];
+  function scenePhase2(t) {
+    onScreen('pilot', () => qPilot(t)); onScreen('eng', () => qEng(t)); onScreen('comms', () => qComms(t)); onScreen('sci', () => qSci(t));
+    const s = sched(t, P2S); compose(s.mode, s.since);
+  }
+
+  // ---------- phase 3
+  const LANDER = { x: 320, y: 205 };
+  const marsBg = (() => {
+    const [c, x] = off(640, 400); const r = R(23);
+    const d = x.createImageData(640, 400), a = d.data;
+    for (let y = 0; y < 400; y++) for (let X = 0; X < 640; X++) {
+      const v = Math.sin(X * .05 + y * .11) + .6 * Math.sin(X * .13 - y * .07), i = (y * 640 + X) * 4;
+      const col = v > .9 ? [136, 64, 42] : v < -1.1 ? [172, 88, 56] : [154, 74, 48];
+      a[i] = col[0]; a[i + 1] = col[1]; a[i + 2] = col[2]; a[i + 3] = 255;
+    }
+    x.putImageData(d, 0, 0);
+    [[500, 100, 40], [190, 300, 22], [90, 200, 14], [420, 330, 16], [600, 60, 12], [250, 60, 10]].forEach(([X, Y, s]) => { ell(x, X, Y, s, s * .6, '#783826'); x.strokeStyle = '#c4724c'; x.lineWidth = 2; x.beginPath(); x.ellipse(X, Y, s, s * .6, 0, 3.5, 5.9); x.stroke(); });
+    x.strokeStyle = '#763624'; x.lineWidth = 12; x.beginPath(); x.moveTo(20, 140); x.lineTo(230, 60); x.stroke(); x.strokeStyle = '#ba6846'; x.lineWidth = 3; x.beginPath(); x.moveTo(20, 134); x.lineTo(230, 54); x.stroke();
+    for (let i = 0; i < 200; i++) { const X = r() * 640, Y = r() * 400, s = 1 + r() * 2; ell(x, X, Y, s, s, '#602e20'); px(x, X - 1, Y - 1, 1, 1, '#b06040'); }
+    noise(x, 640, 400, r, 8, .45);
+    const L = LANDER;
+    for (let a2 = 0; a2 < 360; a2 += 10) px(x, L.x + 34 * Math.cos(a2 * Math.PI / 180), L.y + 24 * Math.sin(a2 * Math.PI / 180), 1, 1, '#78ffdc');
+    [[-12, -9], [12, -9], [-12, 9], [12, 9]].forEach(([dx, dy]) => { x.strokeStyle = '#9696a0'; x.lineWidth = 1; x.beginPath(); x.moveTo(L.x, L.y); x.lineTo(L.x + dx, L.y + dy); x.stroke(); px(x, L.x + dx - 1, L.y + dy - 1, 3, 3, '#bebec8'); });
+    px(x, L.x - 24, L.y - 3, 14, 5, '#2846a0'); px(x, L.x + 10, L.y - 3, 14, 5, '#2846a0'); ell(x, L.x, L.y, 8, 7, '#b0924c'); ell(x, L.x, L.y - 1, 5, 4, '#c8ac68'); ell(x, L.x, L.y - 9, 3, 3, '#e8eaee');
+    return c;
+  })();
+  const [mars, mx] = off(640, 400);
+  const P3 = {
+    pilot: [[0, 330, 214], [5, 480, 118], [8.2, 480, 118], [14, 334, 206], [20, 334, 206]],
+    eng: [[0, 316, 214], [4, 124, 100], [8, 124, 100], [14, 300, 212], [20, 300, 212]],
+    comms: [[0, 342, 216], [20, 342, 216]],
+    sci: [[0, 326, 220], [5, 556, 316], [10, 556, 316], [15, 506, 292], [20, 506, 292]]
+  };
+  const SITES = [[80, 330, 'rich'], [470, 40, 'rich'], [284, 160, 'poor'], [366, 256, 'poor'], [248, 236, 'done']];
+  const storm = (t) => 650 - t * 11;
+  const sciDown = (t) => t >= 15;
+  const sciO2 = (t) => t < 7 ? 90 - t * 1.5 : Math.max(0, 79.5 - (t - 7) * 10);
+  const uplinked = (t) => Math.round(14 + clamp(t, 0, 20) * .55 + (t >= 14 ? 3 : 0));
+  function panel3(x, y, tab, role, t) {
+    box(x, y, 268, 140, C[role], 8);
+    ['MISSION', 'SUIT'].forEach((n, i) => { const tx = x + 12 + i * 82, on = n === tab; g.fillStyle = on ? C.cyan : '#18222e'; g.fillRect(tx, y + 10, 76, 22); T(n, tx + 38, y + 22, 11, on ? C.ink : C.muted, { w: 600, a: 'center', b: 'middle' }); });
+    T('[Q] switch', x + 256, y + 22, 10, C.muted, { a: 'right', b: 'middle' });
+    if (tab === 'MISSION') {
+      const rows = [['Scan rich sites', t >= 10 ? 2 : 1, 3], ['Core sample to lander', t >= 14 ? 1 : 0, 1], ['Weather station', t >= 8 ? 1 : 0, 1], ['Uplink data', uplinked(t), 40]];
+      rows.forEach(([n, a, b], i) => { const yy = y + 52 + i * 22, done = a >= b; g.strokeStyle = done ? C.cyan : C.muted; g.lineWidth = 2; g.strokeRect(x + 12, yy - 9, 10, 10); if (done) { g.beginPath(); g.moveTo(x + 14, yy - 4); g.lineTo(x + 17, yy - 1); g.lineTo(x + 21, yy - 8); g.stroke(); } T(n, x + 30, yy, 12, done ? C.muted : C.white); T(a + '/' + b, x + 256, yy, 12, done ? C.muted : C.white, { w: 600, a: 'right' }); });
+    } else {
+      const vals = role === 'sci' ? [['OXYGEN', sciO2(t) / 100, Math.round(sciO2(t)) + '%', sciO2(t) < 35 ? C.red : C.green], ['POWER', t < 7 ? .7 : Math.max(0, .7 - (t - 7) * .09), '', C.amber]]
+        : [['OXYGEN', .74 - t * .004, Math.round(74 - t * .4) + '%', C.green], ['POWER', .61, '61%', C.eng]];
+      vals.forEach(([n, f, s, col], i) => { const yy = y + 52 + i * 22; T(n, x + 12, yy, 11, C.muted, { w: 600 }); bar(x + 84, yy - 9, 120, 9, f, col); T(s, x + 256, yy, 11, col, { w: 600, a: 'right' }); });
+      const inStorm = role === 'sci' && t > 7;
+      T('DUST', x + 12, y + 96, 11, C.muted, { w: 600 }); T(inStorm ? 'storm: drain x4' : 'clear air', x + 84, y + 96, 11, inStorm ? C.amber : C.white);
+      T('CARRYING', x + 12, y + 118, 11, C.muted, { w: 600 }); T(role === 'sci' ? (t >= 15 ? 'nothing' : t >= 10 ? '9 data units' : 'nothing') : role === 'pilot' ? (t >= 8.2 && t < 14 ? 'core sample' : 'nothing') : 'nothing', x + 84, y + 118, 11, C.white);
+    }
+  }
+  const P3S = [[0, 'grid'], [3, 'eng'], [7.4, 'pilot'], [11.6, 'sci'], [16, 'grid']];
+  function scenePhase3(t) {
+    mx.drawImage(marsBg, 0, 0);
+    for (const [X, Y, k] of SITES) { mx.fillStyle = k === 'rich' ? '#78ffe6' : k === 'poor' ? '#5ab4aa' : '#6e6460'; mx.beginPath(); mx.moveTo(X, Y - 4); mx.lineTo(X + 3, Y); mx.lineTo(X, Y + 4); mx.lineTo(X - 3, Y); mx.fill(); }
+    mx.fillStyle = t >= 10 ? '#6e6460' : '#78ffe6'; mx.beginPath(); mx.moveTo(560, 318); mx.lineTo(563, 322); mx.lineTo(560, 326); mx.lineTo(557, 322); mx.fill();
+    if (t < 8.2) { mx.strokeStyle = '#aaaab4'; mx.lineWidth = 1; mx.beginPath(); mx.moveTo(476, 114); mx.lineTo(480, 104); mx.lineTo(484, 114); mx.stroke(); px(mx, 480, 104, 1, 11, '#ff9640'); }
+    if (t >= 8) { px(mx, 124, 84, 1, 12, '#e6e8ec'); px(mx, 121, 84, 7, 1, '#e6e8ec'); px(mx, Math.floor(t * 8) % 2 ? 121 : 127, 83, 1, 1, '#fff'); }
+    else if (t >= 4) { const k = seg(t, 4, 8); px(mx, 124, 96 - 12 * k, 1, 12 * k, '#e6e8ec'); }
+    const sx0 = storm(t);
+    for (let X = Math.max(0, Math.floor(sx0)); X < 640; X++) { mx.fillStyle = `rgba(198,132,88,${Math.min(.68, (X - sx0) * .012)})`; mx.fillRect(X, 0, 1, 400); }
+    const r = R(3); for (let i = 0; i < 80; i++) { const X = sx0 + r() * 220 + ((t * 40 + i * 9) % 30), Y = (r() * 400 + t * 25) % 400; if (X > 640) continue; mx.strokeStyle = 'rgba(232,182,130,.55)'; mx.beginPath(); mx.moveTo(X, Y); mx.lineTo(X - 14, Y + 5); mx.stroke(); }
+    const pos = {};
+    for (const role of ROLES) {
+      const a = at(P3[role], role === 'sci' && sciDown(t) ? 15 : t); pos[role] = a;
+      if (role === 'sci' && sciDown(t)) { astro(mx, a.x, a.y, CREW.sci.suit, crewOpts('sci', { down: 1 })); continue; }
+      const carry = role === 'pilot' && t >= 8.2 && t < 14 ? '#aaaab4' : role === 'sci' && t >= 10 ? '#5adcff' : null;
+      astro(mx, a.x, a.y, CREW[role].suit, crewOpts(role, { walk: a.m, carry }));
+    }
+    for (let k = 0; k < 6; k++) px(mx, 342, 204 - ((t * 30 + k * 7) % 42), 1, 1, '#78ffdc');
+    for (const role of ROLES) onScreen(role, () => {
+      const p = pos[role], vw = 640 / 3, vh = 120, sx = clamp(p.x - vw / 2, 0, 640 - vw), sy = clamp(p.y - vh / 2, 0, 400 - vh);
+      g.drawImage(mars, sx, sy, vw, vh, 0, 0, 640, 360);
+      const status = {
+        pilot: t < 5 ? 'heading to the crater' : t < 8.2 ? 'drilling ' + Math.round(seg(t, 5, 8.2) * 100) + '%' : t < 14 ? 'carrying the core home' : 'core delivered',
+        eng: t < 4 ? 'heading to the ridge' : t < 8 ? 'deploying ' + Math.round(seg(t, 4, 8) * 100) + '%' : 'station up, heading back',
+        comms: 'uplinking at the lander', sci: t < 5 ? 'heading to the rich site' : t < 10 ? 'scanning ' + Math.round(seg(t, 5, 10) * 100) + '%' : t < 15 ? 'in the storm, low oxygen' : 'DOWN, data lost'
+      }[role];
+      chip(role, 14, 52, status);
+      const obj = [[480, 118, 'CORE SITE', '#ffb43c', t < 8.2], [124, 100, 'WEATHER STATION', C.cyan, true], [80, 330, 'RICH SITE +9', C.cyan, true], [470, 40, 'RICH SITE +9', C.cyan, true], [LANDER.x, LANDER.y + 26, 'LANDER', C.cyan, true]];
+      for (const [X0, Y0, s, col, show] of obj) { if (!show) continue; const X = (X0 - sx) * 3, Y = (Y0 - sy) * 3; if (X > 80 && X < 560 && Y > 90 && Y < 190) tag(s, X, Y + 34, col, 12); }
+      const tab = role === 'pilot' ? (t > 8.6 && t < 11 ? 'SUIT' : 'MISSION') : role === 'sci' ? 'SUIT' : 'MISSION';
+      panel3(12, 206, tab, role, t);
+      const left = Math.max(0, 108 - t * 5.6);
+      topBox('EXTRACTION IN ' + fmt(left), 'data uplinked ' + uplinked(t) + ' / 40', left < 15 ? C.amber : C.white);
+      if (role === 'pilot' && t > 8 && t < 8.8) prompt('[Q] switch to suit', 470, 322, C.pilot);
+      if (role === 'pilot' && t > 10.4 && t < 11.2) prompt('[Q] back to mission', 470, 322, C.pilot);
+      if (role === 'eng' && t > 4 && t < 8) prompt('[E] hold to deploy  ' + Math.round(seg(t, 4, 8) * 100) + '%', 470, 322, C.eng);
+      if (role === 'sci' && t > 5 && t < 10) prompt('[E] hold to scan  ' + Math.round(seg(t, 5, 10) * 100) + '%', 470, 322, C.sci);
+      if (role === 'sci' && t > 11 && t < 15) prompt('oxygen ' + Math.round(sciO2(t)) + '%  get to the lander', 452, 322, C.red);
+      if (role === 'sci' && t >= 15) prompt('suit empty: 9 carried units lost', 452, 322, C.red);
+      if (role === 'comms') prompt('[E] uplink  ' + uplinked(t) + ' of 40 sent', 470, 322, C.comms);
+    });
+    const s = sched(t, P3S); compose(s.mode, s.since);
+    if (t > 18.6) { g.fillStyle = `rgba(4,7,13,${seg(t, 18.6, 19.4) * .7})`; g.fillRect(0, 0, W, H); g.globalAlpha = seg(t, 18.8, 19.3); T('EXTRACTION', 640, 340, 56, C.white, { w: 700, a: 'center', b: 'middle', f: PIX }); T('the ship from Earth leaves on time', 640, 392, 16, C.muted, { a: 'center', b: 'middle' }); g.globalAlpha = 1; }
+  }
+
+  // ---------- report
+  function sceneReport(t) {
+    starfield(t + 90, .2);
+    if (t < 9.6) {
+      box(160, 50, 960, 620, C.cyan, 10);
+      T('MISSION REPORT  /  MARS SURVEY  /  PARTIAL SUCCESS', 196, 92, 15, C.cyan, { w: 600 });
+      const lines = [[.4, 'You uplinked 31 of the 40 data units Mission Control asked for.'], [1.6, '9 units were lost when the Science Officer went down in the dust storm.'], [2.8, 'The camera scans fast but gives little data, so the crew needed the far rich sites.'], [4.0, 'The richest site sat in the storm\'s path, and the suit could not get back to the lander.']];
+      lines.forEach(([a, s], i) => { if (t > a) T(typed(s, t - a, 70), 196, 150 + i * 40, i === 0 ? 19 : 16, C.white, { w: i === 0 ? 600 : 500 }); });
+      if (t > 5.2) { T('What real missions do', 196, 340, 13, C.amber, { w: 600 }); T(typed('In 2018 a planet-wide dust storm cut off power to the Opportunity rover, and the mission ended.', t - 5.4, 70), 196, 368, 15, C.white); T(typed('Mission planners now schedule surface work around Mars weather.', t - 6.6, 70), 196, 394, 15, C.white); }
+      const rows = [['Data uplinked', '31 / 40', 388], ['Crew standing', '3 / 4', 120], ['Credits unspent', '20', 40], ['Build time left', '0:37', 37], ['Fuel and hull', '61% / 80%', 27]];
+      rows.forEach(([n, v, pts], i) => { const k = t - 6.8 - i * .25; if (k < 0) return; const y = 452 + i * 30; T(n, 196, y, 14, C.muted); T(v, 520, y, 14, C.white, { a: 'right' }); T('+' + pts, 640, y, 14, C.green, { w: 600, a: 'right' }); });
+      if (t > 8.2) { T('SCORE', 820, 470, 16, C.muted, { w: 600 }); T(String(Math.round(612 * seg(t, 8.2, 9))), 820, 560, 76, C.white, { w: 700, f: PIX }); }
+      if (t > 8.6) ROLES.forEach((role, i) => bigAstro(800 + i * 70, 586, 2, CREW[role].suit, CREW[role].visor, CREW[role].extra));
+    } else {
+      g.globalAlpha = seg(t, 9.6, 10.4);
+      T('HOMESTEAD', 640, 300, 110, '#ffffff', { w: 700, a: 'center', b: 'middle', f: PIX });
+      T('Finish the mission. Then everyone goes home.', 640, 390, 24, '#f1d9cf', { a: 'center', b: 'middle', f: PIX });
+      T('Concept walkthrough for the team. Not gameplay footage.', 640, 470, 15, C.muted, { a: 'center', b: 'middle' });
+      g.globalAlpha = 1;
+    }
+  }
+
+  // ---------- timeline
+  const CH = [
+    { name: 'Title', start: 0, dur: 5, fn: sceneTitle },
+    { name: 'Lobby', start: 5, dur: 10, fn: sceneLobby },
+    { name: 'Mission brief', start: 15, dur: 5, fn: sceneBrief },
+    { name: 'Explore and build', start: 20, dur: 22, fn: scenePhase1 },
+    { name: 'Launch', start: 42, dur: 4, fn: sceneLaunch },
+    { name: 'Travel and maintain', start: 46, dur: 22, fn: scenePhase2 },
+    { name: 'Landing', start: 68, dur: 4, fn: sceneLand },
+    { name: 'Sortie and homestead', start: 72, dur: 20, fn: scenePhase3 },
+    { name: 'Mission report', start: 92, dur: 12, fn: sceneReport }
+  ];
+  const TOTAL = 104;
+  const CAPS = [
+    [0, 5, 'Title', 'Homestead is a co-op mission design game for one to four players. Mission Control gives the crew a job and no rocket.'],
+    [5, 9, 'Lobby', 'One player hosts and gets a join code. Everyone else types it in to join, like a party code. There is no server to run.'],
+    [9, 15, 'Lobby', 'Each player picks a suit colour, a visor and one extra, then takes a role. The game starts when all four are ready.'],
+    [15, 20, 'Brief', 'Each run opens on a mission card with real NASA numbers: distance, radio delay, sunlight, objectives and a small budget.'],
+    [20, 21.2, 'Build', 'From here on, each player sees only their own screen. Online, these four views are on four different computers.'],
+    [21.2, 22.8, 'Build', 'Jun\'s screen, the Comms Engineer: dropping a weak antenna to take a laser terminal.'],
+    [22.8, 26.2, 'Build', 'rhea42\'s screen, the Science Officer: a random part from the kiosk for 20 credits. It could be anything.'],
+    [26.2, 30, 'Build', 'The campus is too big to cover together, so the crew splits up. Parts land in the pad slots one by one.'],
+    [30, 34, 'Build', 'Mara_K\'s screen, the Pilot: mounting the solid motor. Anyone standing at the pad sees the six meters move.'],
+    [34, 42, 'Build', 'Anyone can start the launch early, and anyone can cancel it. Time left on the clock counts toward the score.'],
+    [42, 46, 'Launch', 'The rocket flies with exactly the parts the crew found: a solid motor, an RTG, a laser terminal and a camera.'],
+    [46, 49, 'Travel', 'In flight the four screens show four different jobs. Nobody can fix another player\'s station.'],
+    [49, 52, 'Travel', 'tobi.exe\'s screen, the Rocket Engineer: the power bus is at its limit, so the galley heater goes off before the breaker trips.'],
+    [52, 54.8, 'Travel', 'Jun\'s screen, the Comms Engineer: a hard turn pushes the laser beam off Earth, and the link drops.'],
+    [54.8, 56.8, 'Travel', 'Mara_K\'s screen, the Pilot: with no link there was no warning, and a rock hits the hull.'],
+    [56.8, 59, 'Travel', 'tobi.exe\'s screen: the breach shows up and the welding job starts.'],
+    [59, 63, 'Travel', 'rhea42\'s screen, the Science Officer: the energy core runs hot, so the coolant valve opens. Then ice goes into the oxygen converter.'],
+    [63, 68, 'Travel', 'Back to all four screens. The link is back, so the next debris field is announced early.'],
+    [68, 72, 'Landing', 'The ship lands on Mars with 80% hull and 61% fuel, both carried over from the flight.'],
+    [72, 75, 'Surface', 'The crew splits up again: four screens, four corners of the map.'],
+    [75, 79.4, 'Surface', 'tobi.exe\'s screen: deploying the weather station on the ridge.'],
+    [79.4, 83.6, 'Surface', 'Mara_K\'s screen: carrying the core home. Q flips the one panel between the mission list and the suit readout.'],
+    [83.6, 88, 'Surface', 'rhea42\'s screen: the dust storm drains the suit four times faster, and they stayed out too long.'],
+    [88, 92, 'Surface', 'The extraction ship leaves on time, finished or not.'],
+    [92, 101.6, 'Report', 'The report traces the result back to choices the crew made, and ends on a real mission that hit the same problem.'],
+    [101.6, 104.1, 'End', 'That is one run. The next one starts with a new seed, so the parts and the mission land somewhere else.']
+  ];
+
+  function draw(t) {
+    const ch = CH.find(c => t >= c.start && t < c.start + c.dur) || CH[CH.length - 1];
+    g = main; g.save(); g.clearRect(0, 0, W, H); ch.fn(clamp(t - ch.start, 0, ch.dur - .001)); g.restore();
+    g.font = `500 12px ${MONO}`; const s = 'AI-assisted mock, not final art', w = g.measureText(s).width;
+    g.fillStyle = 'rgba(8,14,26,.8)'; g.fillRect(W - w - 24, H - 30, w + 16, 22); T(s, W - 16, H - 19, 12, '#c8d2dc', { a: 'right', b: 'middle' });
+    return ch;
+  }
+
+  // ---------- UI
+  const playBtn = document.getElementById('play'), scrub = document.getElementById('scrub'), timeEl = document.getElementById('time'), cap = document.getElementById('caption'), speedSel = document.getElementById('speed'), chEl = document.getElementById('chapters');
+  const chBtns = CH.map(c => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = `${c.name}<span>${fmt(c.start)}</span>`; b.addEventListener('click', () => seek(c.start + .01)); chEl.appendChild(b); return b; });
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let t = 0, playing = !reduce, last = 0, speed = 1, lastCap = '';
+  function render() {
+    const ch = draw(t);
+    scrub.value = t.toFixed(2);
+    timeEl.textContent = fmt(t) + ' / ' + fmt(TOTAL);
+    const c = CAPS.find(c => t >= c[0] && t < c[1]) || CAPS[CAPS.length - 1];
+    const html = `<b>${c[2]}</b>${c[3]}`; if (html !== lastCap) { cap.innerHTML = html; lastCap = html; }
+    chBtns.forEach((b, i) => b.setAttribute('aria-current', CH[i] === ch ? 'true' : 'false'));
+    playBtn.textContent = playing ? 'Pause' : (t >= TOTAL - .05 ? 'Replay' : 'Play');
+  }
+  function seek(v) { t = clamp(v, 0, TOTAL); render(); }
+  function frame(now) {
+    if (playing) { const dt = Math.min(.1, (now - last) / 1000); t += dt * speed; if (t >= TOTAL) { t = TOTAL; playing = false; } render(); }
+    last = now; requestAnimationFrame(frame);
+  }
+  playBtn.addEventListener('click', () => { if (t >= TOTAL - .05) t = 0; playing = !playing; render(); });
+  scrub.addEventListener('input', () => seek(parseFloat(scrub.value)));
+  speedSel.addEventListener('change', () => { speed = parseFloat(speedSel.value); });
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') { e.preventDefault(); playBtn.click(); }
+    if (e.code === 'ArrowRight') seek(t + 5);
+    if (e.code === 'ArrowLeft') seek(t - 5);
+  });
+  const m = /^#at-(\d+(?:\.\d+)?)$/.exec(location.hash);
+  if (m) { t = parseFloat(m[1]); playing = false; }
+  render();
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(render);
+  requestAnimationFrame((n) => { last = n; requestAnimationFrame(frame); });
+})();
+</script>
+</body>
+</html>
