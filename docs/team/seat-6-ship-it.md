@@ -53,7 +53,3 @@ Lives in `src/build/kiosk.ts`. Pay 20 credits for one seeded random part, which 
 ### S6-10 Hazards (hour 8, cut list item 4)
 Moon solar flare: warning, then radiation on open ground, safe at the lander or behind rock. Mars dust storm: a wall crossing the map that cuts sight and drains suits. Lives in `src/ground/hazards.ts`; uses seat 2's map and suit drain (S2-06). Logs `hazard_hit`.
 **Done when:** each mission's hazard fires on the seeded schedule and hurts players in the open.
-
-## Fallback load (if seat 5 is still open at hour 3)
-
-- Engineer power bus and its part numbers (S5-02, S5-06). A small switch panel: loads against supply, switch them off before the breaker trips. Ask Seedlign or TadeyRuk to pair on it if it's your first game code.

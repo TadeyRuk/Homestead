@@ -21,16 +21,14 @@ Six seats, one owner each. Read this file first, then your seat file. Times are 
 
 ## Fallback at hour 3
 
-If seat 4 or 5 still has no owner at hour 3, the flight phase drops to one minigame per role (cut list item 2):
+Seat 5 is taken (Emyol). If seat 4 still has no owner at hour 3, its stations are split up:
 
 | Station | Taken by |
 | --- | --- |
 | Pilot (seat 4) | seat 3, TadeyRuk |
 | Comms (seat 4) | seat 1, Seedlign |
-| Engineer power bus (seat 5) | seat 6, acmrsu |
-| Science oxygen converter only (seat 5) | seat 1, Seedlign |
 
-The hull weld and energy core minigames are cut, along with S4-07, S4-08, S5-07, S5-09 and S5-10. Seat 4's event director, solo station switching, arrival and solo pacing go to seat 1. The power bus numbers (S5-06) go with the power bus to acmrsu, and cabin oxygen failure (S5-08) goes with the converter to seat 1.
+S4-07 and S4-08 are cut. Seat 4's flight shell, event director, solo station switching, arrival and solo pacing go to seat 1. Seat 5 builds its stations as standalone scenes (S5-09 sandbox) until the flight shell exists.
 
 ## Who draws what
 
@@ -155,7 +153,7 @@ hazard_hit  player_down  extraction
 | Hour | Checkpoint | What has to be true |
 | --- | --- | --- |
 | 1.5 | Scaffold | Contract in `src/core/`. Two tabs join by code over WebRTC and see each other walk. |
-| 3 | Seat check | Seats 4 and 5 filled, or the fallback above applies. |
+| 3 | Seat check | Seat 4 filled, or the fallback above applies. |
 | 6 | Whole loop | One player gets through brief, campus, flight, surface and report with placeholder shapes. Each minigame exists in its simplest form. |
 | 8 | Online run, bare UI | Two players on two machines finish a run. All meters and panels readable. |
 | 9.5 | Feature freeze, art in | No new mechanics. Generated art replaces placeholders. |
