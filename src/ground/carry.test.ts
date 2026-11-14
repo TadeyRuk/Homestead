@@ -109,12 +109,14 @@ describe("carrying", () => {
     expect(s.players[0].carrying).toBeNull();
   });
 
-  it("leaves E at the pad to mounting and the countdown", () => {
+  it("leaves E at the pad to mounting: the part goes into its slot, not onto the ground", () => {
     const pad = CAMPUS.pad;
     const s = campus({ x: pad.x, y: pad.y + PAD_REACH - 10 }, { carrying: "camera" });
+    s.parts = [];
     press(s);
-    expect(s.players[0].carrying).toBe("camera");
-    expect(s.log).toEqual([]);
+    expect(s.ship.slots.payload).toBe("camera");
+    expect(s.parts).toEqual([]);
+    expect(s.log.map((e) => e.kind)).toEqual(["part_mounted"]);
   });
 
   it("leaves E at the kiosk to buying when nothing is lying there", () => {
