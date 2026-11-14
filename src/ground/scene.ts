@@ -1,6 +1,7 @@
 import type { Scene } from "../core/scene";
 import { edgeArrow, follow, PX_PER_M, type EdgeArrow } from "./camera";
-import { drawGround, drawMarker, drawParts, drawPlayers, paletteFor } from "./draw";
+import { drawGround, drawMarker, drawParts, drawPlayers, drawShip, paletteFor } from "./draw";
+import { shipDescent } from "./extraction";
 import { SURFACE } from "./surface";
 import { groundFor, type Ground, type GroundMap } from "./world";
 
@@ -36,6 +37,7 @@ export function groundScene(which: Ground): Scene {
       }
       drawParts(ctx, state.parts);
       drawPlayers(ctx, state.players, view.playerId);
+      if (which === "surface" && map.lander) drawShip(ctx, map.lander, shipDescent(state, view.now));
       ctx.restore();
 
       // the way home: the pad on the campus, the lander on the surface
