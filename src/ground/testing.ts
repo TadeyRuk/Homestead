@@ -56,3 +56,25 @@ export function reachable(map: GroundMap, from: Point, targets: readonly Point[]
     return false;
   });
 }
+
+/** a stand-in 2D context that records every call, so scene tests can see what was drawn */
+export function recordingCtx(width = 960, height = 540) {
+  const calls: { name: string; args: unknown[] }[] = [];
+  const target = { canvas: { width, height } } as Record<string, unknown>;
+  const ctx = new Proxy(target, {
+    get(t, key) {
+      if (key in t) return t[key as string];
+      if (key === "measureText") return (text: string) => ({ width: text.length * 7 });
+      return (...args: unknown[]) => {
+        calls.push({ name: String(key), args });
+      };
+    },
+    set(t, key, value) {
+      t[key as string] = value;
+      return true;
+    },
+  }) as unknown as CanvasRenderingContext2D;
+  const texts = () => calls.filter((c) => c.name === "fillText").map((c) => String(c.args[0]));
+  const first = (name: string) => calls.find((c) => c.name === name)?.args;
+  return { ctx, calls, texts, first };
+}
