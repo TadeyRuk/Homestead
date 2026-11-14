@@ -1,6 +1,7 @@
 import type { DeepReadonly } from "../../core/scene";
 import type { Ship } from "../../core/state";
 import { LOW_OXYGEN, TRAY_SIZE, type Converter, type Item } from "./converter";
+import { SAFE_HIGH, SAFE_LOW, type Core } from "./core";
 
 /** where on the canvas a station draws; the flight shell (S4-01) decides */
 export interface Area {
@@ -65,4 +66,42 @@ export function drawConverter(
 
   ctx.fillStyle = DIM;
   ctx.fillText("A/D select, E feed", x, trayY + 90);
+}
+
+export function drawCore(
+  ctx: CanvasRenderingContext2D,
+  core: DeepReadonly<Core>,
+  ship: DeepReadonly<Pick<Ship, "coreTemp" | "instrumentHealth">>,
+  area: Area,
+): void {
+  const { x, y, w } = area;
+  const temp = ship.coreTemp;
+
+  ctx.font = "16px sans-serif";
+  ctx.fillStyle = TEXT;
+  ctx.fillText("Energy core", x, y + 20);
+  ctx.font = "14px sans-serif";
+  ctx.fillStyle = DIM;
+  ctx.fillText(`Heated by ${core.part}`, x, y + 42);
+
+  // the temperature bar, cold on the left, with the safe band marked behind it
+  const barY = y + 56;
+  ctx.fillStyle = "#1c2230";
+  ctx.fillRect(x, barY, w, 18);
+  ctx.fillStyle = "#24402f";
+  ctx.fillRect(x + w * SAFE_LOW, barY, w * (SAFE_HIGH - SAFE_LOW), 18);
+  ctx.fillStyle = temp > SAFE_HIGH ? BAD : temp < SAFE_LOW ? "#7fc8e8" : OK;
+  ctx.fillRect(x + w * temp - 3, barY - 4, 6, 26);
+
+  ctx.fillStyle = temp > SAFE_HIGH ? BAD : temp < SAFE_LOW ? "#7fc8e8" : DIM;
+  const status = temp > SAFE_HIGH ? "Too hot: the instrument is taking damage" : temp < SAFE_LOW ? "Too cold" : "In the safe band";
+  ctx.fillText(status, x, barY + 40);
+
+  ctx.fillStyle = TEXT;
+  ctx.fillText(`Coolant valve ${Math.round(core.valve * 100)}% open`, x, barY + 66);
+  ctx.fillStyle = ship.instrumentHealth < 0.5 ? WARN : TEXT;
+  ctx.fillText(`Instrument health ${Math.round(ship.instrumentHealth * 100)}%`, x, barY + 88);
+
+  ctx.fillStyle = DIM;
+  ctx.fillText("W open valve, S close valve", x, barY + 120);
 }
