@@ -32,7 +32,7 @@ describe("enterPhase", () => {
   it("gives the lobby no deadline", () => {
     const s = createState(1, "mars");
     enterPhase(s, "lobby", 7_000);
-    expect(s.phaseEndsAt).toBe(Infinity);
+    expect(s.phaseEndsAt).toBeNull();
   });
 });
 

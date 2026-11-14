@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PHASE_ORDER } from "./phases";
-import { changePhase, registerScene, sceneFor, type Scene } from "./scene";
+import { followPhase, registerScene, sceneFor, type Scene } from "./scene";
 import { createState } from "./state";
 
 describe("scene registry", () => {
@@ -16,8 +16,8 @@ describe("scene registry", () => {
   });
 });
 
-describe("changePhase", () => {
-  it("exits the old scene, switches phase, then enters the new scene", () => {
+describe("followPhase", () => {
+  it("exits the scene this tab was drawing and enters the one for the state's phase", () => {
     const calls: string[] = [];
     registerScene("brief", { draw: () => {}, exit: () => calls.push("exit brief") });
     registerScene("campus", {
@@ -25,9 +25,17 @@ describe("changePhase", () => {
       enter: (s) => calls.push(`enter campus while phase=${s.phase}`),
     });
     const s = createState(1, "moon");
-    s.phase = "brief";
-    changePhase(s, "campus", 1_000);
+    s.phase = "campus";
+    expect(followPhase("brief", s)).toBe("campus");
     expect(calls).toEqual(["exit brief", "enter campus while phase=campus"]);
-    expect(s.phaseEndsAt).toBe(181_000);
+  });
+
+  it("does nothing while the phase has not changed", () => {
+    const calls: string[] = [];
+    registerScene("flight", { draw: () => {}, enter: () => calls.push("enter"), exit: () => calls.push("exit") });
+    const s = createState(1, "moon");
+    s.phase = "flight";
+    expect(followPhase("flight", s)).toBe("flight");
+    expect(calls).toEqual([]);
   });
 });

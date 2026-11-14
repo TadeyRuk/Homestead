@@ -18,7 +18,9 @@ export function nextPhase(phase: Phase): Phase {
 
 export function enterPhase(state: GameState, phase: Phase, now: number): void {
   state.phase = phase;
-  state.phaseEndsAt = now + PHASE_SECONDS[phase] * 1000;
+  const seconds = PHASE_SECONDS[phase];
+  // null, not Infinity: snapshots go through JSON, which turns Infinity into null anyway
+  state.phaseEndsAt = Number.isFinite(seconds) ? now + seconds * 1000 : null;
   if (phase === "brief") {
     // fresh clock and empty log for the report; resetting the ship and crew is the lobby's job (S1-05)
     state.runStartedAt = now;

@@ -1,4 +1,3 @@
-import { enterPhase } from "./phases";
 import type { GameState, Phase } from "./state";
 
 /** what a scene draws for; each screen follows only its own player */
@@ -29,7 +28,7 @@ const stub = (label: string): Scene => ({
 });
 
 const scenes: Record<Phase, Scene> = {
-  lobby: stub("Lobby"),
+  lobby: { draw: () => {} }, // the lobby is the HTML form; the canvas stays empty behind it
   brief: stub("Brief"),
   campus: stub("Campus"),
   flight: stub("Flight"),
@@ -45,9 +44,10 @@ export function sceneFor(phase: Phase): Scene {
   return scenes[phase];
 }
 
-/** the one way to change phase, so every scene gets its exit and enter */
-export function changePhase(state: GameState, phase: Phase, now: number): void {
-  sceneFor(state.phase).exit?.();
-  enterPhase(state, phase, now);
-  sceneFor(phase).enter?.(state);
+// the host's step() changes the phase; each tab calls this per frame so its scenes get exit and enter
+export function followPhase(drawn: Phase, state: GameState): Phase {
+  if (drawn === state.phase) return drawn;
+  sceneFor(drawn).exit?.();
+  sceneFor(state.phase).enter?.(state);
+  return state.phase;
 }

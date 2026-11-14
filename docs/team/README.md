@@ -77,6 +77,9 @@ Seat 1 lands this in `src/core/` at hour 1.5. Until then, code against these nam
 - Scenes read from `GameState` and append to the event log. A scene never reaches into another seat's scene.
 - All randomness goes through the seeded RNG in `src/core/rng.ts`. No `Math.random()` in game logic.
 - Part and mission numbers live in `src/data/` only. No magic numbers for part stats in scene code.
+- Read time through `timeLeft` and `isUp` in `src/core/timer.ts`; they handle a null `phaseEndsAt`.
+- Game rules go into `step()` in `src/core/step.ts` (host only). Scenes draw and register with `registerScene` at startup.
+- Read keys through `createInput().read()` in `src/core/input.ts`, never from `window`.
 
 ### State shape (first pass)
 
@@ -120,7 +123,8 @@ interface GameState {
   seed: number;
   mission: MissionId;
   phase: Phase;
-  phaseEndsAt: number;
+  phaseEndsAt: number | null; // ms on the host clock; null = no deadline (lobby)
+  runStartedAt: number;       // ms on the host clock; event times count from here
   credits: number;
   players: Player[];
   ship: Ship;

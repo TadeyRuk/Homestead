@@ -53,8 +53,8 @@ export interface GameState {
   seed: number;
   mission: MissionId;
   phase: Phase;
-  /** ms timestamp on the host clock */
-  phaseEndsAt: number;
+  /** ms timestamp on the host clock; null when the phase has no deadline (the lobby) */
+  phaseEndsAt: number | null;
   /** ms timestamp on the host clock */
   runStartedAt: number;
   credits: number;
@@ -71,7 +71,7 @@ export function createState(seed: number, mission: MissionId): GameState {
     seed,
     mission,
     phase: "lobby",
-    phaseEndsAt: 0,
+    phaseEndsAt: null, // the lobby waits for Start, not a timer
     runStartedAt: 0,
     credits: 0,
     players: [],

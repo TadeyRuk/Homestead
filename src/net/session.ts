@@ -1,0 +1,161 @@
+import type { Input } from "../core/input";
+import type { GameState, Player, Role } from "../core/state";
+import { step } from "../core/step";
+import { parseFromClient, parseFromHost, type FromHost } from "./protocol";
+
+/** one open data channel; PeerJS in the browser, an in-memory pair in tests */
+export interface Conn {
+  send(msg: unknown): void;
+  onData(cb: (raw: unknown) => void): void;
+  onClose(cb: () => void): void;
+  close(): void;
+}
+
+const MAX_CREW = 4;
+const SNAPSHOT_MS = 66; // about 15 a second
+// a closed tab may never fire close, so silence counts as leaving; long enough to survive a background tab
+export const DROP_MS = 10_000;
+export const PING_MS = 1_000;
+type Clock = () => number;
+const realClock: Clock = () => performance.now();
+export const HOST_ID = "host";
+
+const ALL_ROLES: Role[] = ["pilot", "engineer", "comms", "science"];
+
+function newPlayer(id: string, name: string, index: number, roles: Role[] = []): Player {
+  // placeholder spawn in a row until seat 2's maps give real spawn points
+  return { id, name, roles, x: 420 + index * 40, y: 270, carrying: null, oxygen: 1, power: 1, down: false };
+}
+
+export function createHost(state: GameState, hostName: string, onEnd: (reason: string) => void, clock: Clock = realClock) {
+  // the host covers every station until the lobby splits roles (S1-05)
+  state.players.push(newPlayer(HOST_ID, hostName, 0, [...ALL_ROLES]));
+  const crew = new Map<string, Conn>();
+  const inputs: Record<string, Input> = {};
+  const heard: Record<string, number> = {};
+  let nextId = 2;
+  let lastSnapshot = -Infinity;
+  let ended = false;
+
+  const send = (conn: Conn, msg: FromHost) => conn.send(msg);
+  const broadcast = (msg: FromHost) => crew.forEach((c) => send(c, msg));
+
+  function end(reason: string) {
+    if (ended) return;
+    ended = true;
+    broadcast({ t: "end", reason });
+    crew.forEach((c) => c.close());
+    crew.clear();
+    onEnd(reason);
+  }
+
+  function refuse(conn: Conn, reason: string) {
+    send(conn, { t: "end", reason });
+    conn.close();
+  }
+
+  function addConnection(conn: Conn) {
+    let id: string | null = null;
+    conn.onData((raw) => {
+      const msg = parseFromClient(raw);
+      if (!msg || ended) return;
+      if (id !== null) heard[id] = clock();
+      if (msg.t === "hello" && id === null) {
+        if (state.phase !== "lobby") return refuse(conn, "Run already started");
+        if (state.players.length >= MAX_CREW) return refuse(conn, "Crew is full");
+        id = `p${nextId++}`;
+        state.players.push(newPlayer(id, msg.name, state.players.length));
+        crew.set(id, conn);
+        heard[id] = clock();
+        send(conn, { t: "welcome", playerId: id });
+        broadcast({ t: "snapshot", state });
+      } else if (msg.t === "input" && id !== null) {
+        // or-in presses so one sent just before a newer input still reaches the next tick
+        const prev = inputs[id];
+        inputs[id] = prev
+          ? { ...msg.input, interact: msg.input.interact || prev.interact, panel: msg.input.panel || prev.panel, switch: msg.input.switch || prev.switch }
+          : msg.input;
+      }
+    });
+    conn.onClose(() => {
+      if (id !== null) left(id);
+    });
+  }
+
+  function left(id: string) {
+    if (!crew.has(id)) return;
+    crew.delete(id);
+    const name = state.players.find((p) => p.id === id)?.name ?? "A crew member";
+    end(`${name} left`);
+  }
+
+  function tick(now: number, dt: number, hostInput: Input) {
+    if (ended) return;
+    for (const id of crew.keys()) {
+      if (clock() - heard[id] > DROP_MS) return left(id);
+    }
+    const before = state.phase;
+    step(state, { ...inputs, [HOST_ID]: hostInput }, now, dt);
+    // the report wrapping round to the lobby is the end of the run
+    if (before === "report" && state.phase === "lobby") return end("Run complete");
+    // presses count once; held directions stay until the joiner sends a new input
+    for (const input of Object.values(inputs)) {
+      input.interact = input.panel = input.switch = false;
+    }
+    if (now - lastSnapshot >= SNAPSHOT_MS) {
+      lastSnapshot = now;
+      broadcast({ t: "snapshot", state });
+    }
+  }
+
+  return { addConnection, tick, end, inputs: () => inputs };
+}
+
+export function createClient(conn: Conn, name: string, onEnd: (reason: string) => void, clock: Clock = realClock) {
+  let playerId: string | null = null;
+  let latest: GameState | null = null;
+  let ended = false;
+  let heard = clock();
+
+  const finish = (reason: string) => {
+    if (ended) return;
+    ended = true;
+    onEnd(reason);
+  };
+
+  conn.onData((raw) => {
+    const msg = parseFromHost(raw);
+    if (!msg) return;
+    heard = clock();
+    if (msg.t === "welcome") playerId = msg.playerId;
+    else if (msg.t === "snapshot") latest = msg.state;
+    else {
+      finish(msg.reason);
+      conn.close();
+    }
+  });
+  conn.onClose(() => finish("Host left"));
+  conn.send({ t: "hello", name });
+
+  return {
+    playerId: () => playerId,
+    state: () => latest,
+    sendInput: (input: Input) => {
+      if (!ended) conn.send({ t: "input", input });
+    },
+    ping: () => {
+      if (!ended) conn.send({ t: "ping" });
+    },
+    /** call every frame; the host sends snapshots constantly, so a long gap means it is gone */
+    check: () => {
+      if (!ended && clock() - heard > DROP_MS) {
+        finish("Host left");
+        conn.close();
+      }
+    },
+    leave: () => {
+      ended = true;
+      conn.close();
+    },
+  };
+}

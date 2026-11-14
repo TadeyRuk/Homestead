@@ -1,0 +1,63 @@
+.lobby {
+  --ground: #121722;
+  --line: #2a3242;
+  --text: #e6e9ef;
+  --muted: #9aa3b5;
+  --accent: #e8b04b;
+  --danger: #ff8a7a;
+  position: fixed;
+  top: 32px;
+  left: 32px;
+  width: min(360px, calc(100vw - 64px));
+  padding: 24px 24px 28px;
+  background: var(--ground);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  font: 16px/1.5 system-ui, sans-serif;
+  display: grid;
+  gap: 8px;
+}
+.lobby h1 { margin: 0 0 8px; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
+.lobby label, .lobby-label { color: var(--muted); font-size: 14px; font-weight: 500; margin: 8px 0 0; }
+.lobby-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.lobby-row:not(:has(input)) { grid-template-columns: auto auto; justify-content: start; }
+.lobby input {
+  min-height: 44px;
+  padding: 0 12px;
+  background: #0b0e14;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+}
+#lobby-code { font-family: ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.12em; }
+.lobby button {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #1b2230;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 200ms, border-color 200ms, transform 200ms;
+}
+.lobby button:hover { background: #252e40; border-color: #3a4558; }
+.lobby button:active { transform: translateY(1px); }
+.lobby button.primary { background: var(--accent); border-color: var(--accent); color: #0b0e14; }
+.lobby button.primary:hover { background: #f0c068; }
+.lobby button:disabled { cursor: not-allowed; background: #1b2230; border-color: var(--line); color: var(--muted); }
+.lobby :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lobby-error { margin: 0; min-height: 1.5em; color: var(--danger); font-size: 14px; }
+.lobby-error:empty { min-height: 0; }
+.lobby-pre { display: grid; gap: 8px; }
+.lobby-pre[hidden] { display: none; }
+.lobby-hosting { display: grid; gap: 4px; }
+.lobby-hosting[hidden] { display: none; }
+/* the one oddity: the code is big and mono, because players read it out loud */
+.lobby-code { margin: 0; font: 600 44px/1.1 ui-monospace, monospace; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+.lobby-crew, .lobby-status { margin: 0; color: var(--muted); font-size: 14px; }
+.lobby-status:empty { display: none; }
+.lobby-hosting button { justify-self: start; margin-top: 12px; }
