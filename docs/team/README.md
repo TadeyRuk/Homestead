@@ -32,6 +32,26 @@ If seat 4 or 5 still has no owner at hour 3, the flight phase drops to one minig
 
 The hull weld and energy core minigames are cut. Seat 4's event director and solo station switching go to seat 1.
 
+## Plan B: TadeyRuk on UI (not confirmed)
+
+If TadeyRuk takes every HTML/CSS screen and the HUD, the seats change like this. Until it is confirmed, the seat files above stand.
+
+**TadeyRuk (seat 3 becomes UI, data, report)** owns `src/ui/`, `src/data/`, `src/report/`. Keeps S3-01 (data) and S3-08 (report logic), and takes these UI issues:
+
+| Issue | Hour | What | Done when |
+| --- | --- | --- | --- |
+| U-01 UI kit | 1.5 | HTML overlay above the canvas in `src/ui/`, colour and type tokens, panel, meter bar and button components | other seats can mount a panel without writing CSS |
+| U-02 Lobby screens | 6 | Host, join, code display, name, role pick. Seat 1 keeps the network calls behind them | one to four players reach a run through the screens |
+| U-03 Brief card | 6 | Mission card from Mission Control: destination, objectives, data target, credits | the brief phase shows the seeded mission |
+| U-04 Pad meters | 6 | The six meters at the pad, reading `GameState` | meters redraw when a part mounts |
+| U-05 Mission and suit panel | 8 | Objective list and suit readout, Q flips between them | ticks and suit levels update live |
+| U-06 HUD | 8 | Phase timers, carried part, crew strip in flight | every phase shows its timer and the crew strip shows each station's trouble |
+| U-07 Report screen | 8 | Draws the report and score from S3-08 | a finished run ends on a readable report |
+
+**polsalarm (seat 2 grows)** takes the logic half of S3-02 to S3-07: seeded spawns, pad slots and swapping, meter math, countdown, salvage and launch, kiosk, objective rules. These all run on maps seat 2 already builds. Hazards (S2-07) become the first thing dropped from seat 2 if it falls behind.
+
+**Hour-3 fallback under plan B:** Pilot goes to TadeyRuk, the Engineer power bus to acmrsu. Comms, oxygen converter, event director and station switching stay with Seedlign.
+
 ## How code gets into main
 
 - One branch per issue, named `seat-N/short-name`, for example `seat-2/campus-map`.

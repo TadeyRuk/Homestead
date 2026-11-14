@@ -37,8 +37,8 @@ Anyone at the pad starts a five-second countdown, anyone can cancel. When the bu
 Pay 20 credits for one seeded random part. Logs `kiosk_bought`.
 **Done when:** buying deducts credits and spawns a part at the kiosk.
 
-### S3-07 Surface objectives and mission panel (hour 8)
-Mission Control's list per mission: scans at rich sites, a sample carried to the lander, a deployed instrument, an uplink target, a bonus. Scan time and data from the payload and `instrumentHealth`. Uplink rate from the antenna. Q flips the panel between the list and the suit readout.
+### S3-07 Brief card, surface objectives and mission panel (hour 8)
+The brief phase shows the seeded mission card: destination, objectives, data target, credits. Then Mission Control's list per mission: scans at rich sites, a sample carried to the lander, a deployed instrument, an uplink target, a bonus. Scan time and data from the payload and `instrumentHealth`. Uplink rate from the antenna. Q flips the panel between the list and the suit readout.
 **Done when:** each objective can be completed on the surface and ticks off in the panel.
 
 ### S3-08 Mission report and score (hour 8)
