@@ -1,7 +1,7 @@
 # Seat 1: Core and network
 
 **Owner:** Seedlign
-**Folders:** `src/core/`, `src/net/`, `src/lobby/`, plus `package.json`, `vite.config.ts`, `tsconfig.json`
+**Folders:** `src/core/`, `src/net/`, `src/lobby/`, `src/build/spawns.ts`, `src/build/launch.ts`, plus `package.json`, `vite.config.ts`, `tsconfig.json`
 **Also:** merges every PR into `main`, every one to two hours
 
 Everyone else waits on S1-01, so it lands first and nobody branches before it.
@@ -45,6 +45,14 @@ Test across two real machines on different networks. If WebRTC fails behind a st
 ### S1-08 Merges and itch.io build (ongoing, hour 10.5)
 Merge PRs every one to two hours, play after each merge. Make sure `npm run build` output runs from a zipped `dist/` on itch.io.
 **Done when:** the uploaded itch.io build runs a full solo run in a fresh browser.
+
+### S1-09 Seeded part spawns (hour 6)
+Lives in `src/build/spawns.ts`, on seat 2's spawn points. Use the seed to place parts on the campus spawn points, so every run differs and the same seed gives the same campus.
+**Done when:** two tabs on the same seed see identical spawns, and a new seed changes them.
+
+### S1-10 Countdown, salvage, launch (hour 6)
+Lives in `src/build/launch.ts`, reading seat 2's pad slots (S2-10). Anyone at the pad starts a five-second countdown, anyone can cancel. When the build timer runs out, empty slots get a weak salvage part. Launch is never blocked: too heavy lifts off and fails. Logs `launch_started`, `launch_cancelled`, `salvage_filled`, `launch_failed`.
+**Done when:** a run can launch early, on timeout with salvage, and fail when overweight.
 
 ## Fallback load (if seats 4 or 5 are still open at hour 3)
 

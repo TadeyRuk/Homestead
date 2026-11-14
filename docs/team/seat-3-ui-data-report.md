@@ -1,14 +1,14 @@
 # Seat 3: UI, data and report
 
 **Owner:** TadeyRuk
-**Folders:** `src/ui/`, `src/data/`, `src/report/`
+**Folders:** `src/ui/`, `src/data/`, `src/report/`, `src/build/meters.ts`
 
 Every HTML/CSS screen and the HUD, the part and mission data everyone reads, and the mission report. Screens draw from `GameState` only. The game rules behind them belong to the seat that owns the state: seat 1 for network and lobby, seat 2 for the build and objectives, seats 4 and 5 for flight.
 
 ## Needs from others
 
 - Seat 1: `GameState`, event kinds, phase switching (S1-01, S1-02), and the host and join calls behind the lobby (S1-03, S1-05).
-- Seat 2: meter values (S2-11) and objective flags (S2-14) in `GameState`.
+- Seat 2: mounted parts from the pad (S2-10) and objective flags (S2-14) in `GameState`.
 - Seats 4 and 5: each station's trouble state for the crew strip.
 - Seat 6: the NASA links behind each part and each report line.
 
@@ -49,6 +49,10 @@ Read the event log, find the biggest loss, and walk it back to the part and the 
 ### S3-09 Report screen (hour 8)
 Draws the report and score from S3-08.
 **Done when:** every run ends on a readable report screen.
+
+### S3-10 Meter math (hour 6)
+Compute the six meters from the mounted parts: mass against engine lift, power supply against draw, budget, data per reading, comms rate, time. Write them to `GameState`, then draw them in S3-05. Lives in `src/build/meters.ts`.
+**Done when:** mounting or swapping a part changes the computed values.
 
 ## Fallback load (if seat 4 is still open at hour 3)
 

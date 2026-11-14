@@ -51,8 +51,12 @@ Seat 3 draws every HTML/CSS screen and the HUD from `GameState`. The seat that o
 | `src/core/` | seat 1: GameState, seeded RNG, phase switching, input map, timers |
 | `src/net/` | seat 1: host, join by code, sync |
 | `src/lobby/` | seat 1: lobby and role logic behind seat 3's screens |
-| `src/ground/` | seat 2: top-down player, carrying, camera, campus and surface maps, hazards, extraction |
-| `src/build/` | seat 2: spawns, pad slots, meter math, countdown, salvage, kiosk |
+| `src/ground/` | seat 2: top-down player, carrying, camera, campus and surface maps, suit drain, extraction |
+| `src/ground/hazards.ts` | seat 6: flares and dust storms |
+| `src/build/pad.ts` | seat 2: pad slots and swapping |
+| `src/build/spawns.ts`, `src/build/launch.ts` | seat 1: seeded spawns, countdown, salvage, launch |
+| `src/build/meters.ts` | seat 3: meter math |
+| `src/build/kiosk.ts` | seat 6: kiosk |
 | `src/missions/` | seat 2: surface objective rules |
 | `src/ui/` | seat 3: every HTML/CSS screen and the HUD |
 | `src/report/` | seat 3: report logic and score |
