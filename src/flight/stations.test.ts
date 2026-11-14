@@ -3,7 +3,7 @@ import type { Input } from "../core/input";
 import { enterPhase } from "../core/phases";
 import { createState, type Player, type Role } from "../core/state";
 import { step } from "../core/step";
-import { nextStation, registerStation, stationFor, stationInput, whoIsAt } from "./stations";
+import { nextStation, registerStation, stationFor, stationInput, stationPace, whoIsAt } from "./stations";
 import "./shell.register";
 
 const still: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
@@ -111,5 +111,12 @@ describe("who drives a station", () => {
     expect(s.flight).toEqual({});
     s.flight.bus = { watts: 120 };
     expect(JSON.parse(JSON.stringify(s)).flight).toEqual({ bus: { watts: 120 } });
+  });
+
+  it("paces a station nobody is watching gently, so a solo player can keep up", () => {
+    const s = solo();
+    expect(stationPace(s, "pilot")).toBe(1);
+    expect(stationPace(s, "science")).toBeLessThan(1);
+    expect(stationPace(s, "science")).toBeGreaterThan(0);
   });
 });

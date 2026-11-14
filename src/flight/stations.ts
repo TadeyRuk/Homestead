@@ -54,6 +54,14 @@ export function stationInput(state: GameState, inputs: Record<string, Input>, ro
   return (p && inputs[p.id]) || STILL;
 }
 
+// a station nobody is looking at still runs, but gently, so one player holding several can keep up (S4-10)
+const UNWATCHED_PACE = 0.4;
+
+/** how hard a station's drift and decay should push right now: 1 when someone is at it */
+export function stationPace(state: DeepReadonly<GameState> | GameState, role: Role): number {
+  return whoIsAt(state, role) ? 1 : UNWATCHED_PACE;
+}
+
 /** the station after `current` among this player's roles; the first one when current is null or not theirs */
 export function nextStation(roles: readonly Role[], current: Role | null): Role | null {
   if (roles.length === 0) return null;
