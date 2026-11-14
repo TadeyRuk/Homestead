@@ -13,7 +13,7 @@ Four small minigames, two per role. They plug into seat 4's flight shell and are
 
 ## If still open at hour 3
 
-Seat 3 takes S5-02. Seat 1 takes S5-05. S5-03 and S5-04 are cut. See the fallback table in `docs/team/README.md`.
+Seat 6 (acmrsu) takes S5-02. Seat 1 takes S5-05. S5-03 and S5-04 are cut. See the fallback table in `docs/team/README.md`.
 
 ## Issues
 
@@ -31,7 +31,7 @@ A hull breach opens a welding job: trace the crack while cabin pressure falls. T
 
 ### S5-04 Science: energy core (hour 6, cut item 2)
 Keep the core in its safe band with a coolant valve. Too hot damages the instrument, too cold drops power. A radar sounder heats much faster than a camera. Logs `core_overheated`, `core_too_cold`.
-**Done when:** an overheated core lowers `instrumentHealth`, which seat 3's surface scans read.
+**Done when:** an overheated core lowers `instrumentHealth`, which seat 2's surface scans read (S2-14).
 
 ### S5-05 Science: oxygen converter (hour 6)
 Flick items from a tray into the intake: ice and CO2 cartridges help, food waste helps a little, a wrench jams it. Keeps cabin oxygen up. Logs `oxygen_low`, `converter_jammed`.

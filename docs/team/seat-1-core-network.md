@@ -9,6 +9,7 @@ Everyone else waits on S1-01, so it lands first and nobody branches before it.
 ## Needs from others
 
 - Seat 3: `src/data/parts.json` and `missions.json` shapes by hour 1.5, so the state can hold part ids.
+- Seat 3: the lobby screens (S3-03) that call your host and join functions.
 - Seat 4: the flight shell's entry function, so phase switching can call it.
 
 ## Issues
@@ -29,9 +30,9 @@ PeerJS in `src/net/`. Host gets a six-character code as its peer id. Joiners typ
 Clients send inputs only. The host applies them, then broadcasts state snapshots several times a second. Clients draw from the latest snapshot.
 **Done when:** two tabs agree on positions, timers and mounted parts through a full run.
 
-### S1-05 Lobby and role pick (hour 6)
-Host and Join buttons, code display, name entry, role pick. Solo gets all four roles. Two or three players split roles. Host picks mission or random, and the seed is shown.
-**Done when:** one to four players can start a run with roles assigned.
+### S1-05 Lobby and role logic (hour 6)
+The functions seat 3's lobby screens call: host, join, set name, pick role, pick mission. Solo gets all four roles. Two or three players split roles. Host picks mission or random and sets the seed.
+**Done when:** one to four players can start a run with roles assigned, driven from seat 3's screens.
 
 ### S1-06 Input map and shared timers (hour 6)
 WASD or arrows to move, E to pick up or mount, Q for the panel, Tab to switch station. A timer helper every phase uses for its countdown.

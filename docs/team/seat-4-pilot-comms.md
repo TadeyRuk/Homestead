@@ -8,17 +8,17 @@ The flight phase shell and two of its four stations. Each station's difficulty c
 ## Needs from others
 
 - Seat 1: `GameState`, phase switching, input map (S1-01, S1-02, S1-06).
-- Seat 3: part stats in `src/data/parts.json` (S3-01).
+- Seat 3: part stats in `src/data/parts.json` (S3-01), and the crew strip (S3-07) that shows your stations' trouble.
 - Seat 5: their stations plug into your shell.
 
 ## If still open at hour 3
 
-Seat 2 takes S4-02 and S4-03. Seat 1 takes S4-01, S4-04, S4-05 and S4-06. See the fallback table in `docs/team/README.md`.
+Seat 3 (TadeyRuk) takes S4-02 and S4-03. Seat 1 takes S4-01, S4-04, S4-05 and S4-06. See the fallback table in `docs/team/README.md`.
 
 ## Issues
 
 ### S4-01 Flight shell and station switching (hour 6)
-The flight scene that hosts four stations. Each player sees the station for their role. Anyone holding more than one role switches with Tab. A crew strip shows what the others are dealing with. Transit length from the engine and the destination.
+The flight scene that hosts four stations. Each player sees the station for their role. Anyone holding more than one role switches with Tab. Each station writes its trouble to `GameState` for seat 3's crew strip. Transit length from the engine and the destination.
 **Done when:** a solo player can Tab through four stub stations, and the phase ends when transit ends.
 
 ### S4-02 Pilot: steering and debris (hour 6)

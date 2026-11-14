@@ -44,3 +44,7 @@ Balance runs on the part numbers in `src/data/parts.json` with seat 3. Get someo
 ### S6-08 Submit (hour 12.5)
 Project page with the repo, the itch.io link, the video, the NASA data list and the AI-use notes. Tick the terms and original-work boxes, press Submit for Judging. Resubmit if anything changes before 11:59 PM.
 **Done when:** submitted, and all links tested in a private window.
+
+## Fallback load (if seat 5 is still open at hour 3)
+
+- Engineer power bus (S5-02). A small switch panel: loads against supply, switch them off before the breaker trips. Ask Seedlign or TadeyRuk to pair on it if it's your first game code.

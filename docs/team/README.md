@@ -7,8 +7,8 @@ Six seats, one owner each. Read this file first, then your seat file. Times are 
 | Seat | Area | Owner | File |
 | --- | --- | --- | --- |
 | 1 | Core and network | Seedlign | [seat-1-core-network.md](seat-1-core-network.md) |
-| 2 | Ground and maps | polsalarm | [seat-2-ground-maps.md](seat-2-ground-maps.md) |
-| 3 | Build, missions, report | TadeyRuk | [seat-3-build-missions-report.md](seat-3-build-missions-report.md) |
+| 2 | Ground, maps and build logic | polsalarm | [seat-2-ground-build.md](seat-2-ground-build.md) |
+| 3 | UI, data and report | TadeyRuk | [seat-3-ui-data-report.md](seat-3-ui-data-report.md) |
 | 4 | Pilot and Comms | open | [seat-4-pilot-comms.md](seat-4-pilot-comms.md) |
 | 5 | Engineer and Science | open | [seat-5-engineer-science.md](seat-5-engineer-science.md) |
 | 6 | Ship it | acmrsu | [seat-6-ship-it.md](seat-6-ship-it.md) |
@@ -25,32 +25,16 @@ If seat 4 or 5 still has no owner at hour 3, the flight phase drops to one minig
 
 | Station | Taken by |
 | --- | --- |
-| Pilot (seat 4) | seat 2, polsalarm |
+| Pilot (seat 4) | seat 3, TadeyRuk |
 | Comms (seat 4) | seat 1, Seedlign |
-| Engineer power bus (seat 5) | seat 3, TadeyRuk |
+| Engineer power bus (seat 5) | seat 6, acmrsu |
 | Science oxygen converter only (seat 5) | seat 1, Seedlign |
 
 The hull weld and energy core minigames are cut. Seat 4's event director and solo station switching go to seat 1.
 
-## Plan B: TadeyRuk on UI (not confirmed)
+## Who draws what
 
-If TadeyRuk takes every HTML/CSS screen and the HUD, the seats change like this. Until it is confirmed, the seat files above stand.
-
-**TadeyRuk (seat 3 becomes UI, data, report)** owns `src/ui/`, `src/data/`, `src/report/`. Keeps S3-01 (data) and S3-08 (report logic), and takes these UI issues:
-
-| Issue | Hour | What | Done when |
-| --- | --- | --- | --- |
-| U-01 UI kit | 1.5 | HTML overlay above the canvas in `src/ui/`, colour and type tokens, panel, meter bar and button components | other seats can mount a panel without writing CSS |
-| U-02 Lobby screens | 6 | Host, join, code display, name, role pick. Seat 1 keeps the network calls behind them | one to four players reach a run through the screens |
-| U-03 Brief card | 6 | Mission card from Mission Control: destination, objectives, data target, credits | the brief phase shows the seeded mission |
-| U-04 Pad meters | 6 | The six meters at the pad, reading `GameState` | meters redraw when a part mounts |
-| U-05 Mission and suit panel | 8 | Objective list and suit readout, Q flips between them | ticks and suit levels update live |
-| U-06 HUD | 8 | Phase timers, carried part, crew strip in flight | every phase shows its timer and the crew strip shows each station's trouble |
-| U-07 Report screen | 8 | Draws the report and score from S3-08 | a finished run ends on a readable report |
-
-**polsalarm (seat 2 grows)** takes the logic half of S3-02 to S3-07: seeded spawns, pad slots and swapping, meter math, countdown, salvage and launch, kiosk, objective rules. These all run on maps seat 2 already builds. Hazards (S2-07) become the first thing dropped from seat 2 if it falls behind.
-
-**Hour-3 fallback under plan B:** Pilot goes to TadeyRuk, the Engineer power bus to acmrsu. Comms, oxygen converter, event director and station switching stay with Seedlign.
+Seat 3 draws every HTML/CSS screen and the HUD from `GameState`. The seat that owns a piece of state writes it, and never builds its own panel for it. Agree field names with TadeyRuk before you add a field a screen needs.
 
 ## How code gets into main
 
@@ -66,11 +50,12 @@ If TadeyRuk takes every HTML/CSS screen and the HUD, the seats change like this.
 | --- | --- |
 | `src/core/` | seat 1: GameState, seeded RNG, phase switching, input map, timers |
 | `src/net/` | seat 1: host, join by code, sync |
-| `src/lobby/` | seat 1: host and join screens, role pick |
+| `src/lobby/` | seat 1: lobby and role logic behind seat 3's screens |
 | `src/ground/` | seat 2: top-down player, carrying, camera, campus and surface maps, hazards, extraction |
-| `src/build/` | seat 3: pad, slots, meters, kiosk, countdown, salvage |
-| `src/missions/` | seat 3: mission cards, surface objectives, mission and suit panel |
-| `src/report/` | seat 3: event log reader, report screen, score |
+| `src/build/` | seat 2: spawns, pad slots, meter math, countdown, salvage, kiosk |
+| `src/missions/` | seat 2: surface objective rules |
+| `src/ui/` | seat 3: every HTML/CSS screen and the HUD |
+| `src/report/` | seat 3: report logic and score |
 | `src/data/` | seat 3: `parts.json`, `missions.json` |
 | `src/flight/` (shell), `src/flight/pilot/`, `src/flight/comms/`, `src/flight/events/` | seat 4 |
 | `src/flight/engineer/`, `src/flight/science/` | seat 5 |
