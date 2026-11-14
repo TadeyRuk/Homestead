@@ -30,4 +30,16 @@ describe("part catalog", () => {
     }
     expect(buildable().some((p) => p.salvage)).toBe(false);
   });
+
+  it("refuses a part list that would break launch, at registration rather than at the timeout", async () => {
+    const { registerParts } = await import("./catalog");
+    const good = buildable();
+    expect(() => registerParts(good)).toThrow(/salvage/);
+    expect(() => registerParts([{ id: "e", slot: "propulsion", mass: 1, power: 0 }])).toThrow();
+  });
+
+  it("gives payload and power parts a heat rate for the energy core", () => {
+    expect(partInfo("radar").heat).toBeGreaterThan(partInfo("camera").heat!);
+    expect(partInfo("rtg").heat).toBeGreaterThan(0);
+  });
 });

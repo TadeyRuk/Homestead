@@ -311,4 +311,39 @@ describe("host and client", () => {
     host.tick(2_100, 0.016, still);
     expect(client.state()!.log.map((e) => e.kind)).toEqual(["part_picked", "debris_hit"]);
   });
+
+  it("keeps a connection that says hello in time", () => {
+    const { state, host, clock } = setup();
+    const [hostSide, clientSide] = pair();
+    let closed = false;
+    clientSide.onClose(() => (closed = true));
+    host.addConnection(hostSide);
+    clock.now = 9_000;
+    clientSide.send({ t: "hello", name: "Late" });
+    clock.now = 10_500;
+    host.tick(10_500, 0.016, still);
+    expect(closed).toBe(false);
+    expect(state.players.map((p) => p.name)).toContain("Late");
+  });
+
+  it("tells a silent connection why it was closed, and ignores a hello that comes after", () => {
+    const { state, host, clock } = setup();
+    // a connection that keeps delivering after close, like a late packet already in flight
+    let deliver: (raw: unknown) => void = () => {};
+    const sent: unknown[] = [];
+    let closed = false;
+    host.addConnection({
+      send: (m) => sent.push(m),
+      onData: (cb) => (deliver = cb),
+      onClose: () => {},
+      close: () => (closed = true),
+    });
+    clock.now = 10_500;
+    host.tick(10_500, 0.016, still);
+    expect(closed).toBe(true);
+    expect(sent).toContainEqual({ t: "end", reason: "Took too long to join" });
+    const before = state.players.length;
+    deliver({ t: "hello", name: "Ghost" });
+    expect(state.players).toHaveLength(before);
+  });
 });

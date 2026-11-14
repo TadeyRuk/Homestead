@@ -18,9 +18,14 @@ export function registerRule(phase: Phase, rule: Rule): void {
 
 // runs only on the host each tick; seat rules run here, so every tab sees one result
 export function step(state: GameState, inputs: Record<string, Input>, now: number, dt: number): void {
-  // the crew gathers in the lobby; nobody walks until the run starts
-  if (state.phase !== "lobby") movePlayers(state, inputs, dt);
-  for (const rule of rules[state.phase] ?? []) rule(state, inputs, now, dt);
+  // players walk only on a map; in flight WASD belongs to the stations, and the lobby waits for Start
+  if (state.phase === "campus" || state.phase === "surface") movePlayers(state, inputs, dt);
+  const phase = state.phase;
+  for (const rule of rules[phase] ?? []) {
+    rule(state, inputs, now, dt);
+    // a rule that ends the phase (liftoff, extraction) means the rest of that phase's rules no longer apply
+    if (state.phase !== phase) return;
+  }
   if (isUp(state, now)) enterPhase(state, nextPhase(state.phase), now);
 }
 

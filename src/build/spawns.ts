@@ -8,7 +8,7 @@ import type { GameState, Slot } from "../core/state";
 const SPAWN_STREAM = 0x73706177;
 const SLOTS: Slot[] = ["propulsion", "power", "comms", "payload"];
 
-/** seeds the campus: every slot gets at least one part, then the rest fill the remaining points */
+/** seeds the campus: one part per slot first (as many slots as there are points), then the rest fill the remaining points */
 export function spawnParts(state: GameState, points: readonly Point[] = mapFor("campus").spawnPoints): void {
   const r = rng(state.seed ^ SPAWN_STREAM);
   const shuffle = <T>(xs: T[]) => {
@@ -20,7 +20,7 @@ export function spawnParts(state: GameState, points: readonly Point[] = mapFor("
   };
   const pool = shuffle(buildable().map((p) => p));
   // one per slot first, so a short map never leaves a slot with nothing to find
-  const firsts = SLOTS.map((slot) => pool.find((p) => p.slot === slot)!).filter(Boolean);
+  const firsts = SLOTS.flatMap((slot) => pool.filter((p) => p.slot === slot).slice(0, 1));
   const order = [...firsts, ...pool.filter((p) => !firsts.includes(p))];
   shuffle([...points]).forEach((at, i) => placePart(state, order[i % order.length].id, at, "s"));
 }

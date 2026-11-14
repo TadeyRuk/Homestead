@@ -37,6 +37,8 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
   const heard: Record<string, number> = {};
   // connections that have not said hello yet, with when they opened; they get DROP_MS to do it
   const pending = new Map<Conn, number>();
+  // connections the host has given up on; a packet already in flight must not seat a ghost player
+  const dropped = new WeakSet<Conn>();
   let nextId = 2;
   let lastSnapshot = -Infinity;
   let hostNow = clock(); // the latest tick time; snapshots carry it
@@ -72,7 +74,7 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
     pending.set(conn, clock());
     conn.onData((raw) => {
       const msg = parseFromClient(raw);
-      if (!msg || ended) return;
+      if (!msg || ended || dropped.has(conn)) return;
       if (id !== null) heard[id] = clock();
       if (msg.t === "hello" && id === null) {
         pending.delete(conn);
@@ -119,7 +121,8 @@ export function createHost(state: GameState, hostName: string, onEnd: (reason: s
     for (const [conn, opened] of pending) {
       if (clock() - opened > DROP_MS) {
         pending.delete(conn);
-        conn.close();
+        dropped.add(conn);
+        refuse(conn, "Took too long to join");
       }
     }
     const before = state.phase;

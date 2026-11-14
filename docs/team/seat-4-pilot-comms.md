@@ -8,7 +8,7 @@ Two of the four flight stations, plus flight events. The flight shell (S4-01) is
 ## Needs from others
 
 - Seat 1: `GameState`, phase switching, input map (S1-01, S1-02, S1-06).
-- Seat 3: part stats in `src/data/parts.json` (S3-01), and the crew strip (S3-07) that shows your stations' trouble.
+- Seat 3: part stats through `partInfo()` in `src/core/catalog.ts` (seat 3 fills it from `src/data/`), and the crew strip (S3-07) that shows your stations' trouble.
 
 ## If still open at hour 3
 

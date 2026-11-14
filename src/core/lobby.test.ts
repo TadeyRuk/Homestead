@@ -141,4 +141,11 @@ describe("startRun resets everything it doesn't deliberately keep", () => {
     }
   });
 });
+
+  it("cancels a countdown left over from the last run", () => {
+    const s = crew(1);
+    s.launchAt = 5_000;
+    startRun(s, "mars", 1_000);
+    expect(s.launchAt).toBeNull();
+  });
 });

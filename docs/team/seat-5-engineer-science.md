@@ -8,7 +8,7 @@ Four small minigames, two per role. They plug into the flight shell (seat 1, on 
 ## Needs from others
 
 - Seat 1: `GameState`, input map (S1-01, S1-06).
-- Seat 3: part power and heat numbers in `src/data/parts.json` (S3-01).
+- Seat 3: part power and heat numbers through `partInfo()` in `src/core/catalog.ts` (seat 3 fills it from `src/data/`). `power` is signed, so a bus load is `-power`; `heat` is core temperature per second.
 - Seat 1: `registerStation`, `stationInput` and `state.flight` (see `docs/team/README.md`). Keep each minigame's state in `state.flight` and step it from a `registerRule("flight", ...)` rule.
 
 ## Where to start
@@ -50,7 +50,7 @@ A low cabin oxygen warning reaches the crew strip. At zero the crew is lost and 
 **Done when:** ignoring the converter ends the run, and the report can name it.
 
 ### S5-09 Station sandbox (hour 6)
-A debug URL such as `?station=engineer&parts=ion,rtg,lowgain,radar` that loads one flight station on its own with chosen parts. For building the minigames before the flight shell lands, and for seat 6's balance runs. Works for all four stations.
+A debug URL such as `?station=engineer&parts=ion-drive,rtg,low-gain,radar` that loads one flight station on its own with chosen parts. For building the minigames before the flight shell lands, and for seat 6's balance runs. Works for all four stations.
 **Done when:** each station opens on its own from the URL with the parts given.
 
 ### S5-10 Station trouble states (hour 8)
