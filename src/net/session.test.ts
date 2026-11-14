@@ -287,4 +287,28 @@ describe("host and client", () => {
     expect(state.mission).toBe("moon");
     expect(state.players[0].roles).toEqual(["engineer", "science"]); // swaps away pilot, its first other role
   });
+
+  it("closes a connection that never says hello", () => {
+    const { host, clock } = setup();
+    const [hostSide, clientSide] = pair();
+    let closed = false;
+    clientSide.onClose(() => (closed = true));
+    host.addConnection(hostSide);
+    clock.now = 10_500;
+    host.tick(10_500, 0.016, still);
+    expect(closed).toBe(true);
+  });
+
+  it("leaves the growing event log out of snapshots until the report needs it", () => {
+    const { state, host, join } = setup();
+    const { client } = join("Ada");
+    enterPhase(state, "campus", 0);
+    state.log.push({ t: 1, phase: "campus", kind: "part_picked" });
+    host.tick(1_000, 0.016, still);
+    expect(client.state()!.log).toEqual([]);
+    enterPhase(state, "report", 2_000);
+    state.log.push({ t: 2, phase: "flight", kind: "debris_hit" });
+    host.tick(2_100, 0.016, still);
+    expect(client.state()!.log.map((e) => e.kind)).toEqual(["part_picked", "debris_hit"]);
+  });
 });

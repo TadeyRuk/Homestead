@@ -19,13 +19,13 @@ export function createPrediction(speed: number) {
     /** fold in the host's position for this player from the latest snapshot */
     reconcile(host: Point, moving: boolean, dt: number) {
       if (!pos) {
-        pos = { ...host };
+        pos = { x: host.x, y: host.y }; // only the position: callers pass a whole Player
         return;
       }
       const ex = host.x - pos.x;
       const ey = host.y - pos.y;
       if (Math.hypot(ex, ey) > SNAP_PX) {
-        pos = { ...host };
+        pos = { x: host.x, y: host.y }; // only the position: callers pass a whole Player
       } else if (!moving) {
         const k = Math.min(1, dt * EASE_PER_S);
         pos.x += ex * k;
