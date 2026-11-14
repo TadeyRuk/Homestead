@@ -1,3 +1,6 @@
+import type { MissionChoice } from "../core/lobby";
+import { ROLES } from "../core/lobby";
+import type { Role } from "../core/state";
 import { normalizeCode } from "../net/code";
 import "./lobby.css";
 
@@ -7,15 +10,27 @@ export interface LobbyHandlers {
   onStart(): void;
   /** a local run with no network, so the game works even if signalling is down */
   onSolo(name: string): void;
+  onPickRole(role: Role): void;
+  onMission(choice: MissionChoice): void;
 }
+
+export interface CrewRow {
+  name: string;
+  roles: readonly Role[];
+  me: boolean;
+}
+
+const ROLE_LABEL: Record<Role, string> = { pilot: "Pilot", engineer: "Engineer", comms: "Comms", science: "Science" };
 
 // a bare form so two tabs can join; seat 3's lobby screens (S3-03) replace it
 export function renderLobby(root: HTMLElement, h: LobbyHandlers) {
   root.innerHTML = `
     <form class="lobby" novalidate>
       <h1>Homestead</h1>
-      <label for="lobby-name">Name</label>
-      <input id="lobby-name" maxlength="16" autocomplete="nickname" />
+      <div class="lobby-name">
+        <label for="lobby-name">Name</label>
+        <input id="lobby-name" maxlength="16" autocomplete="nickname" />
+      </div>
       <div class="lobby-pre">
         <div class="lobby-row">
           <button type="button" data-act="solo" class="primary">Play solo</button>
@@ -28,11 +43,29 @@ export function renderLobby(root: HTMLElement, h: LobbyHandlers) {
         </div>
       </div>
       <p class="lobby-error" role="alert" aria-live="assertive"></p>
-      <section class="lobby-hosting" hidden>
-        <p class="lobby-label">Your code</p>
-        <p class="lobby-code" aria-live="polite"></p>
-        <p class="lobby-crew"></p>
-        <button type="button" data-act="start" class="primary">Start</button>
+      <section class="lobby-room" hidden>
+        <div class="lobby-host-only">
+          <p class="lobby-label">Your code</p>
+          <p class="lobby-code" aria-live="polite"></p>
+        </div>
+        <p class="lobby-label">Crew</p>
+        <ul class="lobby-crew"></ul>
+        <p class="lobby-label">Take a role</p>
+        <div class="lobby-roles" role="group" aria-label="Take a role">
+          ${ROLES.map((r) => `<button type="button" data-role="${r}" aria-pressed="false">${ROLE_LABEL[r]}</button>`).join("")}
+        </div>
+        <div class="lobby-host-only lobby-mission">
+          <label for="lobby-mission">Mission</label>
+          <select id="lobby-mission">
+            <option value="random">Random</option>
+            <option value="moon">Moon</option>
+            <option value="mars">Mars</option>
+          </select>
+          <p class="lobby-seed"></p>
+        </div>
+        <div class="lobby-host-only">
+          <button type="button" data-act="start" class="primary">Start</button>
+        </div>
       </section>
       <p class="lobby-status" aria-live="polite"></p>
     </form>`;
@@ -42,7 +75,16 @@ export function renderLobby(root: HTMLElement, h: LobbyHandlers) {
   const code = $<HTMLInputElement>("#lobby-code");
   const errorLine = $<HTMLElement>(".lobby-error");
   const statusLine = $<HTMLElement>(".lobby-status");
-  const hosting = $<HTMLElement>(".lobby-hosting");
+  const room = $<HTMLElement>(".lobby-room");
+  const roleButtons = [...root.querySelectorAll<HTMLButtonElement>("[data-role]")];
+  const enterRoom = (asHost: boolean) => {
+    room.hidden = false;
+    $<HTMLElement>(".lobby-pre").hidden = true;
+    for (const el of root.querySelectorAll<HTMLElement>(".lobby-host-only")) el.hidden = !asHost;
+    name.disabled = true;
+    $<HTMLElement>(".lobby-name").hidden = true; // fixed now, and the crew list shows it
+    for (const b of buttons) b.disabled = false;
+  };
   const buttons = [...root.querySelectorAll<HTMLButtonElement>("button")];
 
   const showError = (msg: string) => {
@@ -77,6 +119,12 @@ export function renderLobby(root: HTMLElement, h: LobbyHandlers) {
     h.onJoin(n, c);
   });
   $("[data-act=start]").addEventListener("click", () => h.onStart());
+  for (const b of roleButtons) {
+    b.addEventListener("click", () => {
+      if (b.getAttribute("aria-pressed") !== "true") h.onPickRole(b.dataset.role as Role);
+    });
+  }
+  $("#lobby-mission").addEventListener("change", (e) => h.onMission((e.target as HTMLSelectElement).value as MissionChoice));
   root.querySelector("form")!.addEventListener("submit", (e) => e.preventDefault());
 
   return {
@@ -88,14 +136,23 @@ export function renderLobby(root: HTMLElement, h: LobbyHandlers) {
       for (const b of buttons) b.disabled = busy;
       if (busy) showError("");
     },
-    showHosting: (c: string) => {
-      hosting.hidden = false;
+    showHosting: (c: string, seed: number) => {
+      enterRoom(true);
       $<HTMLElement>(".lobby-code").textContent = c;
-      $<HTMLElement>(".lobby-pre").hidden = true;
-      name.disabled = true;
+      $<HTMLElement>(".lobby-seed").textContent = `Seed ${seed}`;
     },
-    showCrew: (names: string[]) => {
-      $<HTMLElement>(".lobby-crew").textContent = `Crew: ${names.join(", ")}`;
+    showJoined: () => enterRoom(false),
+    showCrew: (rows: readonly CrewRow[]) => {
+      const list = $<HTMLElement>(".lobby-crew");
+      list.replaceChildren(
+        ...rows.map((r) => {
+          const li = document.createElement("li");
+          li.textContent = `${r.name}${r.me ? " (you)" : ""}: ${r.roles.map((x) => ROLE_LABEL[x]).join(", ")}`;
+          return li;
+        }),
+      );
+      const mine = rows.find((r) => r.me)?.roles ?? [];
+      for (const b of roleButtons) b.setAttribute("aria-pressed", String(mine.includes(b.dataset.role as Role)));
     },
     hide: () => {
       // a focused button would keep swallowing game keys; not every browser blurs a hidden element

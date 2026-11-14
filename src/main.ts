@@ -1,6 +1,5 @@
 import "./register";
 import { createInput, type Input } from "./core/input";
-import { enterPhase } from "./core/phases";
 import { followPhase, sceneFor } from "./core/scene";
 import { createState, type GameState, type Phase } from "./core/state";
 import { PLAYER_SPEED } from "./core/step";
@@ -25,7 +24,7 @@ const INTERP_DELAY_MS = 100;
 
 // what this tab is doing right now; null while sitting in the lobby form
 type Mode =
-  | { kind: "host"; run: number; state: GameState; close(): void }
+  | { kind: "host"; run: number; state: GameState; session: ReturnType<typeof createHost>; close(): void }
   | {
       kind: "client";
       run: number;
@@ -70,6 +69,7 @@ function startHosting(name: string, closePeer: () => void) {
     kind: "host",
     run: thisRun,
     state,
+    session,
     close: () => {
       clearInterval(ticker);
       setTimeout(closePeer, FLUSH_MS);
@@ -82,8 +82,8 @@ function openLobby(message = "") {
   ui!.hidden = false;
   const l = renderLobby(ui!, {
     onSolo: (name) => {
-      const { state } = startHosting(name, () => {});
-      enterPhase(state, "brief", performance.now());
+      const { session } = startHosting(name, () => {});
+      session.start(performance.now());
       l.hide();
     },
     onHost: async (name) => {
@@ -91,11 +91,10 @@ function openLobby(message = "") {
       l.setStatus("Getting a code...");
       try {
         const hosting = await host();
-        const { session } = startHosting(name, hosting.close);
+        const { state, session } = startHosting(name, hosting.close);
         hosting.onConnection((conn) => session.addConnection(conn));
-        l.setBusy(false);
         l.setStatus("");
-        l.showHosting(hosting.code);
+        l.showHosting(hosting.code, state.seed);
       } catch (e) {
         l.setBusy(false);
         l.setStatus("");
@@ -127,6 +126,7 @@ function openLobby(message = "") {
             setTimeout(joined.close, FLUSH_MS);
           },
         };
+        l.showJoined();
         l.setStatus("Joined. Waiting for the host to start.");
       } catch (e) {
         l.setBusy(false);
@@ -136,8 +136,15 @@ function openLobby(message = "") {
     },
     onStart: () => {
       if (mode?.kind !== "host") return;
-      enterPhase(mode.state, "brief", performance.now());
+      mode.session.start(performance.now());
       l.hide();
+    },
+    onPickRole: (role) => {
+      if (mode?.kind === "host") mode.session.takeRole(role);
+      else if (mode?.kind === "client") mode.client.pickRole(role);
+    },
+    onMission: (choice) => {
+      if (mode?.kind === "host") mode.session.setMission(choice);
     },
   });
   if (message) l.showError(message);
@@ -198,6 +205,15 @@ function smoothed(
   };
 }
 
+// the lobby lists names and roles; redraw it only when they change
+function showCrewIfChanged(state: GameState, me: string) {
+  const rows = state.players.map((p) => ({ name: p.name, roles: p.roles, me: p.id === me }));
+  const key = JSON.stringify(rows);
+  if (key === crewShown) return;
+  crewShown = key;
+  lobby.showCrew(rows);
+}
+
 function draw(now: number) {
   const dt = Math.max(0, Math.min((now - last) / 1000, 0.1));
   last = now;
@@ -206,11 +222,6 @@ function draw(now: number) {
   let me = HOST_ID;
   if (mode?.kind === "host") {
     state = mode.state;
-    const crew = state.players.map((p) => p.name).join(", ");
-    if (state.phase === "lobby" && crew !== crewShown) {
-      crewShown = crew;
-      lobby.showCrew(state.players.map((p) => p.name));
-    }
   } else if (mode?.kind === "client") {
     const joined = mode;
     // only send when something changed, so a still player costs no traffic
@@ -224,9 +235,11 @@ function draw(now: number) {
       state = joined.client.state();
       me = joined.client.playerId() ?? "";
       if (state && state.phase !== "lobby") lobby.hide();
-      if (state) state = smoothed(joined, state, me, i, dt);
+      if (state && state.phase !== "lobby") state = smoothed(joined, state, me, i, dt);
     }
   }
+
+  if (state?.phase === "lobby") showCrewIfChanged(state, me);
 
   ctx!.fillStyle = "#0b0e14";
   ctx!.fillRect(0, 0, canvas!.width, canvas!.height);
