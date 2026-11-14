@@ -1,6 +1,6 @@
 import type { Scene } from "../core/scene";
 import { edgeArrow, follow, PX_PER_M, type EdgeArrow } from "./camera";
-import { CAMPUS_PALETTE, drawGround, drawMarker, drawPlayers } from "./draw";
+import { CAMPUS_PALETTE, drawGround, drawMarker, drawParts, drawPlayers } from "./draw";
 import { groundFor, type Ground, type GroundMap } from "./world";
 
 /**
@@ -23,6 +23,7 @@ export function groundScene(which: Ground): Scene {
       if (map.pad) drawMarker(ctx, map.pad, "#7ef0d0", "Launch pad");
       if (map.kiosk) drawMarker(ctx, map.kiosk, "#ff5fae", "Kiosk", 16);
       if (which === "surface" && map.lander) drawMarker(ctx, map.lander, "#7ef0d0", "Lander", 30);
+      drawParts(ctx, state.parts);
       drawPlayers(ctx, state.players, view.playerId);
       ctx.restore();
 

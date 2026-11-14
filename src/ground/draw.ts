@@ -66,6 +66,31 @@ export function drawMarker(ctx: Ctx, at: Point, colour: string, name: string, ra
   ctx.textAlign = "left";
 }
 
+interface Loose extends Point {
+  readonly part: string;
+}
+
+/** loose parts as small crates, labelled until the art pass gives each part its own sprite */
+export function drawParts(ctx: Ctx, parts: readonly Loose[]): void {
+  for (const piece of parts) {
+    ctx.fillStyle = "#0b0e14";
+    ctx.beginPath();
+    ctx.ellipse(piece.x, piece.y + 7, 10, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#f2f4f8";
+    ctx.save();
+    ctx.translate(piece.x, piece.y);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(-6, -6, 12, 12);
+    ctx.restore();
+    ctx.fillStyle = "#c9ced8";
+    ctx.font = "10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(piece.part, piece.x, piece.y + 22);
+    ctx.textAlign = "left";
+  }
+}
+
 interface Drawable extends Point {
   readonly id: string;
   readonly name: string;
@@ -90,8 +115,14 @@ export function drawPlayers(ctx: Ctx, players: readonly Drawable[], me: string):
     ctx.fillStyle = "#0b0e14";
     ctx.fillRect(p.x - 4, p.y - 4, 8, 4); // visor, so a player reads as an astronaut and not a crate
     if (p.carrying) {
+      // the part held over the head, named, so everyone can see who has what
       ctx.fillStyle = "#f2f4f8";
       ctx.fillRect(p.x - 4, p.y - PLAYER_HALF - 10, 8, 8);
+      ctx.fillStyle = "#ffd84a";
+      ctx.font = "600 10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(p.carrying, p.x, p.y - PLAYER_HALF - 14);
+      ctx.textAlign = "left";
     }
     ctx.fillStyle = "#e6e9ef";
     ctx.font = "11px sans-serif";
