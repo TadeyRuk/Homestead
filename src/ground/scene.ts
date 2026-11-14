@@ -1,4 +1,5 @@
 import type { Scene } from "../core/scene";
+import { KIOSK_REACH, PAD_REACH } from "./carry";
 import { edgeArrow, follow, PX_PER_M, type EdgeArrow } from "./camera";
 import { SLOTS, slotSpot } from "../build/pad";
 import { drawCountdown, drawGround, drawMarker, drawPadSlots, drawParts, drawPlayers, drawShip, drawSuitBars, drawTaskRing, drawHeldData, drawInstrument, paletteFor } from "./draw";
@@ -31,7 +32,8 @@ export function groundScene(which: Ground): Scene {
       if (which === "campus") {
         if (map.pad) {
           const pad = map.pad;
-          drawMarker(ctx, pad, "#7ef0d0", "Launch pad");
+          // the ring is where E mounts or starts the countdown
+          drawMarker(ctx, pad, "#7ef0d0", "Launch pad", PAD_REACH);
           drawPadSlots(
             ctx,
             SLOTS.map((slot) => ({
@@ -44,7 +46,8 @@ export function groundScene(which: Ground): Scene {
           // the stub scene used to show this; seat 1's countdown lives in state.launchAt
           if (state.launchAt !== null) drawCountdown(ctx, pad, Math.max(0, Math.ceil((state.launchAt - view.now) / 1000)));
         }
-        if (map.kiosk) drawMarker(ctx, map.kiosk, "#ff5fae", "Kiosk", 16);
+        // the ring is where E buys
+        if (map.kiosk) drawMarker(ctx, map.kiosk, "#ff5fae", "Kiosk", KIOSK_REACH);
       } else {
         const sv = state.surface;
         for (const site of map.sites ?? []) {
