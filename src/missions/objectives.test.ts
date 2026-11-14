@@ -179,6 +179,31 @@ describe("uplink", () => {
     expect(s.data.uplinked).toBe(0);
   });
 
+  it("logs a batch still sending when the surface ends, so the log adds up to the uplinked total", () => {
+    const s = landed("mars", { comms: "low-gain" });
+    s.surface.held.a = 30;
+    at(s, "a", lander);
+    s.phaseEndsAt = clock + 3_000; // the extraction ship arrives mid-send
+    wait(s, 4);
+    expect(s.phase).toBe("report");
+    const logged = kinds(s, "data_uplinked").reduce((sum, e) => sum + (e.value ?? 0), 0);
+    expect(s.data.uplinked).toBeGreaterThan(0);
+    expect(logged).toBeCloseTo(s.data.uplinked, 1);
+    expect(kinds(s, "data_uplinked")[0]).toMatchObject({ phase: "surface", player: "a", part: "low-gain" });
+  });
+
+  it("logs the batch of a player who goes down mid-send as the crew is wiped out", () => {
+    const s = landed("mars", { comms: "low-gain" });
+    s.surface.held.a = 30;
+    at(s, "a", lander);
+    wait(s, 1);
+    for (const p of s.players) p.down = true; // the whole crew down ends the surface on this tick
+    wait(s, 0.25);
+    expect(s.phase).toBe("report");
+    const logged = kinds(s, "data_uplinked").reduce((sum, e) => sum + (e.value ?? 0), 0);
+    expect(logged).toBeCloseTo(s.data.uplinked, 1);
+  });
+
   it("flips the uplink flag when the uplinked total reaches the target", () => {
     const s = landed("moon", { comms: "laser" });
     s.surface.held.a = 25;

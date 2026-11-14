@@ -121,16 +121,28 @@ function uplink(state: GameState, p: Player, now: number, dt: number): void {
     if (s.held[p.id] <= 1e-9) s.held[p.id] = 0;
   }
   // a batch ends when the player's data is all sent, or they walk away or go down mid-send
-  const batch = s.uplinking[p.id];
-  if (batch !== undefined && (!sending || s.held[p.id] === 0)) {
-    const antenna = state.ship.slots.comms;
-    logEvent(state, "data_uplinked", now, {
-      player: p.id,
-      value: Math.round(batch * 10) / 10,
-      ...(antenna ? { part: antenna } : {}),
-    });
-    delete s.uplinking[p.id];
-  }
+  if (s.uplinking[p.id] !== undefined && (!sending || s.held[p.id] === 0)) logBatch(state, p.id, now);
+}
+
+/** logs one player's open uplink batch as `data_uplinked` and closes it */
+function logBatch(state: GameState, playerId: string, now: number): void {
+  const batch = state.surface.uplinking[playerId];
+  if (batch === undefined) return;
+  const antenna = state.ship.slots.comms;
+  logEvent(state, "data_uplinked", now, {
+    player: playerId,
+    value: Math.round(batch * 100) / 100,
+    ...(antenna ? { part: antenna } : {}),
+  });
+  delete state.surface.uplinking[playerId];
+}
+
+/**
+ * Logs every uplink still in progress. Extraction calls this as the surface ends, so data sent
+ * in the last seconds is in the log and the logged batches add up to `data.uplinked`.
+ */
+export function flushUplinks(state: GameState, now: number): void {
+  for (const playerId of Object.keys(state.surface.uplinking)) logBatch(state, playerId, now);
 }
 
 /** host rule for the surface: jobs at sites and spots, the sample home, data up the antenna */
