@@ -11,9 +11,9 @@ Four small minigames, two per role. They plug into seat 4's flight shell and are
 - Seat 3: part power and heat numbers in `src/data/parts.json` (S3-01).
 - Seat 4: the flight shell's station interface (S4-01). Until it lands, build each minigame as a standalone scene.
 
-## If still open at hour 3
+## Where to start
 
-Seat 6 (acmrsu) takes S5-02 and S5-06. Seat 1 takes S5-05 and S5-08. S5-03, S5-04, S5-07, S5-09 and S5-10 are cut. See the fallback table in `docs/team/README.md`.
+S5-09 (station sandbox) first: it loads one station on its own, so nothing waits on seat 4's flight shell. Then S5-01, S5-02, S5-05 and S5-06 (hour 6).
 
 ## Issues
 

@@ -54,8 +54,7 @@ Lives in `src/build/spawns.ts`, on seat 2's spawn points. Use the seed to place 
 Lives in `src/build/launch.ts`, reading seat 2's pad slots (S2-10). Anyone at the pad starts a five-second countdown, anyone can cancel. When the build timer runs out, empty slots get a weak salvage part. Launch is never blocked: too heavy lifts off and fails. Logs `launch_started`, `launch_cancelled`, `salvage_filled`, `launch_failed`.
 **Done when:** a run can launch early, on timeout with salvage, and fail when overweight.
 
-## Fallback load (if seats 4 or 5 are still open at hour 3)
+## Fallback load (if seat 4 is still open at hour 3)
 
 - Comms dish minigame (S4-04, S4-05)
-- Science oxygen converter and cabin oxygen failure (S5-05, S5-08)
-- Event director, solo station switching, arrival and solo pacing (S4-06, S4-01, S4-09, S4-10)
+- Flight shell, event director, solo station switching, arrival and solo pacing (S4-01, S4-06, S4-09, S4-10)
