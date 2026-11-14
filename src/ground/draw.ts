@@ -1,0 +1,103 @@
+import type { Point } from "../core/map";
+import type { Role } from "../core/state";
+import { PLAYER_HALF } from "./geom";
+import type { GroundMap } from "./world";
+
+/** placeholder colours until the art pass; one palette per setting */
+export interface Palette {
+  ground: string;
+  floors: Record<string, string>;
+  wall: string;
+  wallEdge: string;
+  text: string;
+}
+
+export const CAMPUS_PALETTE: Palette = {
+  ground: "#1f3a2c",
+  floors: { road: "#4a4f57", runway: "#3b3f46", apron: "#5d636c", yard: "#2c4a3a" },
+  wall: "#565c67",
+  wallEdge: "#2b2f36",
+  text: "#e6e9ef",
+};
+
+// role colours from the proposal mocks, so each player reads as their job
+export const ROLE_COLOURS: Record<Role, string> = {
+  pilot: "#f08a24",
+  engineer: "#e8c547",
+  comms: "#3fc6d9",
+  science: "#e0509a",
+};
+
+type Ctx = CanvasRenderingContext2D;
+
+export function drawGround(ctx: Ctx, map: GroundMap, palette: Palette): void {
+  ctx.fillStyle = palette.ground;
+  ctx.fillRect(0, 0, map.width, map.height);
+  for (const f of map.floors) {
+    ctx.fillStyle = palette.floors[f.kind] ?? palette.floors.road ?? palette.ground;
+    ctx.fillRect(f.x, f.y, f.w, f.h);
+  }
+  for (const w of map.walls) {
+    ctx.fillStyle = palette.wallEdge;
+    ctx.fillRect(w.x, w.y, w.w, w.h);
+    ctx.fillStyle = palette.wall;
+    ctx.fillRect(w.x + 2, w.y + 2, w.w - 4, w.h - 6);
+  }
+  ctx.fillStyle = palette.text;
+  ctx.font = "600 13px sans-serif";
+  ctx.textAlign = "center";
+  for (const l of map.labels) ctx.fillText(l.text, l.x, l.y);
+  ctx.textAlign = "left";
+}
+
+/** a ring with a name, for the pad, the kiosk and the lander */
+export function drawMarker(ctx: Ctx, at: Point, colour: string, name: string, radius = 22): void {
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.arc(at.x, at.y, radius, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = colour;
+  ctx.font = "600 11px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(name, at.x, at.y - radius - 6);
+  ctx.textAlign = "left";
+}
+
+interface Drawable extends Point {
+  readonly id: string;
+  readonly name: string;
+  readonly roles: readonly Role[];
+  readonly down: boolean;
+  readonly carrying: string | null;
+}
+
+export function drawPlayers(ctx: Ctx, players: readonly Drawable[], me: string): void {
+  // everyone else first, so this tab's own player is always on top
+  const ordered = [...players.filter((p) => p.id !== me), ...players.filter((p) => p.id === me)];
+  for (const p of ordered) {
+    const s = PLAYER_HALF * 2;
+    ctx.globalAlpha = p.down ? 0.45 : 1;
+    if (p.id === me) {
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(p.x - PLAYER_HALF - 3, p.y - PLAYER_HALF - 3, s + 6, s + 6);
+    }
+    ctx.fillStyle = p.roles[0] ? ROLE_COLOURS[p.roles[0]] : "#c9ced8";
+    ctx.fillRect(p.x - PLAYER_HALF, p.y - PLAYER_HALF, s, s);
+    ctx.fillStyle = "#0b0e14";
+    ctx.fillRect(p.x - 4, p.y - 4, 8, 4); // visor, so a player reads as an astronaut and not a crate
+    if (p.carrying) {
+      ctx.fillStyle = "#f2f4f8";
+      ctx.fillRect(p.x - 4, p.y - PLAYER_HALF - 10, 8, 8);
+    }
+    ctx.fillStyle = "#e6e9ef";
+    ctx.font = "11px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(p.down ? `${p.name} (down)` : p.name, p.x, p.y + PLAYER_HALF + 14);
+    ctx.textAlign = "left";
+    ctx.globalAlpha = 1;
+  }
+}
