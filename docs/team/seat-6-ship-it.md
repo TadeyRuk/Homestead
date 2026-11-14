@@ -47,7 +47,7 @@ Project page with the repo, the itch.io link, the video, the NASA data list and 
 **Done when:** submitted, and all links tested in a private window.
 
 ### S6-09 Kiosk (hour 8, cut list item 1)
-Lives in `src/build/kiosk.ts`. Pay 20 credits for one seeded random part, which appears at the kiosk. Logs `kiosk_bought`.
+Lives in `src/build/kiosk.ts`. `buyFromKiosk` charges 20 credits during campus and drops a seeded random part at the kiosk, logging `kiosk_bought`. Still to do: a campus rule that calls it when a player presses E near the kiosk (`nearest` from `src/core/map.ts`).
 **Done when:** buying deducts credits and spawns a part at the kiosk.
 
 ### S6-10 Hazards (hour 8, cut list item 4)

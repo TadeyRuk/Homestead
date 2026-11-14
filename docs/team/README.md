@@ -28,7 +28,7 @@ Seat 5 is taken (Emyol). If seat 4 still has no owner at hour 3, its stations ar
 | Pilot (seat 4) | seat 3, TadeyRuk |
 | Comms (seat 4) | seat 1, Seedlign |
 
-S4-07 and S4-08 are cut. Seat 4's flight shell, event director, solo station switching, arrival and solo pacing go to seat 1. Seat 5 builds its stations as standalone scenes (S5-09 sandbox) until the flight shell exists.
+S4-07 and S4-08 are cut. Seat 4's event director, arrival and solo pacing go to seat 1. The flight shell itself (S4-01) is already seat 1's and on main.
 
 ## Who draws what
 
@@ -48,7 +48,7 @@ Seat 3 draws every HTML/CSS screen and the HUD from `GameState`. The seat that o
 | --- | --- |
 | `src/core/` | seat 1: GameState, seeded RNG, phase switching, input map, timers |
 | `src/net/` | seat 1: host, join by code, sync |
-| `src/lobby/` | seat 1: lobby and role logic behind seat 3's screens |
+| `src/lobby/` | seat 1: the stopgap lobby form until seat 3's screens replace it (role and run-start logic is in `src/core/lobby.ts`) |
 | `src/ground/` | seat 2: top-down player, carrying, camera, campus and surface maps, suit drain, extraction |
 | `src/ground/hazards.ts` | seat 6: flares and dust storms |
 | `src/build/pad.ts` | seat 2: pad slots and swapping |
@@ -79,9 +79,14 @@ Seat 1 lands this in `src/core/` at hour 1.5. Until then, code against these nam
 - Read time through `timeLeft` and `isUp` in `src/core/timer.ts`; they handle a null `phaseEndsAt`.
 - Game rules are registered from your own folder with `registerRule(phase, (state, inputs, now, dt) => ...)` from `src/core/step.ts`. They run on the host only, each tick of that phase.
 - Put your `registerRule`, `registerScene` and `registerStation` calls in a file ending `.register.ts` inside your own folder, for example `src/flight/engineer/engineer.register.ts`. Every such file loads at startup, so nobody edits `src/main.ts` to plug in.
-- Flight stations register with `registerStation(role, { draw })` from `src/flight/stations.ts`. The flight shell (`src/flight/shell.register.ts`) shows each player the station for `player.station` and moves it on Tab. Write your station's current problem to `state.trouble[role]` from a rule, and delete it when fixed.
-- Maps: seat 2 registers the real campus and surface with `registerMap("campus" | "surface", layout)` from `src/core/map.ts`. A layout gives `spawnPoints`, `pad` and `kiosk` (campus) or `lander` and `sites` (surface). Until then a placeholder sized to the canvas is used. Use `nearest(points, player, reach)` for "is the player at the pad or next to a part".
-- Loose parts live in `state.parts`. Seat 1 seeds them onto the spawn points at the start of campus (S1-09). Picking up (seat 2, S2-03) removes the piece and sets `player.carrying` to its part id; dropping or swapping puts a piece back. A kiosk purchase (seat 6) adds a piece at `kiosk`. Mounting at the pad (S2-10) writes `ship.slots`, which launch (S1-10) reads.
+- Flight stations register with `registerStation(role, { draw })` from `src/flight/stations.ts`. The flight shell (`src/flight/shell.register.ts`) shows each player the station for `player.station` and moves it on Tab. Every player is seated at their first role the moment flight starts.
+- Station state lives in `state.flight`, one plain-data entry per minigame (`state.flight.bus`, `state.flight.weld`, ...), created and stepped by your flight rule, so joiners see it in snapshots. Drive it with `stationInput(state, inputs, role)`, which returns only the keys of the player looking at that station: a solo player holds all four roles and must not drive all four at once. `whoIsAt(state, role)` gives that player.
+- A role with two minigames registers one station that draws both, and one rule that steps both. Split the keys between them (for example arrows for one, E for the other) or show one at a time and flip with the panel key.
+- Write your station's current problem to `state.trouble[role]` from a rule, and delete it when fixed.
+- Registering the same scene, station or map twice logs a warning, and the dev console lists every `.register.ts` file that loaded; a file that isn't listed is misnamed.
+- Maps: seat 2 registers the real campus and surface with `registerMap("campus", CampusLayout)` and `registerMap("surface", SurfaceLayout)` from `src/core/map.ts`. A campus needs `spawnPoints`, `pad` and `kiosk`; a surface needs `lander` and `sites`. All are required, so a missing pad is a type error. Until then a placeholder sized to the canvas is used. Use `nearest(points, player, reach)` for "is the player at the pad or next to a part".
+- Loose parts live in `state.parts` and are cleared whenever the map changes. Put a piece down only with `placePart(state, part, at, source)` from `src/core/parts.ts`, which gives it an id no other piece has had this run. Seat 1 seeds pieces onto the spawn points at the start of campus (S1-09). Picking up (seat 2, S2-03) removes the piece and sets `player.carrying` to its part id; dropping or swapping calls `placePart` again. `buyFromKiosk` (seat 6) places its piece at `kiosk` itself. Mounting at the pad (S2-10) writes `ship.slots`, which launch (S1-10) reads.
+- A run's starting credits and data target come from `missionInfo(mission)` in `src/core/missions.ts`. Seat 3 registers the real numbers with `registerMissionInfo`; until then the Moon gets 60 credits and a 25-unit target, Mars 100 and 40.
 - A run starts only through `startRun` in `src/core/lobby.ts`: it resolves the mission, resets the ship, data, objectives, trouble and log, and resets each player's suit, keeping the crew and their roles. Roles are dealt with `dealRoles` and swapped one-for-one with `takeRole`, so every role is held exactly once. Read a player's jobs from `player.roles`.
 - Scenes register with `registerScene(phase, scene)` at startup. They get read-only state and draw it. A scene never changes state; that belongs in a rule.
 - Rules read each player's keys from `inputs[player.id]`. Never call `createInput()` yourself or listen to `window`; `src/main.ts` owns the one keyboard listener.
@@ -135,9 +140,11 @@ interface GameState {
   credits: number;
   players: Player[];
   parts: LoosePart[];       // parts lying on the map: { id, part, x, y }
+  partSeq: number;          // behind loose-part ids; use placePart, not this
   ship: Ship;
   data: { collected: number; uplinked: number; target: number };
   objectives: Record<string, boolean>;
+  flight: Record<string, unknown>;       // one plain-data entry per flight minigame, written by rules
   trouble: Partial<Record<Role, string>>; // each flight station's current problem, for the crew strip
   log: GameEvent[];
 }

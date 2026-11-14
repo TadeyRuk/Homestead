@@ -1,21 +1,29 @@
 export type Point = { x: number; y: number };
 
-/** where things are on a map; seat 2 owns the real layouts and registers them from src/ground/ */
-export interface MapLayout {
+// seat 2 owns the real layouts and registers them from src/ground/; every field is required, so a
+// forgotten pad is a compile error rather than a launch that silently never fires
+export interface CampusLayout {
   width: number;
   height: number;
-  /** campus: where seeded parts appear (S1-09) */
+  /** where seeded parts appear (S1-09) */
   spawnPoints: Point[];
-  /** campus: where parts are mounted and the launch countdown starts (S2-10, S1-10) */
-  pad?: Point;
-  kiosk?: Point;
-  /** surface: where suits recharge and data uploads */
-  lander?: Point;
-  sites?: (Point & { id: string; rich: boolean })[];
+  /** where parts are mounted and the launch countdown starts (S2-10, S1-10) */
+  pad: Point;
+  kiosk: Point;
 }
 
+export interface SurfaceLayout {
+  width: number;
+  height: number;
+  /** where suits recharge and data uploads */
+  lander: Point;
+  sites: (Point & { id: string; rich: boolean })[];
+}
+
+type Layouts = { campus: CampusLayout; surface: SurfaceLayout };
+
 // placeholders sized to the canvas, so spawns and launch work before seat 2's maps land
-const maps: Record<"campus" | "surface", MapLayout> = {
+const maps: Layouts = {
   campus: {
     width: 960,
     height: 540,
@@ -30,17 +38,20 @@ const maps: Record<"campus" | "surface", MapLayout> = {
   surface: {
     width: 960,
     height: 540,
-    spawnPoints: [],
     lander: { x: 480, y: 270 },
     sites: [],
   },
 };
 
-export function registerMap(which: "campus" | "surface", layout: MapLayout): void {
+const claimed = new Set<keyof Layouts>();
+
+export function registerMap<K extends keyof Layouts>(which: K, layout: Layouts[K]): void {
+  if (claimed.has(which)) console.warn(`registerMap: "${which}" was already registered; replacing it`);
+  claimed.add(which);
   maps[which] = layout;
 }
 
-export function mapFor(which: "campus" | "surface"): MapLayout {
+export function mapFor<K extends keyof Layouts>(which: K): Layouts[K] {
   return maps[which];
 }
 

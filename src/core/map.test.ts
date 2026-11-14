@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapFor, nearest, registerMap, type MapLayout } from "./map";
+import { mapFor, nearest, registerMap, type CampusLayout } from "./map";
 import { createState } from "./state";
 
 describe("map layouts", () => {
@@ -10,7 +10,7 @@ describe("map layouts", () => {
   });
 
   it("returns the layout seat 2 registered", () => {
-    const campus: MapLayout = { width: 3000, height: 1600, spawnPoints: [{ x: 1, y: 2 }], pad: { x: 0, y: 0 }, kiosk: { x: 5, y: 5 } };
+    const campus: CampusLayout = { width: 3000, height: 1600, spawnPoints: [{ x: 1, y: 2 }], pad: { x: 0, y: 0 }, kiosk: { x: 5, y: 5 } };
     registerMap("campus", campus);
     expect(mapFor("campus")).toBe(campus);
   });

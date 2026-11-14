@@ -245,10 +245,20 @@ describe("host and client", () => {
     expect(host.inputs()).toEqual({});
   });
 
-  it("deals roles again as each joiner arrives", () => {
+  it("gives each joiner roles from whoever holds the most", () => {
     const { state, join } = setup();
     join("Ada");
-    expect(state.players.map((p) => p.roles)).toEqual([["pilot", "comms"], ["engineer", "science"]]);
+    expect(state.players.map((p) => p.roles)).toEqual([["pilot", "engineer"], ["comms", "science"]]);
+  });
+
+  it("does not let start run twice and wipe a run in progress", () => {
+    const { state, host } = setup();
+    host.start(0);
+    enterPhase(state, "campus", 0);
+    state.ship.hull = 0.5;
+    host.start(1_000);
+    expect(state.phase).toBe("campus");
+    expect(state.ship.hull).toBe(0.5);
   });
 
   it("lets a joiner take a role in the lobby, swapping with its holder", () => {
@@ -256,7 +266,7 @@ describe("host and client", () => {
     const { client } = join("Ada");
     client.pickRole("pilot");
     expect(state.players.map((p) => p.roles)).toEqual([["engineer", "comms"], ["pilot", "science"]]);
-    expect(client.state()!.players[1].roles).toEqual(["pilot", "science"]);
+    expect(client.state()!.players[1].roles).toEqual(["pilot", "science"]); // Ada gave away comms
   });
 
   it("ignores role requests once the run has started", () => {
@@ -264,7 +274,7 @@ describe("host and client", () => {
     const { client } = join("Ada");
     host.start(0);
     client.pickRole("pilot");
-    expect(state.players[1].roles).toEqual(["engineer", "science"]);
+    expect(state.players[1].roles).toEqual(["comms", "science"]);
   });
 
   it("starts the run on the host's mission pick, and the host can take a role too", () => {
@@ -275,6 +285,6 @@ describe("host and client", () => {
     host.start(1_000);
     expect(state.phase).toBe("brief");
     expect(state.mission).toBe("moon");
-    expect(state.players[0].roles).toEqual(["comms", "science"]); // swaps away pilot, its first other role
+    expect(state.players[0].roles).toEqual(["engineer", "science"]); // swaps away pilot, its first other role
   });
 });
