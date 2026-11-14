@@ -78,22 +78,24 @@ From proposal section 02, which follows the 2026 Project Submission Guide and th
 | 5 | AI may not be used to come up with the idea. AI-made images and video carry a visible watermark. AI-written code and data are noted in text and metadata. | The concept is the team's. Every AI-made image and the video carry a watermark. The "AI use" section below says where AI was used (S6-05). | acmrsu, with every seat reporting its AI use | Not yet |
 | 6 | AI-made content may not contain NASA logos, flags or mission identifiers. | No NASA logos, flags or mission patches in any art. Real mission names appear only as plain text in the report. | acmrsu (art pass, S6-03) | Not yet |
 | 7 | List every outside resource, even free ones. No copyrighted material without permission. | Fonts and sounds come from free licences and are listed under "Credits and licences". The game screenshots used as style references stay out of the build, video and repo. | acmrsu | Not yet |
-| 8 | At most six members, all registered at the same Local Event. | Each member confirms their own registration below. | Each member | Not yet |
+| 8 | At most six members, all registered at the same Local Event. | Team "Project Hail Marcus". Every member is on the team and registered at our Local Event (table below). Anyone who joins later must be added to the team and registered there too. | acmrsu | Yes |
 | 9 | No images, video or voices of anyone under 18. | Checked before the video is recorded. | acmrsu | Not yet |
 | 10 | Press "Submit for Judging" before 11:59 PM local time on 15 November, after ticking the terms and original-work boxes. | Submit at hour 12.5 and keep the rest as buffer. Resubmit if anything changes before the deadline (S6-08). | acmrsu | Not yet |
 
-### Local Event registration
+### Team and Local Event registration
 
-| Seat | Member | Registered at our Local Event |
+Space Apps team: **Project Hail Marcus**.
+
+| Seat | Member | On the team, registered at our Local Event |
 | --- | --- | --- |
-| 1 | Seedlign | Not confirmed |
-| 2 | polsalarm | Not confirmed |
-| 3 | TadeyRuk | Not confirmed |
+| 1 | Seedlign | Yes |
+| 2 | polsalarm | Yes |
+| 3 | TadeyRuk | Yes |
 | 4 | open | No owner yet |
-| 5 | Emyol | Not confirmed |
-| 6 | acmrsu | Not confirmed |
+| 5 | Emyol | Yes |
+| 6 | acmrsu | Yes |
 
-Change your own row to "Yes" in a PR, or tell acmrsu and they will.
+Confirmed by acmrsu on 15 Nov 2026. If someone takes seat 4, add them to the team and the Local Event before they commit.
 
 ## NASA data and resources
 
