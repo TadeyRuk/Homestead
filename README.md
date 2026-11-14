@@ -67,12 +67,33 @@ Scaffold only: a canvas with one square that moves with WASD.
 
 ## Rules checklist (Space Apps 2026)
 
-- Demo video of 30 seconds or less (or at most 7 slides), English, public link with no login.
-- At least one NASA data source, listed on the project page.
-- AI-made images and video are watermarked; AI use is documented in this README.
-- No NASA logos, flags or mission patches in any art.
-- Every outside resource (fonts, sounds) is listed with its licence.
-- Submit before 11:59 PM local time on 15 Nov 2026.
+From proposal section 02, which follows the 2026 Project Submission Guide and the Judging and Awards Guide. Every rule has one owner. Status is yes once it is true for the submitted project, and not yet until then.
+
+| # | Rule | What we do | Owner | Status |
+| --- | --- | --- | --- | --- |
+| 1 | The demo is a video of 30 seconds or less, or at most 7 slides. Going over makes us ineligible for global judging. | A video cut to 28 seconds (S6-07). | acmrsu | Not yet |
+| 2 | Everything is in English. A video in another language needs English subtitles. | English voice-over with burned-in English subtitles. | acmrsu | Not yet |
+| 3 | Videos and files are hosted elsewhere, on a public link that needs no login. | Video unlisted on YouTube, game on itch.io, code on this public repo. Every link opened in a private window before submitting. | acmrsu | Not yet |
+| 4 | At least one NASA data source or resource. Relevance rewards NASA data that is central to the project. | The "NASA data and resources" section of this README, copied into the project page's NASA Data field. | acmrsu | Not yet |
+| 5 | AI may not be used to come up with the idea. AI-made images and video carry a visible watermark. AI-written code and data are noted in text and metadata. | The concept is the team's. Every AI-made image and the video carry a watermark. The "AI use" section below says where AI was used (S6-05). | acmrsu, with every seat reporting its AI use | Not yet |
+| 6 | AI-made content may not contain NASA logos, flags or mission identifiers. | No NASA logos, flags or mission patches in any art. Real mission names appear only as plain text in the report. | acmrsu (art pass, S6-03) | Not yet |
+| 7 | List every outside resource, even free ones. No copyrighted material without permission. | Fonts and sounds come from free licences and are listed under "Credits and licences". The game screenshots used as style references stay out of the build, video and repo. | acmrsu | Not yet |
+| 8 | At most six members, all registered at the same Local Event. | Each member confirms their own registration below. | Each member | Not yet |
+| 9 | No images, video or voices of anyone under 18. | Checked before the video is recorded. | acmrsu | Not yet |
+| 10 | Press "Submit for Judging" before 11:59 PM local time on 15 November, after ticking the terms and original-work boxes. | Submit at hour 12.5 and keep the rest as buffer. Resubmit if anything changes before the deadline (S6-08). | acmrsu | Not yet |
+
+### Local Event registration
+
+| Seat | Member | Registered at our Local Event |
+| --- | --- | --- |
+| 1 | Seedlign | Not confirmed |
+| 2 | polsalarm | Not confirmed |
+| 3 | TadeyRuk | Not confirmed |
+| 4 | open | No owner yet |
+| 5 | Emyol | Not confirmed |
+| 6 | acmrsu | Not confirmed |
+
+Change your own row to "Yes" in a PR, or tell acmrsu and they will.
 
 ## NASA data and resources
 
