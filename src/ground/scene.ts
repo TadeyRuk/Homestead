@@ -1,8 +1,9 @@
 import type { Scene } from "../core/scene";
 import { edgeArrow, follow, PX_PER_M, type EdgeArrow } from "./camera";
 import { SLOTS, slotSpot } from "../build/pad";
-import { drawCountdown, drawGround, drawMarker, drawPadSlots, drawParts, drawPlayers, drawShip, paletteFor } from "./draw";
+import { drawCountdown, drawGround, drawMarker, drawPadSlots, drawParts, drawPlayers, drawShip, drawSuitBars, paletteFor } from "./draw";
 import { shipDescent } from "./extraction";
+import { LANDER_REACH } from "./suit";
 import { SURFACE } from "./surface";
 import { groundFor, type Ground, type GroundMap } from "./world";
 
@@ -48,10 +49,12 @@ export function groundScene(which: Ground): Scene {
           drawMarker(ctx, SURFACE.sampleSites[state.mission], "#ff7b3a", state.mission === "mars" ? "Core sample" : "Regolith", 14);
           drawMarker(ctx, SURFACE.deploySpot, "#b48cff", state.mission === "mars" ? "Weather station" : "Seismometer", 14);
         }
-        if (map.lander) drawMarker(ctx, map.lander, "#7ef0d0", "Lander", 30);
+        // the ring is the recharge zone
+        if (map.lander) drawMarker(ctx, map.lander, "#7ef0d0", "Lander", LANDER_REACH);
       }
       drawParts(ctx, state.parts);
       drawPlayers(ctx, state.players, view.playerId);
+      if (which === "surface") for (const p of state.players) if (!p.down) drawSuitBars(ctx, p);
       if (which === "surface" && map.lander) drawShip(ctx, map.lander, shipDescent(state, view.now));
       ctx.restore();
 
