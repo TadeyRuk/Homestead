@@ -44,3 +44,15 @@ describe("a new run", () => {
     expect(s.log).toEqual([]);
   });
 });
+
+describe("onEnterPhase", () => {
+  it("runs a seat's hook as its phase starts, after the old map's parts are cleared", async () => {
+    const { onEnterPhase } = await import("./phases");
+    const seen: number[] = [];
+    onEnterPhase("campus", (s) => seen.push(s.parts.length));
+    const s = createState(1, "mars");
+    s.parts.push({ id: "x1", part: "rtg", x: 0, y: 0 });
+    enterPhase(s, "campus", 0);
+    expect(seen).toEqual([0]);
+  });
+});

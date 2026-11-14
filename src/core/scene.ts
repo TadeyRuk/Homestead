@@ -1,3 +1,4 @@
+import { mapFor } from "./map";
 import type { GameState, Phase } from "./state";
 
 /** read-only all the way down, so a scene can't write state that a joiner's next snapshot would undo */
@@ -22,11 +23,27 @@ export interface Scene {
   exit?(): void;
 }
 
+// placeholder drawing so runs can be played before the seats' real scenes land: parts, pad and countdown
 const stub = (label: string): Scene => ({
-  draw(ctx, state) {
+  draw(ctx, state, view) {
     ctx.fillStyle = "#8a93a6";
     ctx.font = "14px sans-serif";
     ctx.fillText(`${label} (stub)`, 16, 28);
+    if (state.phase === "campus") {
+      const pad = mapFor("campus").pad;
+      ctx.strokeStyle = "#3a4558";
+      ctx.strokeRect(pad.x - 24, pad.y - 24, 48, 48);
+      ctx.fillText("pad", pad.x - 12, pad.y + 40);
+      if (state.launchAt !== null) ctx.fillText(`Launch in ${Math.ceil((state.launchAt - view.now) / 1000)} s`, 16, 48);
+    }
+    for (const part of state.parts) {
+      ctx.fillStyle = "#5b7fa6";
+      ctx.fillRect(part.x - 5, part.y - 5, 10, 10);
+      ctx.fillStyle = "#8a93a6";
+      ctx.font = "11px sans-serif";
+      ctx.fillText(part.part, part.x - 5, part.y + 18);
+      ctx.font = "14px sans-serif";
+    }
     for (const p of state.players) {
       ctx.fillStyle = "#e8b04b";
       ctx.fillRect(p.x - 8, p.y - 8, 16, 16);

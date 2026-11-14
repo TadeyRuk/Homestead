@@ -85,7 +85,10 @@ Seat 1 lands this in `src/core/` at hour 1.5. Until then, code against these nam
 - Write your station's current problem to `state.trouble[role]` from a rule, and delete it when fixed.
 - Registering the same scene, station or map twice logs a warning, and the dev console lists every `.register.ts` file that loaded; a file that isn't listed is misnamed.
 - Maps: seat 2 registers the real campus and surface with `registerMap("campus", CampusLayout)` and `registerMap("surface", SurfaceLayout)` from `src/core/map.ts`. A campus needs `spawnPoints`, `pad` and `kiosk`; a surface needs `lander` and `sites`. All are required, so a missing pad is a type error. Until then a placeholder sized to the canvas is used. Use `nearest(points, player, reach)` for "is the player at the pad or next to a part".
-- Loose parts live in `state.parts` and are cleared whenever the map changes. Put a piece down only with `placePart(state, part, at, source)` from `src/core/parts.ts`, which gives it an id no other piece has had this run. Seat 1 seeds pieces onto the spawn points at the start of campus (S1-09). Picking up (seat 2, S2-03) removes the piece and sets `player.carrying` to its part id; dropping or swapping calls `placePart` again. `buyFromKiosk` (seat 6) places its piece at `kiosk` itself. Mounting at the pad (S2-10) writes `ship.slots`, which launch (S1-10) reads.
+- Loose parts live in `state.parts` and are cleared on every phase change. Put a piece down only with `placePart(state, part, at, source)` from `src/core/parts.ts`, which gives it an id no other piece has had this run. Seat 1 seeds pieces onto the spawn points at the start of campus (S1-09). Picking up (seat 2, S2-03) removes the piece and sets `player.carrying` to its part id; dropping or swapping calls `placePart` again. `buyFromKiosk` (seat 6) places its piece at `kiosk` itself. Mounting at the pad (S2-10) writes `ship.slots`, which launch (S1-10) reads.
+- Part stats come from `src/core/catalog.ts`: `partInfo(id)`, `buildable()` (what can spawn or be rolled), `massOf(slots)` and `liftOf(slots)`. The placeholder is the proposal's parts table plus one weak salvage part per slot; seat 3 replaces it with `registerParts` (S3-01).
+- One-off setup when a phase starts goes in `onEnterPhase(phase, (state, now) => ...)` from `src/core/phases.ts`, for example spawning the campus parts.
+- At the pad, E while carrying a part mounts it (seat 2, S2-10); E with empty hands starts or cancels the 5 s launch countdown (seat 1, S1-10). When the build timer runs out, empty slots get salvage parts and the rocket launches. A rocket heavier than its engine's lift, or with no engine, logs `launch_failed` and the run goes to the report.
 - A run's starting credits and data target come from `missionInfo(mission)` in `src/core/missions.ts`. Seat 3 registers the real numbers with `registerMissionInfo`; until then the Moon gets 60 credits and a 25-unit target, Mars 100 and 40.
 - A run starts only through `startRun` in `src/core/lobby.ts`: it resolves the mission, resets the ship, data, objectives, trouble and log, and resets each player's suit, keeping the crew and their roles. Roles are dealt with `dealRoles` and swapped one-for-one with `takeRole`, so every role is held exactly once. Read a player's jobs from `player.roles`.
 - Scenes register with `registerScene(phase, scene)` at startup. They get read-only state and draw it. A scene never changes state; that belongs in a rule.
@@ -139,6 +142,7 @@ interface GameState {
   runStartedAt: number;       // ms on the host clock; event times count from here
   credits: number;
   players: Player[];
+  launchAt: number | null;  // host ms of liftoff while the countdown runs
   parts: LoosePart[];       // parts lying on the map: { id, part, x, y }
   partSeq: number;          // behind loose-part ids; use placePart, not this
   ship: Ship;

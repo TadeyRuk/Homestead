@@ -12,6 +12,14 @@ export const PHASE_SECONDS: Record<Phase, number> = {
   report: 60,
 };
 
+type EnterHook = (state: GameState, now: number) => void;
+const enterHooks: Partial<Record<Phase, EnterHook[]>> = {};
+
+/** runs on the host as a phase starts, for one-off setup such as spawning the campus parts */
+export function onEnterPhase(phase: Phase, hook: EnterHook): void {
+  (enterHooks[phase] ??= []).push(hook);
+}
+
 export function nextPhase(phase: Phase): Phase {
   return PHASE_ORDER[(PHASE_ORDER.indexOf(phase) + 1) % PHASE_ORDER.length];
 }
@@ -21,8 +29,8 @@ export function enterPhase(state: GameState, phase: Phase, now: number): void {
   const seconds = PHASE_SECONDS[phase];
   // null, not Infinity: snapshots go through JSON, which turns Infinity into null anyway
   state.phaseEndsAt = Number.isFinite(seconds) ? now + seconds * 1000 : null;
-  // each map has its own loose parts; campus spawns refill on entry (S1-09)
-  if (phase === "campus" || phase === "surface") state.parts = [];
+  // loose parts belong to one phase's map; campus spawns refill on entry (S1-09)
+  state.parts = [];
   // seat everyone at their first station as flight starts, so no flight rule ever sees a null station
   for (const p of state.players) p.station = phase === "flight" ? (p.roles[0] ?? null) : null;
   if (phase === "brief") {
@@ -30,4 +38,5 @@ export function enterPhase(state: GameState, phase: Phase, now: number): void {
     state.runStartedAt = now;
     state.log = [];
   }
+  for (const hook of enterHooks[phase] ?? []) hook(state, now);
 }
