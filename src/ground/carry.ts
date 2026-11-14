@@ -9,8 +9,12 @@ import { groundFor } from "./world";
 export const PICK_REACH = 32;
 /** inside this distance of the pad, E belongs to mounting (S2-10) and the launch countdown (S1-10) */
 export const PAD_REACH = 48;
-/** inside this distance of the kiosk, E belongs to buying (seat 6) */
-export const KIOSK_REACH = 40;
+/**
+ * Inside this distance of the kiosk, E belongs to buying (seat 6). Bought parts land on the kiosk
+ * point itself, so this must not be wider than PICK_REACH: anyone close enough to buy is close
+ * enough to pick up what they bought, and never buys again by mistake (#93).
+ */
+export const KIOSK_REACH = PICK_REACH;
 
 /** puts a part down where the player stands */
 export function dropAt(state: GameState, p: Player, part: string): LoosePart {
