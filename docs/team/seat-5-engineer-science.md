@@ -1,6 +1,6 @@
 # Seat 5: Engineer and Science
 
-**Owner:** open (add your GitHub login here and in `docs/team/README.md` when you take it)
+**Owner:** Emyol
 **Folders:** `src/flight/engineer/`, `src/flight/science/`
 
 Four small minigames, two per role. They plug into seat 4's flight shell and are the most independent work in the project, so a late joiner can pick this up cold.
