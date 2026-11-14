@@ -23,5 +23,6 @@ describe("comms in a real flight", () => {
     enterPhase(s, "flight", 0);
     step(s, {}, 50, 0.05);
     expect(s.ship.linkLocked).toBe(false);
+    expect(s.trouble.comms).toBe("No antenna");
   });
 });

@@ -9,6 +9,7 @@ registerRule("flight", (state, inputs, now, dt) => {
   const antenna = state.ship.slots.comms;
   if (!antenna) {
     state.ship.linkLocked = false;
+    state.trouble.comms = "No antenna";
     return;
   }
   const dish = ((state.flight.dish as Dish | undefined) ??= createDish());
