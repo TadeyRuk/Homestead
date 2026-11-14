@@ -59,6 +59,33 @@ export interface GameEvent {
   part?: string;
   player?: string;
   value?: number;
+  /** which objective, for `objective_done` */
+  objective?: string;
+}
+
+/** one player's timed job on the surface: scanning a site, drilling the sample, deploying, photographing */
+export interface SurfaceTask {
+  kind: "scan" | "drill" | "deploy" | "photo";
+  /** the site id, or the spot's name */
+  target: string;
+  /** 0..1 */
+  progress: number;
+}
+
+/** the crew's progress on Mission Control's list (seat 2, S2-14); reset as the surface starts */
+export interface SurfaceProgress {
+  /** ids of the sites scanned so far */
+  scanned: string[];
+  /** data units each player carries, by player id; data only counts once uplinked at the lander */
+  held: Record<string, number>;
+  /** data units each player has sent in their current uplink at the lander, by player id */
+  uplinking: Record<string, number>;
+  /** what each player is doing right now, by player id; absent when nothing */
+  tasks: Record<string, SurfaceTask>;
+  sampleDrilled: boolean;
+  deployed: boolean;
+  /** index into the surface map's bonus spots, picked by the seed */
+  bonusSpot: number;
 }
 
 export interface GameState {
@@ -80,6 +107,8 @@ export interface GameState {
   ship: Ship;
   data: { collected: number; uplinked: number; target: number };
   objectives: Record<string, boolean>;
+  /** surface objective progress: scans, data in hand, tasks (seat 2) */
+  surface: SurfaceProgress;
   /**
    * flight minigame state, one plain-data entry per minigame (for example `bus`, `weld`, `core`, `converter`);
    * written by host rules, so every tab gets it in snapshots
@@ -115,6 +144,7 @@ export function createState(seed: number, mission: MissionId): GameState {
     },
     data: { collected: 0, uplinked: 0, target: 0 },
     objectives: {},
+    surface: { scanned: [], held: {}, uplinking: {}, tasks: {}, sampleDrilled: false, deployed: false, bonusSpot: 0 },
     flight: {},
     trouble: {},
     log: [],

@@ -133,6 +133,7 @@ interface GameEvent {
   part?: string;        // the part that caused it, if any
   player?: string;
   value?: number;
+  objective?: string;   // which objective, for objective_done
 }
 
 interface GameState {
@@ -149,6 +150,7 @@ interface GameState {
   ship: Ship;
   data: { collected: number; uplinked: number; target: number };
   objectives: Record<string, boolean>;
+  surface: SurfaceProgress; // scans, data in hand, jobs in progress (seat 2, S2-14)
   flight: Record<string, unknown>;       // one plain-data entry per flight minigame, written by rules
   trouble: Partial<Record<Role, string>>; // each flight station's current problem, for the crew strip
   log: GameEvent[];

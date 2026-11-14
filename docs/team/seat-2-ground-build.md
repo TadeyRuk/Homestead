@@ -12,6 +12,13 @@ Spawns, launch, meter math, kiosk and hazards went to other seats to even out th
 - Register your maps from a `*.register.ts` file in `src/ground/`: `registerMap("campus", layout)` and `registerMap("surface", layout)`, using the `CampusLayout` and `SurfaceLayout` types in `src/core/map.ts`. Include about a dozen `spawnPoints`, the `pad` and the `kiosk` on the campus.
 - Carrying (S2-03) and the pad (S2-10) work on `state.parts` (loose pieces) and `ship.slots`. Seat 1 fills `state.parts` from your spawn points (S1-09) and reads `ship.slots` at launch (S1-10).
 
+## What other seats can use
+
+- **Pad (S2-10):** E at the pad while carrying mounts, so seat 1's launch takes empty-handed E there. `slotSpot` and `dropSpot` in `src/build/pad.ts` give each slot's position.
+- **Suits (S2-06):** seat 6's hazards call `registerDrainModifier((state, player) => factor)` from `src/ground/suit.ts`. Rocks for "shelter behind rock" are `SURFACE.rocks` in `src/ground/surface.ts`. `LANDER_REACH` is the recharge and uplink zone.
+- **Objectives (S2-14):** state lives in `state.objectives` (`scan`, `sample`, `deploy`, `uplink`, `bonus`) and `state.surface` (scanned sites, data each player holds, jobs in progress). For the mission panel, `objectiveLines(state)` in `src/missions/objectives.ts` gives each line's label, count, need and done flag. Scan, uplink and mission-list numbers are placeholders in `src/missions/stats.ts`; seat 3 replaces them with `registerScanStats`, `registerUplinkRates` and `registerMissionList`.
+- **Extraction (S2-08):** one `extraction` event with `value` = crew standing, then one per player with `player`, `value` 1 standing or 0 down, and `part` if still carrying.
+
 ## Needs from others
 
 - Seat 1: `GameState`, input map, timers (S1-01, S1-06).

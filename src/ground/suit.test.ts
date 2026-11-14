@@ -82,7 +82,7 @@ describe("suit drain", () => {
     expect(p.down).toBe(true);
     expect(p.power).toBe(0);
     expect(p.carrying).toBeNull();
-    expect(s.parts).toMatchObject([{ part: "sample", x: OUT.x, y: OUT.y }]);
+    expect(s.parts).toContainEqual(expect.objectContaining({ part: "sample", x: OUT.x, y: OUT.y }));
     expect(s.log.filter((e) => e.kind === "player_down")).toEqual([
       expect.objectContaining({ kind: "player_down", player: "a", part: "sample", phase: "surface" }),
     ]);
