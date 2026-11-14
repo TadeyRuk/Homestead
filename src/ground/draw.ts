@@ -115,8 +115,14 @@ export function drawPlayers(ctx: Ctx, players: readonly Drawable[], me: string):
     ctx.fillStyle = "#0b0e14";
     ctx.fillRect(p.x - 4, p.y - 4, 8, 4); // visor, so a player reads as an astronaut and not a crate
     if (p.carrying) {
+      // the part held over the head, named, so everyone can see who has what
       ctx.fillStyle = "#f2f4f8";
       ctx.fillRect(p.x - 4, p.y - PLAYER_HALF - 10, 8, 8);
+      ctx.fillStyle = "#ffd84a";
+      ctx.font = "600 10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(p.carrying, p.x, p.y - PLAYER_HALF - 14);
+      ctx.textAlign = "left";
     }
     ctx.fillStyle = "#e6e9ef";
     ctx.font = "11px sans-serif";

@@ -142,6 +142,13 @@ describe("carrying", () => {
     expect(s.players.map((p) => p.carrying)).toEqual(["rtg", "camera"]);
   });
 
+  it("names the part a player is carrying above their head", () => {
+    const s = campus(OPEN, { carrying: "rtg" });
+    const r = recordingCtx();
+    groundScene("campus").draw(r.ctx, s, { playerId: "a", now: 0 });
+    expect(r.texts()).toContain("rtg");
+  });
+
   it("draws loose parts on the map", () => {
     const s = campus();
     s.parts.push({ id: "lp1", part: "rtg", x: OPEN.x + 50, y: OPEN.y });
