@@ -64,6 +64,15 @@ describe("energy core", () => {
     expect(s.coreTemp).toBeCloseTo(0.5 + (radar.heat - COOLING_PER_SECOND) * 2, 2);
   });
 
+  it("can always cool a core, even one heated past the base cooling rate", () => {
+    // payload and RTG heat stacked together (S5-07) can beat the valve's base rate
+    const core = createCore({ part: "radar", heat: COOLING_PER_SECOND * 1.5 });
+    core.valve = 1;
+    const s = ship(0.5);
+    stepCore(core, s, still, 2, () => {});
+    expect(s.coreTemp).toBeLessThan(0.5);
+  });
+
   it("keeps the core temperature between 0 and 1", () => {
     const core = createCore(radar);
     const s = ship(0.99);

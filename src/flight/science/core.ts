@@ -5,8 +5,10 @@ import type { GameEvent, Ship } from "../../core/state";
 /** the core's safe band; under it the ship loses power (S5-07), over it the instrument takes damage */
 export const SAFE_LOW = 0.3;
 export const SAFE_HIGH = 0.7;
-/** core temperature a fully open coolant valve takes away each second */
+/** core temperature a fully open coolant valve takes away each second, for a core heated less than this */
 export const COOLING_PER_SECOND = 0.05;
+/** a hotter core gets this much more cooling than its heat, so a careful player can always hold it */
+export const COOLING_HEADROOM = 1.5;
 /** how far the valve moves each second a key is held; shut to open in a little over a second */
 export const VALVE_PER_SECOND = 0.8;
 /** instrument health lost each second the core runs over the band */
@@ -46,7 +48,7 @@ export function stepCore(
 ): void {
   // up opens the valve, down closes it; it stays where it is when let go
   core.valve = clamp(core.valve - input.dy * VALVE_PER_SECOND * dt);
-  ship.coreTemp = clamp(ship.coreTemp + (core.heat - core.valve * COOLING_PER_SECOND) * dt);
+  ship.coreTemp = clamp(ship.coreTemp + (core.heat - core.valve * cooling(core)) * dt);
 
   const hot = ship.coreTemp > SAFE_HIGH;
   const cold = ship.coreTemp < SAFE_LOW;
@@ -55,6 +57,11 @@ export function stepCore(
   if (cold && !core.cold) emit("core_too_cold", { part: core.part, value: ship.coreTemp });
   core.hot = hot;
   core.cold = cold;
+}
+
+/** what a fully open valve takes away each second */
+export function cooling(core: Pick<Core, "heat">): number {
+  return Math.max(COOLING_PER_SECOND, core.heat * COOLING_HEADROOM);
 }
 
 function clamp(v: number): number {
