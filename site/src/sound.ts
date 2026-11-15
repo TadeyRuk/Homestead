@@ -27,7 +27,7 @@ function startMusic(): void {
   if (playing || !ctx || !out || ctx.state !== 'running' || !track) return;
   playing = true;
   const g = ctx.createGain(), t = ctx.currentTime + .05, src = ctx.createBufferSource();
-  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.5, t + .6);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.22, t + .6);
   src.buffer = track; src.loop = true;
   src.connect(g).connect(out); src.start(t);
 }
