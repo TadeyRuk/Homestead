@@ -121,6 +121,21 @@
     },
     save() { return HS.pack(B); },
     load(d) { if (!B) return; Object.assign(B, d); B.p = B.ps[HS.net.me] || B.p; },
+    // joiner prediction (js/net-game.js): the own avatar in snapshot d, the live one, and one step of this tab's
+    // walking with the host's rules; true when it moved
+    mine(d) { return d && d.ps ? d.ps[HS.net.me] : null; },
+    me() { return B && B.ps[HS.net.me]; },
+    predict(q, dt) {
+      const p = this.me();
+      if (!p || B.done || (B.roll && B.roll.who === HS.net.me) || p.inspect) return false;
+      const a = HS.axis(), len = Math.hypot(a.x, a.y);
+      if (!len) { q.walk = 0; return false; }
+      const sp = SPEED * (p.carry ? .92 : 1) * dt, nx = clamp(q.x + a.x / len * sp, 6, 634), ny = clamp(q.y + a.y / len * sp, 10, 394);
+      if (!inSolid(nx, q.y)) q.x = nx; if (!inSolid(q.x, ny)) q.y = ny;
+      q.walk += dt; if (a.x) q.flip = a.x < 0;
+      q.face = a.x && Math.abs(a.x) >= Math.abs(a.y) ? 'side' : a.y < 0 ? 'up' : 'down';
+      return true;
+    },
     draw() {
       const S = HS.S, p = B.p, t = B.t, cam = HS.camera(p);
       // ----- world, on the 1280 x 720 art grid (js/campus.js, js/art.js)
