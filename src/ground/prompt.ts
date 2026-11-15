@@ -4,7 +4,8 @@ import type { GameState, Player } from "../core/state";
 import { partName } from "../data/data";
 import { KIOSK_PRICE } from "../build/kiosk";
 import { slotOf } from "../build/pad";
-import { jobHere } from "../missions/objectives";
+import { surfaceGame } from "../missions/games";
+import { gameHere, jobHere } from "../missions/objectives";
 import { missionList } from "../missions/stats";
 import { atKiosk, atPad, PICK_REACH } from "./carry";
 
@@ -29,7 +30,9 @@ export function ePrompt(state: ReadState, p: Player): string | null {
   const s = state as GameState;
   if (state.phase === "surface") {
     const running = state.surface.tasks[p.id];
-    if (running) return null; // the task ring already says what is happening
+    if (running || state.surface.games[p.id]) return null; // the task ring or the overlay already says what is happening
+    const game = gameHere(s, p);
+    if (game) return `[E] start the ${surfaceGame(game)?.name.toLowerCase() ?? game}`;
     const job = jobHere(s, p);
     if (job) {
       const words = job.kind === "deploy" ? `deploy the ${partName(missionList(state.mission).instrument)}` : JOB_WORDS[job.kind];

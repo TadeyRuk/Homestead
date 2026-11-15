@@ -10,6 +10,8 @@ export const EVENT_KINDS = [
   "site_scanned", "sample_collected", "data_uplinked", "objective_done",
   "hazard_hit", "player_down", "extraction",
   "landed", "ship_lost",
+  // a surface minigame attempt failed (S2-19); `part` is the part that set the difficulty, `objective` the task
+  "task_failed",
 ] as const;
 
 export type EventKind = (typeof EVENT_KINDS)[number];

@@ -3,8 +3,10 @@ import { KIOSK_REACH, PAD_REACH } from "./carry";
 import { edgeArrow, follow, PX_PER_M, type EdgeArrow } from "./camera";
 import { SLOTS, slotSpot } from "../build/pad";
 import { C, MONO } from "../ui/tokens";
-import { drawCountdown, drawGround, drawHeldData, drawInstrument, drawLander, drawMarker, drawPadSlots, drawParts, drawPlayers, drawShip, drawSuitBars, drawTaskRing, paletteFor } from "./draw";
+import { drawCountdown, drawGround, drawHeldData, drawInstrument, drawLander, drawMarker, drawPadSlots, drawParts, drawPlayers, drawShip, drawSuitBars, drawTaskRing, nameTag, paletteFor } from "./draw";
+import { gameSpot, surfaceGame } from "../missions/games";
 import { bonusSpot } from "../missions/objectives";
+import { drawGameOverlay } from "./overlay";
 import { missionList } from "../missions/stats";
 import { shipDescent } from "./extraction";
 import { drawHazard, hazardAt } from "./hazards";
@@ -65,6 +67,12 @@ export function groundScene(which: Ground): Scene {
           if (sv.deployed) drawInstrument(ctx, SURFACE.deploySpot, list.instrument);
           else drawMarker(ctx, SURFACE.deploySpot, "#b48cff", state.mission === "mars" ? "Weather station" : "Seismometer", 14);
           if (!state.objectives.bonus) drawMarker(ctx, bonusSpot(state), "#ffffff", "Photo spot", 12);
+          // each minigame on this run's list that is still to do (S2-19)
+          for (const [kind, done] of Object.entries(state.objectives)) {
+            const def = done ? undefined : surfaceGame(kind);
+            const spot = def ? gameSpot(kind, state.mission) : null;
+            if (def && spot) drawMarker(ctx, spot, "#4fd8ff", def.name, 14);
+          }
         }
         // the ring is the recharge zone
         if (map.lander) {
@@ -80,6 +88,10 @@ export function groundScene(which: Ground): Scene {
           drawSuitBars(ctx, p);
           const task = state.surface.tasks[p.id];
           if (task) drawTaskRing(ctx, p, task.progress, TASK_LABELS[task.kind]);
+          // everyone else sees who is busy in a minigame
+          const game = state.surface.games[p.id];
+          const gameName = game ? surfaceGame(game.kind)?.name : undefined;
+          if (gameName) nameTag(ctx, gameName, p.x, p.y + 50, "#4fd8ff", "#4fd8ff", 10);
           const held = state.surface.held[p.id] ?? 0;
           if (held > 0) drawHeldData(ctx, p, held);
         }
@@ -101,6 +113,11 @@ export function groundScene(which: Ground): Scene {
       const home = which === "campus" ? map.pad : map.lander;
       const arrow = home && me ? edgeArrow(cam, home, me) : null;
       if (arrow) drawArrow(ctx, arrow, which === "campus" ? "Pad" : "Lander");
+
+      // this player's open minigame, over their own view only
+      const run = which === "surface" && me && !me.down ? state.surface.games[me.id] : undefined;
+      const def = run ? surfaceGame(run.kind) : undefined;
+      if (run && def) drawGameOverlay(ctx, run, def, state.mission, view.now);
     },
   };
 }

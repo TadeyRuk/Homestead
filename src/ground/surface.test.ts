@@ -54,6 +54,7 @@ describe("surface map", () => {
       ...Object.values(SURFACE.sampleSites),
       SURFACE.deploySpot,
       ...SURFACE.bonusSpots,
+      ...Object.values(SURFACE.gameSpots).flatMap((spots) => Object.values(spots)),
     ];
     for (const p of points) expect(isOpen(SURFACE, p), `${p.x},${p.y}`).toBe(true);
   });
@@ -64,9 +65,36 @@ describe("surface map", () => {
       ...Object.values(SURFACE.sampleSites),
       SURFACE.deploySpot,
       ...SURFACE.bonusSpots,
+      ...Object.values(SURFACE.gameSpots).flatMap((spots) => Object.values(spots)),
     ];
     const ok = reachable(SURFACE, lander, targets);
     expect(targets.filter((_, i) => !ok[i])).toEqual([]);
+  });
+
+  it("keeps every minigame spot clear of the other spots, so one E press means one thing", () => {
+    for (const mission of ["mars", "moon"] as const) {
+      const others = [
+        ...SURFACE.sites,
+        SURFACE.sampleSites[mission],
+        SURFACE.deploySpot,
+        ...SURFACE.bonusSpots,
+        ...SURFACE.starts,
+      ];
+      const games = Object.values(SURFACE.gameSpots).map((spots) => spots[mission]);
+      for (const g of games) {
+        for (const o of [...others, ...games.filter((x) => x !== g)]) {
+          expect(Math.hypot(g.x - o.x, g.y - o.y), `${mission} ${g.x},${g.y} vs ${o.x},${o.y}`).toBeGreaterThan(80);
+        }
+      }
+    }
+  });
+
+  it("puts the Moon's ice in the crater, and the panel spot beside the lander", () => {
+    const { crater } = SURFACE;
+    const ice = SURFACE.gameSpots["ice-drill"].moon;
+    expect(Math.hypot(ice.x - crater.x, ice.y - crater.y)).toBeLessThan(crater.r - 40);
+    const panel = SURFACE.gameSpots["panel-clean"].mars;
+    expect(Math.hypot(panel.x - lander.x, panel.y - lander.y)).toBeLessThan(130);
   });
 
   it("puts the Mars core sample on the rim and the Moon sample on the crater floor", () => {

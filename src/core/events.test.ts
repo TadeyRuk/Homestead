@@ -20,8 +20,9 @@ describe("logEvent", () => {
     expect(s.log.map((e) => e.kind)).toEqual(["part_picked", "part_mounted"]);
   });
 
-  it("lists all 30 kinds from the team contract", () => {
-    expect(EVENT_KINDS).toHaveLength(30);
-    expect(new Set(EVENT_KINDS).size).toBe(30);
+  it("lists the 30 kinds from the team contract plus task_failed", () => {
+    expect(EVENT_KINDS).toHaveLength(31);
+    expect(new Set(EVENT_KINDS).size).toBe(31);
+    expect(EVENT_KINDS).toContain("task_failed");
   });
 });

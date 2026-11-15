@@ -1,5 +1,6 @@
 import "./register";
 import { createInput, type Input } from "./core/input";
+import { inSurfaceGame } from "./missions/games";
 import { followPhase, sceneFor } from "./core/scene";
 import { createState, type GameState, type Phase } from "./core/state";
 import { PLAYER_SPEED } from "./core/step";
@@ -192,9 +193,10 @@ function smoothed(
 ): GameState {
   const mine = state.players.find((p) => p.id === me);
   if (mine) {
-    // the host keeps players still in the lobby and when down; predict the same
-    if (state.phase !== "lobby" && !mine.down) joined.prediction.step(i, dt);
-    joined.prediction.reconcile(mine, i.dx !== 0 || i.dy !== 0, dt);
+    // the host keeps players still in the lobby, when down, and in a surface minigame; predict the same
+    const still = state.phase === "lobby" || mine.down || inSurfaceGame(state, me);
+    if (!still) joined.prediction.step(i, dt);
+    joined.prediction.reconcile(mine, !still && (i.dx !== 0 || i.dy !== 0), dt);
   }
   const past = joined.others.at(joined.client.hostNow() - INTERP_DELAY_MS);
   return {

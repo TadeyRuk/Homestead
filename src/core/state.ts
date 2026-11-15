@@ -72,6 +72,22 @@ export interface SurfaceTask {
   progress: number;
 }
 
+/**
+ * One player's open surface minigame (S2-19), by player id in `surface.games`. `game` is the
+ * minigame's own plain data from its `start`, stepped by its `update` on the host.
+ */
+export interface SurfaceGameRun {
+  /** the registered minigame, which is also its objective id */
+  kind: string;
+  /** the part that set the difficulty, logged on `task_failed` */
+  part: string | null;
+  /** failed attempts so far; each retry starts fresh */
+  tries: number;
+  /** host ms of the last failure, so the overlay can flash it; null before any */
+  failedAt: number | null;
+  game: unknown;
+}
+
 /** the crew's progress on Mission Control's list (seat 2, S2-14); reset as the surface starts */
 export interface SurfaceProgress {
   /** ids of the sites scanned so far */
@@ -86,6 +102,8 @@ export interface SurfaceProgress {
   deployed: boolean;
   /** index into the surface map's bonus spots, picked by the seed */
   bonusSpot: number;
+  /** each player's open minigame overlay, by player id; absent when none (S2-19) */
+  games: Record<string, SurfaceGameRun>;
 }
 
 export interface GameState {
@@ -147,7 +165,7 @@ export function createState(seed: number, mission: MissionId): GameState {
     },
     data: { collected: 0, uplinked: 0, target: 0 },
     objectives: {},
-    surface: { scanned: [], held: {}, uplinking: {}, tasks: {}, sampleDrilled: false, deployed: false, bonusSpot: 0 },
+    surface: { scanned: [], held: {}, uplinking: {}, tasks: {}, sampleDrilled: false, deployed: false, bonusSpot: 0, games: {} },
     flight: {},
     trouble: {},
     log: [],
