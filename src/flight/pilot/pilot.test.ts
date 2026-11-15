@@ -113,6 +113,14 @@ describe("pilot station (S4-02, S4-03)", () => {
     expect(s.log.find((e) => e.kind === "debris_hit")?.part).toBe("large-solar");
   });
 
+  it("lets the same debris field hit a large array more often than a small one (S4-07)", () => {
+    const small = flight({}, [field()]);
+    const large = flight({ power: "large-solar" }, [field()]);
+    run(small, still, 20);
+    run(large, still, 20);
+    expect(pilot(large).hits).toBeGreaterThan(pilot(small).hits);
+  });
+
   it("puts the same debris in the same places for the same seed", () => {
     const a = flight({}, [field()]);
     const b = flight({}, [field()]);
