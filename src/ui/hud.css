@@ -1,0 +1,206 @@
+/* seat 3's HUD (S3-05, S3-06, S3-07), on the overlay's 640 x 360 grid */
+.hs-clock {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  min-width: calc(var(--u) * 58);
+  height: calc(var(--u) * 20);
+  box-sizing: border-box;
+  padding: 0 calc(var(--u) * 7);
+  gap: calc(var(--u) * 6);
+  align-content: center;
+  line-height: calc(var(--u) * 18);
+  border-color: var(--hs-crew);
+  background: var(--hs-ink);
+}
+.hs-clock-label {
+  font-size: calc(var(--u) * 6);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hs-muted);
+}
+.hs-clock-time {
+  font: 700 calc(var(--u) * 11) / calc(var(--u) * 18) var(--hs-pixel);
+  font-variant-numeric: tabular-nums;
+}
+.hs-clock[data-tone="warn"] { border-color: var(--hs-amber); }
+.hs-clock[data-tone="warn"] .hs-clock-time { color: var(--hs-amber); }
+.hs-clock[data-tone="bad"] { border-color: var(--hs-red); animation: hs-pulse 1s steps(2, jump-none) infinite; }
+.hs-clock[data-tone="bad"] .hs-clock-time { color: var(--hs-red); }
+
+.hs-chip {
+  padding: calc(var(--u) * 4) calc(var(--u) * 7);
+  font-size: calc(var(--u) * 7.5);
+  font-weight: 600;
+  color: var(--hs-amber);
+  border-color: var(--hs-amber);
+}
+
+.hs-meters {
+  padding: calc(var(--u) * 5) calc(var(--u) * 7) calc(var(--u) * 6);
+}
+.hs-meters h2 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hs-meters[data-preview="1"] {
+  border-color: var(--hs-amber);
+}
+.hs-meters[data-preview="1"] h2 {
+  color: var(--hs-amber);
+}
+.hs-meters .hs-meter {
+  margin: calc(var(--u) * 2.5) 0;
+  font-size: calc(var(--u) * 6.5);
+}
+.hs-meters-note {
+  margin: calc(var(--u) * 4) 0 0;
+  font-size: calc(var(--u) * 6.5);
+  color: var(--hs-muted);
+}
+.hs-meters-note[data-tone="bad"] { color: var(--hs-red); font-weight: 600; }
+.hs-meters-note[data-tone="warn"] { color: var(--hs-amber); }
+
+.hs-carry {
+  --slot: var(--hs-amber);
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--u) * 6);
+  white-space: nowrap;
+  padding: calc(var(--u) * 4) calc(var(--u) * 9);
+  border-color: var(--slot);
+  animation: hs-rise 200ms ease-out;
+}
+.hs-carry-label {
+  font-size: calc(var(--u) * 6);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hs-muted);
+}
+.hs-carry strong {
+  color: var(--slot);
+  font-size: calc(var(--u) * 8.5);
+}
+.hs-carry-info {
+  font-size: calc(var(--u) * 6.5);
+  color: var(--hs-muted);
+}
+
+.hs-crew {
+  position: absolute;
+  display: flex;
+  gap: calc(var(--u) * 4);
+}
+.hs-crew[hidden] { display: none; }
+.hs-crew-chip {
+  --role: var(--hs-crew);
+  display: grid;
+  width: calc(var(--u) * 70);
+  box-sizing: border-box;
+  padding: calc(var(--u) * 2.5) calc(var(--u) * 6);
+  background: var(--hs-panel);
+  border: calc(var(--u) * 1) solid color-mix(in srgb, var(--role) 45%, transparent);
+  border-radius: calc(var(--u) * 4);
+}
+.hs-crew-chip[data-here="1"] {
+  border-color: var(--role);
+  box-shadow: 0 0 0 calc(var(--u) * 1) color-mix(in srgb, var(--role) 35%, transparent);
+}
+.hs-crew-role {
+  font-size: calc(var(--u) * 6);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--role);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hs-crew-trouble {
+  font-size: calc(var(--u) * 6.5);
+  color: var(--hs-green);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hs-crew-chip[data-trouble="1"] .hs-crew-trouble {
+  color: var(--hs-red);
+  font-weight: 600;
+  animation: hs-pulse 1.2s steps(2, jump-none) infinite;
+}
+
+.hs-mission .hs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: calc(var(--u) * 2.5);
+}
+.hs-mission li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: calc(var(--u) * 6);
+  font-size: calc(var(--u) * 7);
+  color: var(--hs-white);
+}
+.hs-mission li > span:first-child::before {
+  content: "○ ";
+  color: var(--hs-muted);
+}
+.hs-mission li[data-ok="1"]:not([data-suit="1"]) > span:first-child {
+  color: var(--hs-muted);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--hs-green) 70%, transparent);
+}
+.hs-mission li[data-ok="1"]:not([data-suit="1"]) > span:first-child::before {
+  content: "● ";
+  color: var(--hs-green);
+}
+.hs-mission li[data-suit="1"] > span:first-child::before {
+  content: "";
+}
+.hs-mission li > span:last-child {
+  font-variant-numeric: tabular-nums;
+  color: var(--hs-crew);
+  text-align: right;
+}
+.hs-mission li[data-low="1"] > span:last-child {
+  color: var(--hs-red);
+  font-weight: 600;
+}
+.hs-mission .hs-hint {
+  margin: calc(var(--u) * 5) 0 0;
+}
+
+@keyframes hs-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-clock[data-tone="bad"],
+  .hs-crew-chip[data-trouble="1"] .hs-crew-trouble,
+  .hs-carry {
+    animation: none;
+  }
+}
+
+.hs-mask {
+  position: absolute;
+  height: calc(var(--u) * 18);
+  background: var(--hs-space);
+  pointer-events: none;
+}
+.hs-mask[hidden] { display: none; }
+
+/* a panel the player has walked under fades, so the map stays readable */
+.hs-panel {
+  transition: opacity 180ms ease-out;
+}
+.hs-panel[data-under="1"] {
+  opacity: 0.28;
+}

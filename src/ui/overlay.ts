@@ -70,6 +70,8 @@ function tick(): void {
   fit();
   // the lobby draws no scene; a frame older than a moment means no run is on screen
   const frame = latest && performance.now() - seenAt < 250 ? latest : null;
+  // dev server only: lets a test script read what is on screen; never in a build
+  if (import.meta.env.DEV) (window as unknown as { __hsFrame?: Frame | null }).__hsFrame = frame;
   for (const fn of listeners) {
     try {
       fn(frame);
