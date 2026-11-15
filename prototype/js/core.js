@@ -120,7 +120,11 @@
 
   // ---------- sound: small square-wave blips, starts after the first key or click
   let AC = null; HS.muted = false;
-  HS.audioUnlock = () => { if (AC) { if (AC.state === 'suspended') AC.resume(); return; } try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } };
+  HS.audioUnlock = () => {
+    if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+    try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; return; }
+    loadClips(); HS.musicFor(HS.sceneName);   // audio starts on the first key or tap, so the clips and music start here
+  };
   const tone = (f, d = .07, type = 'square', v = .035, f2 = 0, delay = 0) => {
     if (HS.muted || !AC) return; const t = AC.currentTime + delay, o = AC.createOscillator(), gn = AC.createGain();
     o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
@@ -145,6 +149,49 @@
     type: () => tone(900 + Math.random() * 200, .012, 'square', .008),
     jingle: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, .14, 'square', .035, 0, i * .11)),
     sad: () => [392, 330, 262].forEach((f, i) => tone(f, .22, 'triangle', .05, 0, i * .2))
+  };
+
+  // the events S6-04 names that had no sound of their own; each starts as the blip it used to share
+  Object.assign(HS.sfx, { buy: HS.sfx.good, win: HS.sfx.jingle, fail: HS.sfx.jam, done: HS.sfx.jingle, extract: HS.sfx.launch });
+
+  // ---------- recorded sound (S6-04). A name listed in SFX_FILES plays its clip from assets/sfx/ instead of the blip,
+  // and falls back to the blip until the clip has loaded or if it fails to. MUSIC loops per scene. M mutes all of it.
+  // Both lists stay empty until the clips are committed, so the game asks for no files it does not have.
+  HS.SFX_FILES = {};   // sound name -> file, e.g. pick: 'pick.ogg'
+  HS.MUSIC = {};       // menu: title, crew, lobby and brief; mars: the Mars surface. e.g. menu: 'music-menu.ogg'
+  const clips = {};    // file -> decoded buffer, once loaded
+  let music = null, musicFile = '';
+  const loadClip = (file) => {
+    if (clips[file] !== undefined || !AC) return;
+    clips[file] = null;
+    fetch('assets/sfx/' + file).then((r) => r.ok ? r.arrayBuffer() : Promise.reject(new Error('HTTP ' + r.status)))
+      .then((b) => AC.decodeAudioData(b)).then((buf) => { clips[file] = buf; if (file === musicFile) { musicFile = ''; HS.musicFor(HS.sceneName); } })
+      .catch((e) => console.warn('sound not loaded, keeping the blip:', file, e.message));
+  };
+  const loadClips = () => { for (const f of Object.values(HS.SFX_FILES)) loadClip(f); for (const f of Object.values(HS.MUSIC)) loadClip(f); };
+  const playClip = (file, v = .55) => {
+    const buf = clips[file];
+    if (!buf) return false;
+    if (HS.muted || !AC) return true;
+    const s = AC.createBufferSource(), gn = AC.createGain(); s.buffer = buf; gn.gain.value = v; s.connect(gn).connect(AC.destination); s.start();
+    return true;
+  };
+  for (const [name, file] of Object.entries(HS.SFX_FILES)) {
+    const blip = HS.sfx[name];
+    if (blip) HS.sfx[name] = () => { if (!playClip(file)) blip(); };
+  }
+  const MENU = ['title', 'crew', 'lobby', 'brief'];
+  // starts the loop this scene wants, if any, and stops the old one; called on every scene change and on M
+  HS.musicFor = (scene) => {
+    const key = MENU.includes(scene) ? 'menu' : scene === 'surface' && HS.S && HS.S.mission && HS.S.mission.id === 'mars' ? 'mars' : '';
+    const file = (!HS.muted && AC && HS.MUSIC[key]) || '';
+    if (file === musicFile) return;
+    if (music) { try { music.stop(); } catch (e) { /* already stopped */ } music = null; }
+    musicFile = file;
+    const buf = file && clips[file];
+    if (!buf) return;   // not loaded yet: loadClip starts it when it arrives
+    const s = AC.createBufferSource(), gn = AC.createGain(); s.buffer = buf; s.loop = true; gn.gain.value = .3;
+    s.connect(gn).connect(AC.destination); s.start(); music = s;
   };
 
   HS.hint = (s) => { const w = HS.tw(s, 6.5); g.fillStyle = 'rgba(8,14,26,.7)'; g.fillRect(0, 349, w + 16, 11); T(s, 8, 355, 6.5, '#aab6c2', { b: 'middle' }); };
