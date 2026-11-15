@@ -1,9 +1,11 @@
 import Peer, { type DataConnection } from "peerjs";
 import { makeCode, peerId } from "./code";
+import { iceServersFrom } from "./ice";
 import type { Conn } from "./session";
 
 // signalling goes through the free public PeerJS server; pass options here to point at our own
-const PEER_OPTIONS = { debug: 1 } as const;
+const iceServers = iceServersFrom(import.meta.env.VITE_ICE_SERVERS as string | undefined);
+const PEER_OPTIONS = iceServers ? { debug: 1, config: { iceServers } } : { debug: 1 };
 
 function wrap(dc: DataConnection): Conn {
   return {
