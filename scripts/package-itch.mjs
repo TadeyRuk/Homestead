@@ -1,5 +1,5 @@
 // npm run package: builds, then zips the game for itch.io (S1-08). The game is prototype/ (plain scripts)
-// plus js/net.js, the network layer bundled from src/proto by npm run build:proto.
+// plus prototype/js/net.js, the network layer bundled from src/proto by npm run build:proto.
 import { cpSync, existsSync, rmSync } from "node:fs";
 import { zipDir } from "./zip.mjs";
 

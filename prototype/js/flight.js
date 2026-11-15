@@ -75,7 +75,7 @@
         events: 0, nextEvent: 5, noteS: '', noteT: 0, noteCol: C.white, alertBeep: 0,
         note(s, col) { this.noteS = s; this.noteT = 4.5; this.noteCol = col; }
       };
-      // online, each crew member starts at their own station (the lobby's order); solo keeps all four
+      // online, each crew member starts at their own station (the lobby's order); solo, the one player switches between all four
       HS.ids().forEach((id, i) => { F.seats[id] = i % 4; });
       F.st = F.seats[HS.net.me] || 0;
       S.fuel = 100; S.hull = 100; S.cabinO2 = 100; S.instDamage = 0; S.hits = 0; S.hitsNoWarn = 0; S.trips = 0; S.telemetry = 0; S.hotTime = 0;

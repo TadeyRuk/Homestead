@@ -1,7 +1,8 @@
 // Homestead online play: host and join by a six-character code (the network layer is js/net.js, built from
 // src/proto by npm run build:proto; without it the game plays solo and the online button stays hidden).
 // The host runs the game as it always has and sends the run state plus the scene's state about 30 times a
-// second. Joiners send their keys and pointer, follow the host's scene and only draw.
+// second. Joiners send their keys and pointer and follow the host's scene: the play scenes only draw, the
+// cutscenes run locally with no input.
 (() => {
   const HS = window.HS, g = HS.g;
   const { T, box, C, PIX, clamp } = HS;
@@ -14,7 +15,7 @@
     mode: 'solo',          // solo | host | client
     me: 'host',            // this tab's crew id
     crew: [],              // [{ id, name, suit }]
-    room: null, client: null, code: '', want: false, msg: '', busy: false, lastSnap: 0, lastPing: 0, sent: ''
+    room: null, client: null, code: '', want: false, msg: '', busy: false, gen: 0, lastSnap: 0, lastPing: 0, sent: ''
   };
   HS.online = () => N.mode !== 'solo';
   HS.ids = () => N.mode === 'solo' ? ['host'] : N.crew.map(m => m.id);
@@ -22,22 +23,25 @@
 
   // ---------- each crew member's input, as the HS.In shape the scenes read
   const blank = () => ({ down: new Set(), hit: new Set(), mx: 320, my: 180, mdown: false, click: false });
+  // copied from the room once per frame, so a press or click a scene consumes stays consumed for the frame
   const remote = {};
-  HS.inputOf = (id) => {
-    if (id === N.me) return HS.local;
-    const raw = N.room && N.room.inputs()[id];
-    const i = remote[id] = remote[id] || blank();
-    if (raw) { i.down = new Set(raw.down); i.hit = new Set(raw.hit); i.mx = raw.mx; i.my = raw.my; i.mdown = raw.mdown; i.click = raw.click; }
-    else { i.down.clear(); i.hit.clear(); i.click = false; }
-    return i;
+  const readRemote = () => {
+    const all = N.room.inputs();
+    for (const id of HS.ids()) {
+      if (id === N.me) continue;
+      const raw = all[id], i = remote[id] = remote[id] || blank();
+      if (raw) { i.down = new Set(raw.down); i.hit = new Set(raw.hit); i.mx = raw.mx; i.my = raw.my; i.mdown = raw.mdown; i.click = raw.click; }
+      else { i.down.clear(); i.hit.clear(); i.click = false; }
+    }
   };
+  HS.inputOf = (id) => id === N.me ? HS.local : (remote[id] = remote[id] || blank());
   // run fn with HS.key, HS.hit, HS.axis and HS.In reading crew member id's input
   HS.as = (id, fn) => { const keep = HS.In; HS.In = HS.inputOf(id); try { return fn(); } finally { HS.In = keep; } };
-  // a clicked HUD button is consumed by setting HS.In.click = false; that must also clear it on the source
+  // runs fn once per crew member, with that member's input
   HS.each = (fn) => { for (const id of HS.ids()) HS.as(id, () => fn(id)); };
 
   // ---------- sounds, shakes and flashes fired on the host play on every screen
-  let outbox = [];
+  let outbox = [], lastData = null;
   // only the play scenes: joiners run the cutscenes themselves, sounds included
   const relay = (fn, kind, name) => (...args) => { if (N.mode === 'host' && PLAY.includes(HS.sceneName)) outbox.push([kind, name, args]); return fn(...args); };
   for (const k of Object.keys(HS.sfx)) HS.sfx[k] = relay(HS.sfx[k], 'sfx', k);
@@ -60,7 +64,9 @@
     if (now - N.lastSnap < SNAP_MS) return;
     N.lastSnap = now;
     const cur = HS.scenes[HS.sceneName];
-    N.room.send({ scene: HS.sceneName, S: HS.S && HS.S.mission ? packS() : null, d: cur && cur.save ? cur.save() : null, fx: outbox, crew: N.crew }, now);
+    const data = { scene: HS.sceneName, S: HS.S && HS.S.mission ? packS() : null, d: cur && cur.save ? cur.save() : null, fx: outbox, crew: N.crew };
+    N.room.send(data, now);
+    lastData = Object.assign({}, data, { fx: [] });   // a keepalive repeats the state, not the sounds
     outbox = [];
   }
   function onSnap(data) {
@@ -77,6 +83,7 @@
   // ---------- the frame hooks main.js calls
   const encode = (i) => ({ down: [...i.down].slice(0, 24), hit: [...i.hit].slice(0, 24), mx: Math.round(i.mx), my: Math.round(i.my), mdown: i.mdown, click: i.click });
   HS.netBefore = () => {
+    if (N.mode === 'host') readRemote();
     if (N.mode !== 'client') return;
     const now = performance.now(), i = encode(HS.local), s = JSON.stringify(i);
     // presses go every frame they happen; held keys and the pointer only when they change
@@ -96,6 +103,14 @@
   HS.netRuns = (name) => N.mode !== 'client' || name === 'lobby' ? 'full' : PLAY.includes(name) ? 'none' : 'quiet';
   HS.blankInput = blank();
 
+  // a hidden tab gets no animation frames, so pings and the host's keepalive also run on a timer; without
+  // it, switching tabs for ten seconds would drop the whole crew
+  setInterval(() => {
+    const now = performance.now();
+    if (N.mode === 'client') { if (now - N.lastPing > PING_MS) { N.lastPing = now; N.client.ping(); } N.client.check(); }
+    else if (N.mode === 'host') { N.room.check(); if (N.mode === 'host' && lastData && now - N.lastSnap > 900) { N.lastSnap = now; N.room.send(lastData, now); } }
+  }, 500);
+
   function leave(reason) {
     const was = N.mode;
     N.mode = 'solo'; N.me = 'host'; HS.NAME.crew = 'SOLO CREW'; N.crew = []; N.room = null; N.client = null; N.code = ''; N.busy = false; N.want = false;
@@ -103,24 +118,30 @@
   }
   const profile = () => ({ name: HS.S.name || 'Crew', suit: HS.S.suit });
 
+  // gen moves on when the player backs out of the lobby, so a code that arrives late is thrown away
+  const stale = (gen) => gen !== N.gen || HS.sceneName !== 'lobby';
   async function hostGame() {
     if (N.busy) return; N.busy = true; N.msg = 'Getting a code...';
-    try {
-      const { code, room } = await window.HSNet.host(profile(), leave);
-      Object.assign(N, { mode: 'host', me: 'host', room, code, msg: '', busy: false });
-      HS.NAME.crew = 'CREW';
-      N.crew = room.members();
-      HS.sfx.ok();
-    } catch (e) { N.busy = false; N.msg = e.message || 'Could not host'; HS.sfx.buzz(); }
+    const gen = N.gen;
+    let got;
+    try { got = await window.HSNet.host(profile(), leave); }
+    catch (e) { console.error('could not host', e); if (!stale(gen)) { N.busy = false; N.msg = e.message || 'Could not host'; HS.sfx.buzz(); } return; }
+    if (stale(gen)) { got.room.end(''); return; }
+    Object.assign(N, { mode: 'host', me: 'host', room: got.room, code: got.code, msg: '', busy: false });
+    HS.NAME.crew = 'CREW';
+    N.crew = got.room.members();
+    HS.sfx.ok();
   }
   async function joinGame(code) {
     if (N.busy) return; N.busy = true; N.msg = 'Joining...';
-    try {
-      const client = await window.HSNet.join(code, profile(), leave, onSnap);
-      Object.assign(N, { mode: 'client', client, code: code.toUpperCase(), msg: 'Waiting for the host to start', busy: false });
-      HS.NAME.crew = 'CREW';
-      HS.sfx.ok();
-    } catch (e) { N.busy = false; N.msg = e.message || 'Could not join'; HS.sfx.buzz(); }
+    const gen = N.gen;
+    let client;
+    try { client = await window.HSNet.join(code, profile(), leave, onSnap); }
+    catch (e) { console.error('could not join', e); if (!stale(gen)) { N.busy = false; N.msg = e.message || 'Could not join'; HS.sfx.buzz(); } return; }
+    if (stale(gen)) { client.leave(); return; }
+    Object.assign(N, { mode: 'client', client, code: code.toUpperCase(), msg: 'Waiting for the host to start', busy: false });
+    HS.NAME.crew = 'CREW';
+    HS.sfx.ok();
   }
 
   // ---------- the lobby: host or join, see who is in, the host starts the run
@@ -141,7 +162,7 @@
       for (const code of HS.In.hit) { const ch = charOf(code); if (ch && CHARS.includes(ch) && L.typing.length < 6) { L.typing += ch; HS.sfx.type(); } }
       if (HS.hit('Backspace')) { L.typing = L.typing.slice(0, -1); HS.sfx.type(); }
       if (HS.hit('Enter') && !N.busy) { if (L.typing.length === 6) joinGame(L.typing); else hostGame(); }
-      if (HS.hit('Escape')) { N.msg = ''; HS.go('title'); }
+      if (HS.hit('Escape')) { N.gen++; N.busy = false; N.msg = ''; HS.go('title'); }
       if (HS.In.click) { const h = L.hits.find(b => HS.over(b.x, b.y, b.w, b.h)); if (h) h.go(); }
     },
     draw() {

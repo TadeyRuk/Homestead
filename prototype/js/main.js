@@ -17,14 +17,21 @@
 
   function frame(now) {
     let dt = Math.min(.05, (now - last) / 1000) || 0; last = now;
-    if (HS.netBefore) HS.netBefore();
-    for (let i = 0; i < HS.speed; i++) { step(dt); if (i === 0 && HS.speed > 1) HS.endFrame(); }   // key presses count once per frame
-    if (HS.netAfter) HS.netAfter();
-    draw();
-    // spend a few spare milliseconds a frame building the launch campus ahead of time (js/campus.js)
-    if (HS.campusPrewarm && HS.sceneName !== 'build') HS.campusPrewarm(5);
-    HS.endFrame();
-    requestAnimationFrame(frame);
+    try {
+      if (HS.netBefore) HS.netBefore();
+      for (let i = 0; i < HS.speed; i++) { step(dt); if (i === 0 && HS.speed > 1) HS.endFrame(); }   // key presses count once per frame
+      if (HS.netAfter) HS.netAfter();
+      draw();
+      // spend a few spare milliseconds a frame building the launch campus ahead of time (js/campus.js)
+      if (HS.campusPrewarm && HS.sceneName !== 'build') HS.campusPrewarm(5);
+    } catch (e) {
+      // one bad frame must not stop the loop; online, the host ends the game so nobody sits on a frozen screen
+      console.error('frame failed', e);
+      if (HS.net && HS.net.mode === 'host') HS.net.room.end('The host hit an error');
+    } finally {
+      HS.endFrame();
+      requestAnimationFrame(frame);
+    }
   }
   function step(dt) {
     HS.time += dt;

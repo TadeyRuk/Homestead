@@ -5,7 +5,7 @@
   const L = HS.LANDER, A = HS.surfaceArt;   // the art is in js/surface-art.js
   let U = null;
   // what each crew member has of their own on the surface; use() swaps one of them into U, keep() saves it back
-  const PK = ['p', 'carry', 'o2', 'pw', 'hold', 'tab', 'down', 'downT', 'inHazard'];
+  const PK = ['p', 'carry', 'carried', 'o2', 'pw', 'hold', 'tab', 'down', 'downT', 'inHazard'];
   const use = (id) => { const o = U.ps[id]; for (const k of PK) U[k] = o[k]; U.me = id; };
   const keep = (id) => { const o = U.ps[id]; for (const k of PK) o[k] = U[k]; };
 
@@ -17,13 +17,13 @@
   const sheltered = (p) => atLander(p) || U.rocks.some(([X, Y]) => Math.hypot(p.x - (X + 5), p.y - (Y + 6)) < 13);
 
   function goDown() {
-    const S = HS.S; U.down = true; S.lostDown += S.carried; S.carried = 0; U.carry = null;
+    const S = HS.S; U.down = true; S.lostDown += U.carried; U.carried = 0; U.carry = null;
     // the run only ends early when nobody is left standing
     if (Object.keys(U.ps).every(id => id === U.me || U.ps[id].down)) { S.crewStanding = 0; S.ended = { phase: 'surface', reason: 'suit', hazard: U.inHazard }; }
     HS.log('down', { lost: S.lostDown, hazard: U.inHazard, left: Math.round(U.left) });
     HS.sfx.sad(); HS.shake(5); HS.flash('255,60,60', .4); U.downT = 0;
   }
-  function extraction() { if (U.ext) return; U.ext = { t: 0 }; HS.S.surfaceLeft = Math.max(0, U.left); HS.log('extract', { uplinked: Math.floor(HS.S.uplinked), buffer: HS.S.buffer, carried: HS.S.carried }); HS.sfx.launch(); }
+  function extraction() { if (U.ext) return; keep(U.me); HS.S.carried = Object.values(U.ps).reduce((a, o) => a + o.carried, 0); U.ext = { t: 0 }; HS.S.surfaceLeft = Math.max(0, U.left); HS.log('extract', { uplinked: Math.floor(HS.S.uplinked), buffer: HS.S.buffer, carried: HS.S.carried }); HS.sfx.launch(); }
 
   HS.scenes.surface = {
     enter() {
@@ -36,7 +36,7 @@
         hold: null, tab: 'MISSION', noteS: '', noteT: 0, noteCol: C.cyan, down: false, downT: 0, ext: null, done: false, inHazard: false, map: false, photoT: 0, lowBeep: 0,
         storms: [], flares: [], rocks: D.rocks, devil: { x: 0, y: 0 }, overlook: null, upT: 0, ps: {}, me: 'host'
       };
-      HS.ids().forEach((id, i) => { U.ps[id] = { p: { x: L.x + 4 + i * 10, y: L.y + 16, walk: 0, flip: false, face: 'down' }, carry: null, o2: 100, pw: 100, hold: null, tab: 'MISSION', down: false, downT: 0, inHazard: false }; });
+      HS.ids().forEach((id, i) => { U.ps[id] = { p: { x: L.x + 4 + i * 10, y: L.y + 16, walk: 0, flip: false, face: 'down' }, carry: null, carried: 0, o2: 100, pw: 100, hold: null, tab: 'MISSION', down: false, downT: 0, inHazard: false }; });
       use(U.ps[HS.net.me] ? HS.net.me : HS.ids()[0]);
       const si = D.sample.find(s => s[0] === U.sample.x); U.sample.y = si[1];
       const di = D.deploy[(r() * 2) | 0]; U.deploy.x = di[0]; U.deploy.y = di[1];
@@ -114,7 +114,7 @@
 
       // lander: drop off data and samples, recharge, uplink
       if (home) {
-        if (S.carried > 0) { S.buffer += S.carried; note(`${S.carried} data units handed to the lander`, C.cyan); S.carried = 0; HS.sfx.good(); }
+        if (U.carried > 0) { S.buffer += U.carried; note(`${U.carried} data units handed to the lander`, C.cyan); U.carried = 0; HS.sfx.good(); }
         if (U.carry === 'sample') { U.carry = null; S.sampleDone = true; note(mi.objectives.sample + ': done', C.green); HS.sfx.jingle(); HS.log('sample'); }
         const rc = m.power.recharge * (m.power.solar && U.mars ? .43 : 1) * dt; U.o2 = Math.min(100, U.o2 + rc); U.pw = Math.min(100, U.pw + rc);
       } else {
@@ -133,7 +133,7 @@
       const S = HS.S, m = U.m, p = U.p, mi = S.mission, near = (o, d = 14) => Math.hypot(p.x - o.x, p.y - o.y) < d;
       for (const s of U.sites) if (!s.done && near(s)) {
         const base = m.payload[s.kind], got = Math.max(1, Math.round(base * (1 - S.instDamage / 100)));
-        return { id: 'site' + s.x, x: s.x, y: s.y, col: '#78ffe6', time: m.payload.scan, label: `[E] hold to scan  +${got} data`, finish: () => { s.done = true; S.carried += got; S.yieldLost += base - got; if (s.kind === 'rich') S.scansRich++; else S.scansPoor++; HS.sfx.good(); note(`Scan done: +${got} data in your hands. Take it to the lander.`, C.cyan); HS.log('scan', { kind: s.kind, got, base }); } };
+        return { id: 'site' + s.x, x: s.x, y: s.y, col: '#78ffe6', time: m.payload.scan, label: `[E] hold to scan  +${got} data`, finish: () => { s.done = true; U.carried += got; S.yieldLost += base - got; if (s.kind === 'rich') S.scansRich++; else S.scansPoor++; HS.sfx.good(); note(`Scan done: +${got} data in your hands. Take it to the lander.`, C.cyan); HS.log('scan', { kind: s.kind, got, base }); } };
       }
       if (!U.sample.done && near(U.sample)) return { id: 'sample', x: U.sample.x, y: U.sample.y, col: '#ffb43c', time: 3.2, label: U.mars ? '[E] hold to drill the core' : '[E] hold to collect regolith', finish: () => { U.sample.done = true; U.carry = 'sample'; HS.sfx.pick(); note('Sample in hand. Carry it to the lander.', C.amber); } };
       if (!U.deploy.done && near(U.deploy)) return { id: 'deploy', x: U.deploy.x, y: U.deploy.y, col: '#e6e8ec', time: 4, label: `[E] hold to deploy the ${mi.objectives.deploy.toLowerCase()}`, finish: () => { U.deploy.done = true; S.deployDone = true; HS.sfx.jingle(); note(mi.objectives.deploy + ': deployed', C.green); HS.log('deploy'); } };
@@ -156,12 +156,12 @@
       if (mars) list.push({ y: U.devil.y + 2, draw: () => A.devil(x, cam, U.devil, t) });
       else { list.push({ y: U.overlook.y + 2, draw: () => A.overlook(x, cam, U.overlook, S.bonusDone, t) }); U.rocks.forEach(([X, Y], i) => list.push({ y: Y + 4, draw: () => A.boulder(x, cam, X, Y, i) })); }
       if (U.down || !(U.ext && U.ext.t > 2.6)) {
-        const held = U.down ? null : U.carry ? (mars ? 'core' : 'can') : S.carried > 0 ? 'data' : null;
+        const held = U.down ? null : U.carry ? (mars ? 'core' : 'can') : U.carried > 0 ? 'data' : null;
         list.push({ y: p.y + 4, draw: () => A.crew(x, cam, p, S.suit, { walk: p.walk, flip: p.flip, face: p.face, carry: !!held, down: U.down, t }, held, t) });
       }
       for (const id in U.ps) {
         const o = U.ps[id]; if (id === U.me || (U.ext && U.ext.t > 2.6 && !o.down)) continue;
-        const held = o.down ? null : o.carry ? (mars ? 'core' : 'can') : null, q = o.p;
+        const held = o.down ? null : o.carry ? (mars ? 'core' : 'can') : o.carried > 0 ? 'data' : null, q = o.p;
         list.push({ y: q.y + 4, draw: () => A.crew(x, cam, q, HS.member(id).suit, { walk: q.walk, flip: q.flip, face: q.face, carry: !!held, down: o.down, t }, held, t) });
       }
       list.sort((a, b) => a.y - b.y);
@@ -189,7 +189,7 @@
       if (rich && S.scansRich < mi.objectives.scans && !U.ext) HS.edgeArrow(cam, rich.x, rich.y, '#78ffe6', 'RICH', true);
 
       // ----- HUD
-      const st = U.down ? 'DOWN' : U.carry ? 'carrying the sample' : S.carried > 0 ? `carrying ${S.carried} data units` : atLander(p) ? 'at the lander: recharging' : 'hands empty';
+      const st = U.down ? 'DOWN' : U.carry ? 'carrying the sample' : U.carried > 0 ? `carrying ${U.carried} data units` : atLander(p) ? 'at the lander: recharging' : 'hands empty';
       HS.chip('crew', 8, 30, st);
       const low = U.left < 20;
       HS.topBox(U.ext ? 'EXTRACTION' : 'EXTRACTION IN ' + fmt(U.left), `data uplinked ${Math.floor(S.uplinked)} / ${mi.target}`, low && Math.floor(t * 4) % 2 ? C.red : low ? C.amber : C.white);
@@ -233,7 +233,7 @@
         const home = atLander(U.p), rc = U.m.power.recharge * (U.m.power.solar && U.mars ? .43 : 1);
         [['OXYGEN', U.o2, U.o2 < 35 ? C.red : C.green], ['POWER', U.pw, U.pw < 35 ? C.red : C.eng]].forEach(([n, v, col], i) => { const yy = y + 38 + i * 15; T(n, x + 8, yy, 7, C.muted, { w: 600 }); bar(x + 56, yy - 7, 104, 7, v / 100, col); T(Math.round(v) + '%', x + w - 8, yy, 7.5, col, { w: 600, a: 'right' }); });
         T(U.mars ? 'DUST' : 'SUN', x + 8, y + 68, 7, C.muted, { w: 600 }); T(U.inHazard ? (U.mars ? 'storm: drain x4' : 'flare: drain x6') : home ? `recharging ${rc.toFixed(1)}% per second` : U.mars ? 'clear air' : 'quiet', x + 56, y + 68, 7.5, U.inHazard ? C.amber : home ? C.green : C.white);
-        T('CARRYING', x + 8, y + 83, 7, C.muted, { w: 600 }); T(U.carry ? 'the sample' : S.carried > 0 ? `${S.carried} data units` : 'nothing', x + 56, y + 83, 7.5, C.white);
+        T('CARRYING', x + 8, y + 83, 7, C.muted, { w: 600 }); T(U.carry ? 'the sample' : U.carried > 0 ? `${U.carried} data units` : 'nothing', x + 56, y + 83, 7.5, C.white);
         T('LANDER', x + 8, y + 98, 7, C.muted, { w: 600 }); T(S.buffer > 0 ? `${Math.ceil(S.buffer)} units waiting to send` : 'nothing waiting', x + 56, y + 98, 7.5, S.buffer > 0 ? C.cyan : C.white);
       }
     },

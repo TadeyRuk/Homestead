@@ -38,6 +38,7 @@
       p.carry = best.id; HS.sfx.pick(); return;
     }
     if (near(p, KIOSK.sx, KIOSK.sy, 22)) {
+      if (B.roll) { toast('The kiosk is busy', C.muted); HS.sfx.buzz(); return; }
       if (S.credits < HS.KIOSK_COST) { toast('Not enough credits for the kiosk', C.red); HS.sfx.buzz(); return; }
       S.credits -= HS.KIOSK_COST; S.kioskBuys++; B.roll = { t: 0, who: B.me, result: HS.REAL_PARTS[(B.kr() * HS.REAL_PARTS.length) | 0] }; HS.sfx.ok(); return;
     }
