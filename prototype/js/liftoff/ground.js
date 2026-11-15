@@ -429,7 +429,7 @@
     g.restore();
 
     // words: the name, the field note, the countdown
-    const tf = 1 - sstep(10.4, 11.2, t);
+    const tf = env.quiet ? 0 : 1 - sstep(10.4, 11.2, t);   // env.quiet: the extraction cutscene draws its own words
     if (tf > 0) {
       g.globalAlpha = tf * clamp(t * 1.5);
       say("HOMESTEAD", 52, 132, 88, "#ffffff", { pixel: true, weight: 700, shadow: "#0a0f1c", sd: 6 });

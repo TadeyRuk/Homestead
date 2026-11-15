@@ -58,7 +58,7 @@
       const S = HS.S, m = U.m;
       if (U.done) return;
       U.t += dt; U.noteT -= dt; U.photoT -= dt; U.fx.update(dt);
-      if (U.ext) { U.ext.t += dt; if (U.ext.t > 5) { U.done = true; HS.go('report'); } return; }
+      if (U.ext) { U.ext.t += dt; if (U.ext.t > 5) { U.done = true; HS.go(HS.S.ended ? 'report' : 'extraction'); } return; }
       const ids = Object.keys(U.ps);
       // extraction comes early once the whole crew is down
       if (ids.every(id => U.ps[id].down)) { if (Math.max(...ids.map(id => (U.ps[id].downT += dt))) > 2.6) extraction(); return; }
