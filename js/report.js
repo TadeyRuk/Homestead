@@ -210,7 +210,7 @@
       const t = Rp.t, a = Rp.a, S = HS.S, mi = S.mission, A = art(mi.id);
       const img = (s, x, y) => { g.imageSmoothingEnabled = false; g.drawImage(s, x, y, s.width / 2, s.height / 2); };
       // how the run ended, behind the panel: the lander on the surface, the burnt pad, or the planet never reached
-      HS.cutArt.report(t); HS.blitArt();
+      HS.cutArt.report(t); HS.bleedArt(); HS.blitArt();
       box(20, 20, 600, 322, C.cyan, 6);
       const hd = `MISSION REPORT  /  ${mi.name}  /  `;
       T(hd, 34, 36, 8.5, C.cyan, { w: 600 }); T(a.outcome, 34 + HS.tw(hd, 8.5, { w: 600 }), 36, 8.5, a.col, { w: 600 });

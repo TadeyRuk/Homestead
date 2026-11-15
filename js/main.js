@@ -4,8 +4,15 @@
   let cur = null, next = null, fade = 0, fadeDir = 0, fadeCol = '4,7,13', last = 0;
   HS.time = 0; HS.speed = 1; HS.paused = false;
   let scale = 2;
-  // keep the canvas backing store at the size it is shown, so text stays sharp on any window or display
-  const fit = () => { const r = HS.cv.getBoundingClientRect(), d = window.devicePixelRatio || 1, w = Math.max(640, Math.min(3840, Math.round(r.width * d))); if (HS.cv.width !== w) { HS.cv.width = w; HS.cv.height = Math.round(w * 9 / 16); } scale = HS.cv.width / 640; };
+  // the canvas fills the window at any shape, its backing store at the size it is shown (so text stays sharp),
+  // capped at 3840 x 2400. The 640 x 360 safe box is scaled to fit and centred; js/art.js lays out the margins.
+  const fit = () => {
+    const d = window.devicePixelRatio || 1, vw = Math.max(1, window.innerWidth), vh = Math.max(1, window.innerHeight);
+    const k = Math.min(1, 3840 / (vw * d), 2400 / (vh * d)), w = Math.max(320, Math.round(vw * d * k)), h = Math.max(180, Math.round(vh * d * k));
+    if (HS.cv.width !== w || HS.cv.height !== h) { HS.cv.width = w; HS.cv.height = h; }
+    scale = Math.min(w / 640, h / 360);
+    HS.layout(w, h, scale);
+  };
   window.addEventListener('resize', fit); fit();
   const PLAY = ['build', 'flight', 'surface'];
 
@@ -47,24 +54,24 @@
   }
   function draw() {
     const sx = HS.shakeAmt ? (Math.random() - .5) * HS.shakeAmt : 0, sy = HS.shakeAmt ? (Math.random() - .5) * HS.shakeAmt : 0;
-    g.setTransform(scale, 0, 0, scale, Math.round(sx * scale), Math.round(sy * scale));
+    g.setTransform(scale, 0, 0, scale, Math.round((HS.OX + sx) * scale), Math.round((HS.OY + sy) * scale));
     g.globalAlpha = 1; g.imageSmoothingEnabled = false;
-    g.fillStyle = '#04070d'; g.fillRect(-10, -10, 660, 380);
+    HS.fillStage('#04070d');
     if (cur) { g.save(); cur.draw(); g.restore(); }
-    if (HS.flashA > 0) { g.fillStyle = `rgba(${HS.flashCol},${HS.flashA})`; g.fillRect(-10, -10, 660, 380); }
+    if (HS.flashA > 0) HS.fillStage(`rgba(${HS.flashCol},${HS.flashA})`);
     // watermark required by the Space Apps AI rules, plus the sound state
     // on the title the film has its own words along the bottom, so the watermark moves to the top edge there
-    const s = 'AI-assisted placeholder art', w = HS.tw(s, 6.5), wy = HS.sceneName === 'title' ? 0 : 349;
-    g.fillStyle = 'rgba(8,14,26,.7)'; g.fillRect(640 - w - (PLAY.includes(HS.sceneName) ? 96 : 44), wy, w + 96, 11);
-    HS.T(s, 636, wy + 6, 6.5, '#aab6c2', { a: 'right', b: 'middle' });
-    HS.T(HS.muted ? '[M] off' : '[M] snd', 640 - w - 41, wy + 6, 6.5, HS.muted ? HS.C.red : '#6f7d8c', { b: 'middle' });
+    const s = 'AI-assisted placeholder art', w = HS.tw(s, 6.5), wy = HS.sceneName === 'title' ? HS.Y0 : HS.Y1 - 11, ex = HS.X1;
+    g.fillStyle = 'rgba(8,14,26,.7)'; g.fillRect(ex - w - (PLAY.includes(HS.sceneName) ? 96 : 44), wy, w + 96, 11);
+    HS.T(s, ex - 4, wy + 6, 6.5, '#aab6c2', { a: 'right', b: 'middle' });
+    HS.T(HS.muted ? '[M] off' : '[M] snd', ex - w - 41, wy + 6, 6.5, HS.muted ? HS.C.red : '#6f7d8c', { b: 'middle' });
     if (HS.paused) {
-      g.fillStyle = 'rgba(4,7,13,.78)'; g.fillRect(-10, -10, 660, 380);
+      HS.fillStage('rgba(4,7,13,.78)');
       HS.box(210, 112, 220, 136, HS.C.cyan, 6);
       HS.T('PAUSED', 320, 140, 22, HS.C.white, { w: 700, a: 'center', b: 'middle', f: HS.PIX });
       [['[ESC] or [ENTER]', 'resume'], ['[R]', 'restart this seed'], ['[T]', 'quit to title'], ['[M]', HS.muted ? 'sound is off' : 'sound is on']].forEach(([k, v], i) => { HS.T(k, 306, 170 + i * 17, 8, HS.C.amber, { w: 600, a: 'right' }); HS.T(v, 316, 170 + i * 17, 8, HS.C.white); });
-    } else if (PLAY.includes(HS.sceneName)) HS.T('[ESC] pause', 640 - w - 50, 355, 6.5, '#6f7d8c', { a: 'right', b: 'middle' });
-    if (fade > 0) { g.fillStyle = `rgba(${fadeCol},${fade})`; g.fillRect(-10, -10, 660, 380); }
+    } else if (PLAY.includes(HS.sceneName)) HS.T('[ESC] pause', ex - w - 50, wy + 6, 6.5, '#6f7d8c', { a: 'right', b: 'middle' });
+    if (fade > 0) HS.fillStage(`rgba(${fadeCol},${fade})`);
   }
 
   // debug / test hooks: ?scene=flight&mission=mars&seed=7&parts=chem,rtg,dish,spectro&speed=4

@@ -34,16 +34,28 @@
     cx.imageSmoothingEnabled = true;
     cx.filter = `blur(${blur / 2}px) saturate(1.15)`;
     cx.clearRect(0, 0, cw, ch);
-    cx.drawImage(art, x - m, y - m, cw * 2, ch * 2, 0, 0, cw, ch);
+    cx.drawImage(art, x - m + HS.AOX, y - m + HS.AOY, cw * 2, ch * 2, 0, 0, cw, ch);   // art is the stage's art layer
     cx.filter = 'none';
     g.save(); rrect(x, y, w, h, r); g.clip();
     g.imageSmoothingEnabled = true; g.drawImage(c, m / 2, m / 2, w / 2, h / 2, x, y, w, h);
     g.restore();
   }
+  // the film's queued words (gfx.js TextQueue.flush), drawn with the safe box's offset on the stage
+  function flushFilm(tx, S, ox, oy) {
+    g.save(); g.setTransform(S, 0, 0, S, ox, oy);
+    for (const c of tx.cmds) {
+      g.globalAlpha = c.alpha; g.font = `${c.o.weight ?? 600} ${c.size}px ${c.o.pixel ? LO.PIXEL : LO.MONO}`;
+      g.textAlign = c.o.align ?? 'left'; g.textBaseline = c.o.base ?? 'alphabetic';
+      if (c.o.shadow) { g.fillStyle = c.o.shadow; g.fillText(c.s, c.x + (c.o.sd ?? 4), c.y + (c.o.sd ?? 4)); }
+      g.fillStyle = c.col; g.fillText(c.s, c.x, c.y);
+    }
+    g.restore(); tx.clear();
+  }
   function drawSetup(S, art, k) {
     const hits = title.hits = [];
     const mx = HS.In.mx * 2, my = HS.In.my * 2, over = (x, y, w, h) => mx >= x && mx <= x + w && my >= y && my <= y + h;
-    const PW = 340, PAD = 24, X = 1229 - PW - PAD * 2 - 2, best = HS.best();
+    // pinned 51 art pixels in from the screen's right edge, as the main game's form sits on its title
+    const PW = 340, PAD = 24, X = HS.AX1 - 51 - PW - PAD * 2 - 2, best = HS.best();
     const H = 454 + (best ? 29 : 0), Y = Math.round(360 - H / 2 + (1 - k) * 12);
     g.save();
     g.globalAlpha = k;
@@ -90,7 +102,7 @@
   function drawReplay(S, art) {
     // the main game's "↻ Replay" pill, bottom centre
     const s = '↻ Replay'; g.font = font(11); if ('letterSpacing' in g) g.letterSpacing = '0px';
-    const w = Math.ceil(g.measureText(s).width + 28.6 + 2), h = 28.4, x = Math.round(640 - w / 2), y = 720 - 7.5 - h;
+    const w = Math.ceil(g.measureText(s).width + 28.6 + 2), h = 28.4, x = Math.round(640 - w / 2), y = HS.AY1 - 7.5 - h;
     const mx = HS.In.mx * 2, my = HS.In.my * 2, hot = mx >= x && mx <= x + w && my >= y && my <= y + h;
     frost(art, x, y, w, h, h / 2, 6, S);
     rrect(x, y, w, h, h / 2); g.fillStyle = hot ? 'rgba(8,14,26,.85)' : 'rgba(8,14,26,.62)'; g.fill();
@@ -122,17 +134,16 @@
       f.prepare(4);
       const t = f.tick(dt);
       f.draw(t, dt);
-      // the art is on a 1280 x 720 grid; show it as sharp pixels, then put the text on top at full resolution
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      const S = HS.cv.width / LO.ART_W;
-      g.imageSmoothingEnabled = S < 1;
-      g.drawImage(f.art, 0, 0, HS.cv.width, HS.cv.height);
-      f.tx.flush(g, S, LO.PIXEL, LO.MONO);
-      // the setup panel and the replay pill, laid out on the same 1280 x 720 grid
-      g.setTransform(S, 0, 0, S, 0, 0);
+      // the film's 1280 x 720 art goes into the safe box of the stage's art layer, mirrored out into the margins so it
+      // fills the window (js/art.js), shown as sharp pixels; then its words go on top at full resolution
+      HS.ax.drawImage(f.art, 0, 0); HS.bleedArt(64); HS.blitArt();
+      const S = HS.scale / 2, ox = HS.OX * HS.scale, oy = HS.OY * HS.scale;
+      flushFilm(f.tx, S, ox, oy);
+      // the setup panel and the replay pill, on the same 1280 x 720 grid, pinned to the screen's edges
+      g.setTransform(S, 0, 0, S, ox, oy);
       const k = f.env.calm ? 1 : 1 - Math.pow(1 - seg(title.t, .3, .8), 3);
-      drawSetup(S, f.art, k);
-      drawReplay(S, f.art);
+      drawSetup(S, HS.art, k);
+      drawReplay(S, HS.art);
     }
   };
 
@@ -149,7 +160,7 @@
     draw() {
       const t = brief.t, m = HS.S.mission;
       // deep space and the lit globe of the destination, on the 1280 x 720 art grid (js/cutscene-art.js)
-      HS.cutArt.brief(t, m.id); HS.blitArt();
+      HS.cutArt.brief(t, m.id); HS.bleedArt(); HS.blitArt();
       box(110, 34, 420, 290, C.cyan, 6);
       T('MISSION CONTROL  /  INCOMING BRIEF', 128, 56, 8.5, C.cyan, { w: 600 });
       T('seed ' + HS.S.seed, 512, 56, 7.5, C.muted, { a: 'right' });
@@ -188,7 +199,7 @@
       const t = cut.t, m = HS.model(), fail = cut.fail;
       const kUp = fail ? ease(seg(t, .6, 3)) * .32 : ease(seg(t, .6, 4));
       HS.cutArt.launch(t, { kUp, fail, boom: cut.boom, fx: cut.fx });
-      HS.blitArt();
+      HS.bleedArt(); HS.blitArt();
       const names = HS.SLOTS.map(s => HS.PARTS[HS.S.slots[s]].name).join('  /  ');
       if (!fail) {
         g.globalAlpha = seg(t, .8, 1.3) * (1 - seg(t, 3.4, 4.1));
@@ -215,7 +226,7 @@
       const t = land.t, mars = HS.S.mission.id === 'mars';
       // the lander comes down onto Mars or the Moon, touching down at 3.1 s (js/cutscene-art.js)
       HS.cutArt.landing(t, mars);
-      HS.blitArt();
+      HS.bleedArt(); HS.blitArt();
       g.globalAlpha = seg(t, 3.1, 3.4);
       T('TOUCHDOWN', 320, 60, 30, C.white, { w: 700, a: 'center', b: 'middle', f: PIX });
       const dmg = HS.S.instDamage > 1 ? `instrument at ${Math.round(100 - HS.S.instDamage)}%` : 'instrument intact';

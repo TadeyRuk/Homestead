@@ -117,24 +117,27 @@
   })();
 
   // the shared camera (HS.camera) is in js/art.js: it centres the player and snaps to the art grid
-  HS.toScreen = (cam, X, Y) => ({ x: (X - cam.x) * 3, y: (Y - cam.y) * 3 });
+  // world point -> HUD units from the safe box's top left (cam.x, cam.y is the world at the stage's top left)
+  HS.toScreen = (cam, X, Y) => ({ x: (X - cam.x) * 3 + HS.X0, y: (Y - cam.y) * 3 + HS.Y0 });
   // arrow at the screen edge pointing to an off-screen world point
   // Arrows are spread out so two targets in the same direction do not print on top of each other.
   let used = [];
   HS.arrowReset = () => { used = []; };
   HS.edgeArrow = (cam, X, Y, col, label, avoidPanel) => {
     const g = HS.g, s = HS.toScreen(cam, X, Y);
-    if (s.x > 20 && s.x < 620 && s.y > 40 && s.y < 340) return;
-    const cx = 320, cy = 200, a = Math.atan2(s.y - cy, s.x - cx);
-    const k = Math.min(Math.abs(284 / Math.cos(a)), Math.abs(106 / Math.sin(a)));
+    const { X0, X1, Y0, Y1 } = HS;
+    if (s.x > X0 + 20 && s.x < X1 - 20 && s.y > Y0 + 40 && s.y < Y1 - 20) return;
+    // arrows sit on an ellipse-ish frame just inside the screen's edges
+    const cx = (X0 + X1) / 2, cy = 200, hw = (X1 - X0) / 2 - 36, hh = Math.min(cy - Y0 - 94, Y1 - cy - 54), a = Math.atan2(s.y - cy, s.x - cx);
+    const k = Math.min(Math.abs(hw / Math.cos(a)), Math.abs(hh / Math.sin(a)));
     let ax = cx + Math.cos(a) * k, ay = cy + Math.sin(a) * k;
-    if (avoidPanel && ax < 226 && ay > 222) { if (s.y > 340) ax = 232; else ay = 216; }
-    const onSide = Math.abs(Math.abs(ax - cx) - 284) < 1;
-    for (let n = 0; n < 6 && used.some(u => Math.abs(u[0] - ax) < 62 && Math.abs(u[1] - ay) < 16); n++) { if (onSide) ay += ay < 200 ? 18 : -18; else ax += ax < 320 ? 64 : -64; }
+    if (avoidPanel && ax < X0 + 226 && ay > Y1 - 138) { if (s.y > Y1 - 20) ax = X0 + 232; else ay = Y1 - 144; }
+    const onSide = Math.abs(Math.abs(ax - cx) - hw) < 1;
+    for (let n = 0; n < 6 && used.some(u => Math.abs(u[0] - ax) < 62 && Math.abs(u[1] - ay) < 16); n++) { if (onSide) ay += ay < cy ? 18 : -18; else ax += ax < cx ? 64 : -64; }
     used.push([ax, ay]);
     g.save(); g.translate(ax, ay); g.rotate(a); g.fillStyle = col; g.beginPath(); g.moveTo(9, 0); g.lineTo(-5, -6); g.lineTo(-5, 6); g.fill(); g.restore();
     if (label) {
-      const w = HS.tw(label, 7.5, { w: 600 }), lx = HS.clamp(ax - Math.cos(a) * (w / 2 + 14), w / 2 + 6, 634 - w / 2), ly = HS.clamp(ay - Math.sin(a) * 16, 50, 330);
+      const w = HS.tw(label, 7.5, { w: 600 }), lx = HS.clamp(ax - Math.cos(a) * (w / 2 + 14), X0 + w / 2 + 6, X1 - 6 - w / 2), ly = HS.clamp(ay - Math.sin(a) * 16, Y0 + 50, Y1 - 30);
       g.fillStyle = 'rgba(8,14,26,.65)'; g.fillRect(lx - w / 2 - 3, ly - 6, w + 6, 12); HS.T(label, lx, ly + .5, 7.5, col, { w: 600, a: 'center', b: 'middle' });
     }
   };

@@ -107,7 +107,7 @@
   const SLOT_ORDER = ['payload', 'comms', 'power', 'prop'];
   function panel(pv, pvId) {
     const S = HS.S, m = HS.model(), n = pv ? HS.model({ [pv.slot]: pvId }) : null;
-    const X = 452, Y = 30, W = 182, H = 122;
+    const W = 182, H = 122, X = HS.X1 - W - 6, Y = HS.Y0 + 30;   // pinned to the top-right corner
     paper(X, Y, W, H);
     T('ROCKET', X + 7, Y + 11, 7.5, INK, { w: 600 });
     T(n ? 'IF MOUNTED' : '[B] blueprint', X + W - 7, Y + 11, 6.5, n ? AMBER : DIM, { w: 600, a: 'right' });
@@ -165,7 +165,7 @@
   }
   function sheet(t, pv, pvId) {
     const S = HS.S, m = HS.model(), n = pv ? HS.model({ [pv.slot]: pvId }) : null, mm = n || m;
-    g.fillStyle = 'rgba(4,7,13,.6)'; g.fillRect(0, 0, 640, 360);
+    HS.fillStage('rgba(4,7,13,.6)');
     const X = 30, Y = 22, W = 580, H = 318;
     paper(X, Y, W, H, 5, 25);
     T('ROCKET BLUEPRINT', X + 12, Y + 14, 9, INK, { w: 700 });
