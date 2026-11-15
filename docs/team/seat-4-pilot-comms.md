@@ -1,6 +1,6 @@
 # Seat 4: Pilot and Comms
 
-**Owner:** open (add your GitHub login here and in `docs/team/README.md` when you take it)
+**Owner:** Romeo-04
 **Folders:** `src/flight/pilot/`, `src/flight/comms/`, `src/flight/events/`
 
 Two of the four flight stations, plus flight events. The flight shell (S4-01) is done and seat 1's: register your stations with `registerStation` (see `docs/team/README.md`). Each station's difficulty comes from the parts mounted on the campus.
