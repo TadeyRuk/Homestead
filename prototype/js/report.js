@@ -74,7 +74,7 @@
     rows.push(['Data uplinked', `${u} / ${target}`, dataPts]);
     rows.push(['Crew standing', landed ? `${S.crewStanding} / 1` : '0 / 1', landed && S.crewStanding ? 160 : 0]);
     rows.push(['Credits unspent', String(S.credits), S.credits * 2]);
-    rows.push(['Build time left', HS.fmt(S.buildLeft), Math.min(180, S.buildLeft)]);
+    rows.push(['Build time left', HS.fmt(S.buildLeft), Math.min(180, Math.round(S.buildLeft * 180 / HS.BUILD_TIME))]);
     rows.push(['Fuel and hull', `${Math.round(S.fuel)}% / ${Math.round(S.hull)}%`, landed ? Math.round((S.fuel + S.hull) / 5) : 0]);
     const objN = (S.scansRich >= mi.objectives.scans ? 1 : 0) + (S.sampleDone ? 1 : 0) + (S.deployDone ? 1 : 0);
     rows.push(['Objectives', `${objN} / 3${S.bonusDone ? ' + bonus' : ''}`, landed ? objN * 20 + (S.bonusDone ? 30 : 0) : 0]);
