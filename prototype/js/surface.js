@@ -199,6 +199,7 @@
       for (const s of U.storms) if (s.x != null) A.storm(x, cam, s, t);
       if (!mars && flareOn()) A.flare(x, cam, t, sheltered(p), U.rocks);
       HS.blitArt();
+      if (!U.ext) HS.nameTags(cam, Object.fromEntries(Object.entries(U.ps).map(([id, o]) => [id, o.p])));
       if (mars && stormAt(p.x) && !home) { g.fillStyle = 'rgba(120,70,40,.28)'; g.fillRect(0, 0, 640, 360); }
 
       // ----- labels
