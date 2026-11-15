@@ -45,10 +45,11 @@
       if (mars) { const d1 = r() < .5 ? 1 : -1; U.storms = [{ at: (26 + r() * 14) * k, dir: d1, w: 230, x: null }, { at: (104 + r() * 18) * k * .8, dir: -d1, w: 260, x: null }, { at: (150 + r() * 14) * k, dir: d1, w: 250, x: null }]; U.devilSeed = r() * 6; }
       else { U.flares = [{ at: (34 + r() * 14) * k, dur: 12 }, { at: (108 + r() * 20) * k * .8, dur: 13 }, { at: (152 + r() * 12) * k, dur: 12 }]; const o = D.overlook[(r() * D.overlook.length) | 0]; U.overlook = { x: o[0], y: o[1] }; }
       S.uplinked = 0; S.buffer = 0; S.carried = 0; S.lostDown = 0; S.yieldLost = 0; S.scansRich = 0; S.scansPoor = 0; S.sampleDone = false; S.deployDone = false; S.bonusDone = false; S.crewStanding = 1; S.hazardTime = 0;
-      // the list: the fixed objectives, then every surface game that is merged and suits this build (js/surface-games.js)
-      S.tasks = {}; S.goals = ['scan', 'sample', 'deploy'].concat(Object.keys(HS.surfaceGames).filter(k => HS.gameReady(k, m)));
+      // the list (S2-18): three objectives drawn by the seed from the mission's pool, then the uplink and the bonus every run
+      S.tasks = {}; S.goals = HS.drawGoals(S.seed, mi.id, m);
+      U.sample.off = !S.goals.includes('sample'); U.deploy.off = !S.goals.includes('deploy');
       A.enter(mi.id);   // builds this mission's ground and sprites the first time
-      note(`Mission Control: ${mi.objectives.scans} rich sites, the ${mi.objectives.sampleSite.toLowerCase()}, the ${mi.objectives.deploy.toLowerCase()}. Data counts at the lander.`, C.amber, 6);
+      note(`Mission Control: ${HS.goalWords(S.goals, mi.id).join(', ')}. Data counts at the lander.`, C.amber, 6);
     },
 
     update(dt) {
@@ -157,8 +158,8 @@
         const base = m.payload[s.kind], got = Math.max(1, Math.round(base * (1 - S.instDamage / 100)));
         return { id: 'site' + s.x, x: s.x, y: s.y, col: '#78ffe6', time: m.payload.scan, label: `[E] hold to scan  +${got} data`, finish: () => { s.done = true; U.carried += got; S.yieldLost += base - got; if (s.kind === 'rich') S.scansRich++; else S.scansPoor++; HS.sfx.good(); note(`Scan done: +${got} data in your hands. Take it to the lander.`, C.cyan); HS.log('scan', { kind: s.kind, got, base }); } };
       }
-      if (!U.sample.done && near(U.sample)) return { id: 'sample', x: U.sample.x, y: U.sample.y, col: '#ffb43c', time: 3.2, label: U.mars ? '[E] hold to drill the core' : '[E] hold to collect regolith', finish: () => { U.sample.done = true; U.carry = 'sample'; HS.sfx.pick(); note('Sample in hand. Carry it to the lander.', C.amber); } };
-      if (!U.deploy.done && near(U.deploy)) return { id: 'deploy', x: U.deploy.x, y: U.deploy.y, col: '#e6e8ec', time: 4, label: `[E] hold to deploy the ${mi.objectives.deploy.toLowerCase()}`, finish: () => { U.deploy.done = true; S.deployDone = true; HS.sfx.jingle(); note(mi.objectives.deploy + ': deployed', C.green); HS.log('deploy'); } };
+      if (!U.sample.off && !U.sample.done && near(U.sample)) return { id: 'sample', x: U.sample.x, y: U.sample.y, col: '#ffb43c', time: 3.2, label: U.mars ? '[E] hold to drill the core' : '[E] hold to collect regolith', finish: () => { U.sample.done = true; U.carry = 'sample'; HS.sfx.pick(); note('Sample in hand. Carry it to the lander.', C.amber); } };
+      if (!U.deploy.off && !U.deploy.done && near(U.deploy)) return { id: 'deploy', x: U.deploy.x, y: U.deploy.y, col: '#e6e8ec', time: 4, label: `[E] hold to deploy the ${mi.objectives.deploy.toLowerCase()}`, finish: () => { U.deploy.done = true; S.deployDone = true; HS.sfx.jingle(); note(mi.objectives.deploy + ': deployed', C.green); HS.log('deploy'); } };
       for (const k of S.goals) {
         const def = HS.surfaceGames[k], s = def && HS.gameSpot(k, mi.id);
         if (s && !S.tasks[k] && near(s) && !HS.gameFrame.busy(U, k)) return { id: 'game:' + k, game: k, x: s.x, y: s.y, col: HS.CAT[def.slot] || C.cyan, label: `[E] ${def.name.toLowerCase()}` };
@@ -177,8 +178,8 @@
       // depth-sorted by where each thing touches the ground
       const list = [{ y: L.y + 4, draw: () => A.lander(x, cam, t, S.buffer > 0, home) }];
       for (const s of U.sites) list.push({ y: s.y + 2, draw: () => A.site(x, cam, s, t, hold('site' + s.x), !mars) });
-      list.push({ y: U.sample.y + 2, draw: () => A.sample(x, cam, U.sample, t, hold('sample'), !mars) });
-      list.push({ y: U.deploy.y + 2, draw: () => A.deploy(x, cam, U.deploy, U.deploy.done ? 1 : hold('deploy'), t, !mars) });
+      if (!U.sample.off) list.push({ y: U.sample.y + 2, draw: () => A.sample(x, cam, U.sample, t, hold('sample'), !mars) });
+      if (!U.deploy.off) list.push({ y: U.deploy.y + 2, draw: () => A.deploy(x, cam, U.deploy, U.deploy.done ? 1 : hold('deploy'), t, !mars) });
       for (const k of S.goals) { const s = HS.surfaceGames[k] && HS.gameSpot(k, id); if (s) list.push({ y: s.y + 2, draw: () => HS.gameFrame.drawSpot(x, cam, k, s, t, !!S.tasks[k]) }); }
       if (mars) list.push({ y: U.devil.y + 2, draw: () => A.devil(x, cam, U.devil, t) });
       else { list.push({ y: U.overlook.y + 2, draw: () => A.overlook(x, cam, U.overlook, S.bonusDone, t) }); U.rocks.forEach(([X, Y], i) => list.push({ y: Y + 4, draw: () => A.boulder(x, cam, X, Y, i) })); }
@@ -203,19 +204,19 @@
       // ----- labels
       const lab = (X, Y, s, col, dy = 22) => { const q = HS.toScreen(cam, X, Y); if (q.x > 40 && q.x < 600 && q.y > 50 && q.y < 300 && !(q.x < 290 && q.y + dy > 222) && !U.ext) tag(s, q.x, q.y + dy, col, 7.5); };
       for (const s of U.sites) if (!s.done) { const base = m.payload[s.kind]; lab(s.x, s.y, `${s.kind.toUpperCase()} SITE +${Math.max(1, Math.round(base * (1 - S.instDamage / 100)))}`, s.kind === 'rich' ? C.cyan : '#8ac8c0'); }
-      if (!U.sample.done) lab(U.sample.x, U.sample.y, mi.objectives.sampleSite, C.amber);
-      if (!U.deploy.done) lab(U.deploy.x, U.deploy.y, mi.objectives.deploySite, C.cyan);
+      if (!U.sample.off && !U.sample.done) lab(U.sample.x, U.sample.y, mi.objectives.sampleSite, C.amber);
+      if (!U.deploy.off && !U.deploy.done) lab(U.deploy.x, U.deploy.y, mi.objectives.deploySite, C.cyan);
       for (const k of S.goals) { const def = HS.surfaceGames[k], s = def && HS.gameSpot(k, id); if (s && !S.tasks[k]) lab(s.x, s.y, def.name.toUpperCase(), HS.CAT[def.slot] || C.cyan, 12); }
       lab(L.x, L.y + 22, S.buffer > 0 ? `LANDER  uplinking ${m.comms.rate.toFixed(2)}/s` : 'LANDER', C.cyan, 14);
       if (mars && !S.bonusDone) lab(U.devil.x, U.devil.y - 30, '[F] photograph', C.pink, 0);
       if (!mars && !S.bonusDone) lab(U.overlook.x, U.overlook.y, 'EARTH VIEW  [F] photo', C.pink);
       if (!mars && (flareOn() || flareSoon())) for (const [X, Y] of U.rocks) lab(X + 5, Y + 6, 'SHELTER', C.green, 12);
       HS.arrowReset(); if (!U.ext) HS.edgeArrow(cam, L.x, L.y, C.cyan, 'LANDER', true);
-      if (!U.sample.done && !U.ext) HS.edgeArrow(cam, U.sample.x, U.sample.y, C.amber, mars ? 'CORE' : 'REGOLITH', true);
-      if (!U.deploy.done && !U.ext) HS.edgeArrow(cam, U.deploy.x, U.deploy.y, '#e6e8ec', 'DEPLOY', true);
+      if (!U.sample.off && !U.sample.done && !U.ext) HS.edgeArrow(cam, U.sample.x, U.sample.y, C.amber, mars ? 'CORE' : 'REGOLITH', true);
+      if (!U.deploy.off && !U.deploy.done && !U.ext) HS.edgeArrow(cam, U.deploy.x, U.deploy.y, '#e6e8ec', 'DEPLOY', true);
       for (const k of S.goals) { const def = HS.surfaceGames[k], s = def && HS.gameSpot(k, id); if (s && !S.tasks[k] && !U.ext) HS.edgeArrow(cam, s.x, s.y, HS.CAT[def.slot] || C.cyan, def.name.toUpperCase(), true); }
       const rich = U.sites.filter(s => !s.done && s.kind === 'rich').sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
-      if (rich && S.scansRich < mi.objectives.scans && !U.ext) HS.edgeArrow(cam, rich.x, rich.y, '#78ffe6', 'RICH', true);
+      if (rich && S.goals.includes('scan') && S.scansRich < mi.objectives.scans && !U.ext) HS.edgeArrow(cam, rich.x, rich.y, '#78ffe6', 'RICH', true);
 
       // ----- HUD
       const st = U.down ? 'DOWN' : U.carry ? 'carrying the sample' : U.carried > 0 ? `carrying ${U.carried} data units` : atLander(p) ? 'at the lander: recharging' : 'hands empty';
@@ -291,8 +292,8 @@
         if (lbl) T(lbl, x0 + X * k, dy / 2 - 2, 6.5, C.white, { a: 'center' });
       };
       for (const s of U.sites) icon(s.done ? 'done' : s.kind, s.x, s.y, s.done ? '' : s.kind);
-      if (!U.sample.done) icon('sample', U.sample.x, U.sample.y, U.mars ? 'core' : 'regolith');
-      if (!U.deploy.done) icon('deploy', U.deploy.x, U.deploy.y, 'deploy');
+      if (!U.sample.off && !U.sample.done) icon('sample', U.sample.x, U.sample.y, U.mars ? 'core' : 'regolith');
+      if (!U.deploy.off && !U.deploy.done) icon('deploy', U.deploy.x, U.deploy.y, 'deploy');
       for (const kind of S.goals) { const s = HS.surfaceGames[kind] && HS.gameSpot(kind, S.mission.id); if (s) HS.gameFrame.mapSpot(kind, s, x0, y0, k, !!S.tasks[kind]); }
       if (!S.bonusDone) { if (U.mars) icon('devil', U.devil.x, U.devil.y, 'dust devil'); else icon('overlook', U.overlook.x, U.overlook.y, 'earth view'); }
       T('LANDER', x0 + L.x * k, y0 + L.y * k + 24, 7, C.cyan, { a: 'center', w: 600 });

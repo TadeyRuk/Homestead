@@ -14,6 +14,7 @@
   HS.EVENT_K = Math.sqrt(HS.PACE);
   HS.BUILD_TIME = 300;
   HS.SURFACE_TIME = 300;
+  HS.DRAWN_GOALS = 3;    // objectives drawn from the mission's pool each run, besides the uplink and the bonus
 
   HS.SLOTS = ['prop', 'power', 'comms', 'payload'];
   HS.SLOT_NAME = { prop: 'PROPULSION', power: 'POWER', comms: 'COMMS', payload: 'PAYLOAD' };
@@ -51,7 +52,9 @@
       id: 'moon', name: 'LUNAR SURVEY', short: 'Moon', credits: 20, target: 33, transit: 142, eventGap: [18, 26], sites: [4, 4], solarAtArrival: 1, solarFlight: 1, days: 3,
       card: [['Destination', 'the Moon, about 3 days away'], ['Radio delay', 'about 1.3 seconds each way'], ['Gravity', 'one sixth of Earth\'s'],
         ['Objectives', 'scan 3 rich sites, bring back regolith,'], ['', 'deploy a seismometer, uplink 33 data units'], ['Budget', '20 credits'], ['Spacecraft', 'none. Build one from what you find.']],
-      objectives: { scans: 3, sample: 'Regolith to lander', deploy: 'Seismometer', sampleSite: 'CRATER FLOOR', deploySite: 'SEISMOMETER SITE', bonus: 'Photograph Earth' },
+      objectives: { scans: 3, sample: 'Regolith to lander', deploy: 'Seismometer', sampleSite: 'CRATER FLOOR', deploySite: 'SEISMOMETER SITE', bonus: 'Photograph Earth', sampleWords: 'bring back regolith', deployWords: 'deploy a seismometer' },
+      // S2-18: three of these are drawn by the seed each run (js/surface-games.js); a game is only drawn once it is merged
+      pool: ['scan', 'sample', 'deploy', 'drill', 'relay', { id: 'panels', solar: true }],
       hazard: 'flare', hazardName: 'SOLAR FLARE',
       hazardFact: 'The Moon has no thick atmosphere or global magnetic field, so solar particles reach the surface. Crews need shelter within minutes of a warning.',
       walk: 40
@@ -60,7 +63,8 @@
       id: 'mars', name: 'MARS SURVEY', short: 'Mars', credits: 40, target: 50, transit: 208, eventGap: [12, 18], sites: [5, 5], solarAtArrival: .43, solarFlight: .6, days: 210,
       card: [['Destination', 'Mars, about 7 months away'], ['Radio delay', '3 to 22 minutes each way'], ['Sunlight', 'about 43% of what Earth gets'],
         ['Objectives', 'scan 4 rich sites, drill a core, deploy a'], ['', 'weather station, uplink 50 data units'], ['Budget', '40 credits'], ['Spacecraft', 'none. Build one from what you find.']],
-      objectives: { scans: 4, sample: 'Core sample to lander', deploy: 'Weather station', sampleSite: 'CORE SITE', deploySite: 'WEATHER STATION', bonus: 'Photograph a dust devil' },
+      objectives: { scans: 4, sample: 'Core sample to lander', deploy: 'Weather station', sampleSite: 'CORE SITE', deploySite: 'WEATHER STATION', bonus: 'Photograph a dust devil', sampleWords: 'drill a core', deployWords: 'deploy a weather station' },
+      pool: ['scan', 'sample', 'deploy', 'drill', 'relay', { id: 'panels', solar: true }],
       hazard: 'storm', hazardName: 'DUST STORM',
       hazardFact: 'In 2018 a planet-wide dust storm cut off power to the Opportunity rover, and the mission ended. Planners now schedule surface work around Mars weather.',
       walk: 36
