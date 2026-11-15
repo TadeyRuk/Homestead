@@ -161,15 +161,25 @@
     if (b && typeof b === 'object') { const o = {}, ao = a && typeof a === 'object' ? a : {}; for (const n in b) o[n] = blend(ao[n], b[n], k, n); return o; }
     return b;
   };
+  // true when it loaded a state this frame, so a scene's lead() has something fresh to push ahead
   function applySmoothed(now) {
     const cur = HS.scenes[HS.sceneName];
-    if (!cur || !cur.load || !buf.length) return;
+    if (!cur || !cur.load || !buf.length) return false;
     const rt = now - DELAY;
     while (buf.length > 2 && buf[1].t <= rt) buf.shift();   // keep one snapshot at or before rt
     const [a, b] = buf;
     if (!b || rt <= a.t) cur.load(a.d);
     else if (rt >= b.t) cur.load(b.d);
     else cur.load(blend(a.d, b.d, (rt - a.t) / (b.t - a.t)));
+    return true;
+  }
+  // a station's own control, pushed ahead by the round trip plus the smoothing delay (flight.js lead())
+  let leadAt = 0;
+  function applyLead(now) {
+    const dt = leadAt ? Math.min(.1, (now - leadAt) / 1000) : 0;
+    leadAt = now;
+    const cur = HS.scenes[HS.sceneName], rtt = N.client.rtt();
+    if (cur && cur.lead) cur.lead(((rtt == null ? 150 : rtt) + DELAY) / 1000, dt);
   }
 
   // ---------- prediction on joiners: their own avatar moves on their own keys at once, with the host's rules
@@ -248,7 +258,7 @@
     const now = performance.now(), i = encode(HS.local), s = JSON.stringify(i);
     // presses go every frame they happen; held keys and the pointer only when they change
     if (s !== N.sent || i.hit.length || i.click) { N.sent = s; N.client.sendInput(i); }
-    applySmoothed(now);
+    if (applySmoothed(now)) applyLead(now);
     applyPrediction(now);
     if (now - N.lastPing > PING_MS) { N.lastPing = now; N.client.ping(); }
     N.client.check();

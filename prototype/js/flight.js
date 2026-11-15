@@ -9,6 +9,8 @@
   const LOAD_KEYS = ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU'];
   let F = null;
 
+  // joiner prediction for the station controls, eased so it starts and stops softly (see lead() below)
+  const ahead = { x: 0, sp: 0, e: 0, v: 0 };
   const loadOn = (k) => { const l = F.loads.find(l => l.key === k); return l.on && F.blackout <= 0; };
   const supply = () => {
     const p = F.m.power; let s = p.power;
@@ -218,6 +220,26 @@
     },
 
     save() { return HS.pack(F); },
+    // joiner prediction (js/net-game.js): after a snapshot is drawn, push this player's own station control
+    // ahead by what their keys will have done by the time the host's answer arrives, T seconds from now. The
+    // stick, the dish and the valve answer at once; the next snapshot replaces all of it, so nothing builds up.
+    lead(T, dt) {
+      if (!F || F.done || F.over) return;
+      const role = ST[F.st], ax = HS.axis(), m = F.m, prop = m.prop, engine = role === 'pilot' && loadOn('engine');
+      const th = engine ? (HS.key('KeyW', 'ArrowUp') ? 1 : 0) - (HS.key('KeyS', 'ArrowDown') ? 1 : 0) : 0;
+      // the rates the host applies: steering at the engine's turn rate (a pulse motor averages about the same),
+      // thrust at its acceleration, the dish settling near 30 a second, the valve at .55 a second
+      const want = {
+        x: engine ? ax.x * prop.turn * (1 - .45 * Math.min(1, m.heavy)) * T : 0,
+        sp: th * prop.accel * T,
+        e: role === 'comms' ? ax.x * 30 * T : 0,
+        v: role === 'sci' ? -ax.y * .55 * T : 0
+      };
+      const k = Math.min(1, dt * 10);
+      for (const n in ahead) ahead[n] += (want[n] - ahead[n]) * k;
+      F.x = clamp(F.x + ahead.x, 12, 148); F.speed = clamp(F.speed + ahead.sp, 5, 10);
+      F.e = clamp(F.e + ahead.e, -48, 48); F.valve = clamp(F.valve + ahead.v, 0, 1);
+    },
     load(d) { if (!F) return; Object.assign(F, d); F.st = F.seats[HS.net.me] ?? F.st; },
 
     alerts() {
