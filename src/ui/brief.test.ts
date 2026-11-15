@@ -26,6 +26,9 @@ describe("brief ready rule (S3-04)", () => {
     const s = crew("a");
     briefRule(s, { a: press }, 500);
     expect(s.phaseEndsAt).toBe(20_000);
+    // the early press must not count later either
+    briefRule(s, { a: still }, 1_500);
+    expect(s.phaseEndsAt).toBe(20_000);
   });
 
   it("waits for the whole crew", () => {

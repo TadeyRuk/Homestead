@@ -163,13 +163,15 @@ export function pilotRule(state: GameState, inputs: Record<string, Input>, now: 
     p.spawned += 1;
   }
 
+  // at zero fuel the flight rule ends the run on the next tick; until then the ship still answers
   const half = shipHalf(state);
   const fall = (p.speed / ROCK_TRAVEL) * dt;
   const kept: Rock[] = [];
   for (const rock of p.rocks) {
     const before = rock.y;
     rock.y += fall;
-    const crossing = before < SHIP_Y && rock.y >= SHIP_Y - 0.04;
+    // checked once, on the tick the rock reaches the ship's line, so a rock that missed can't hit later
+    const crossing = before < SHIP_Y - 0.04 && rock.y >= SHIP_Y - 0.04;
     if (crossing && Math.abs(rock.x - p.x) < rock.r + half) {
       hit(state, p, rock, watched, now);
       continue;
