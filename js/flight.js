@@ -3,12 +3,10 @@
 (() => {
   const HS = window.HS, g = HS.g;
   const { T, box, bar, tag, C, PIX, clamp, lerp, seg, px, ell, shade } = HS;
-  const [q, qx] = HS.off(160, 90);
   const ST = ['pilot', 'eng', 'comms', 'sci'];
   const SUB = { pilot: 'speed, fuel, hull', eng: 'power and hull', comms: 'keep Earth in the beam', sci: 'core temp and oxygen' };
   const ITEMS = { ice: { col: '#bee6ff', o2: 10, name: 'ice block' }, co2: { col: '#8c9096', o2: 6, name: 'CO2 cartridge' }, food: { col: '#825a3c', o2: 2, name: 'food waste' }, wrench: { col: '#c8ccd4', o2: 0, name: 'wrench' } };
   const LOAD_KEYS = ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU'];
-  const qStars = (() => { const r = HS.R(41); return Array.from({ length: 70 }, () => ({ x: r() * 160, y: r() * 90, b: 80 + r() * 150, v: .5 + r() })); })();
   let F = null;
 
   const loadOn = (k) => { const l = F.loads.find(l => l.key === k); return l.on && F.blackout <= 0; };
@@ -252,33 +250,11 @@
         T(msg[0], 320, 168, 34, C.red, { w: 700, a: 'center', b: 'middle', f: PIX }); T(msg[1], 320, 200, 9, C.white, { a: 'center', b: 'middle' });
       }
     },
-    blit() { g.imageSmoothingEnabled = false; g.drawImage(q, 0, 0, 640, 360); },
-    interior() {
-      px(qx, 0, 0, 160, 90, '#2c3440');
-      for (let X = 0; X < 160; X += 20) px(qx, X, 0, 1, 90, '#222830');
-      for (let Y = 0; Y < 90; Y += 30) px(qx, 0, Y, 160, 1, '#222830');
-      px(qx, 0, 2, 160, 3, '#5a6470'); for (let X = 0; X < 160; X += 4) px(qx, X, 87, 2, 3, '#c8a028');
-    },
-    monitor(X, Y, w, h) { px(qx, X - 1, Y - 1, w + 2, h + 2, '#46505e'); px(qx, X, Y, w, h, '#0a121a'); for (let y = Y; y < Y + h; y += 2) px(qx, X, y, w, 1, '#0c161f'); },
-    sparks() { for (const p of F.fx2) { g.globalAlpha = clamp(p.life * 3, 0, 1); g.fillStyle = p.col; g.fillRect(p.x, p.y, 2, 2); } g.globalAlpha = 1; },
-
     pilot() {
       const S = HS.S, t = F.t, m = F.m, mars = S.mission.id === 'mars';
-      for (let y = 0; y < 90; y++) { const k = y / 90; qx.fillStyle = `rgb(${8 + 8 * k | 0},${12 + 12 * k | 0},${30 + 26 * k | 0})`; qx.fillRect(0, y, 160, 1); }
-      const sp = 8 + F.speed * 1.4;
-      for (const s of qStars) { qx.fillStyle = `rgb(${s.b | 0},${s.b | 0},${Math.min(255, s.b + 30) | 0})`; qx.fillRect(s.x, (s.y + t * sp * s.v) % 90, 1, 1); }
-      const ey = 150 + F.prog * 90; ell(qx, 80, ey, 72, 72, '#1e4896'); qx.strokeStyle = '#78d2ff'; qx.lineWidth = 1; qx.beginPath(); qx.arc(80, ey, 73, 0, 7); qx.stroke(); ell(qx, 60, ey - 50, 18, 8, '#2c6a4a');
-      const ds = 2 + F.prog * 9; ell(qx, 128, 14, ds, ds, mars ? '#c45c38' : '#b4b8c4'); ell(qx, 128 - ds * .3, 14 - ds * .2, ds * .3, ds * .25, mars ? '#9a4428' : '#8a8e9a');
-      for (const pd of F.pending) if (pd.warned) { const X = pd.aimed ? F.x : pd.x; if (Math.floor(t * 6) % 2) { px(qx, X - 2, 1, 5, 1, C.amber); px(qx, X - 1, 2, 3, 1, C.amber); px(qx, X, 3, 1, 1, C.amber); } }
-      for (const rk of F.rocks) { ell(qx, rk.x, rk.y, rk.s, rk.s * .85, '#625c58'); ell(qx, rk.x - 1 + Math.cos(rk.rot), rk.y - 1 + Math.sin(rk.rot), rk.s * .55, rk.s * .45, '#867e76'); }
-      F.fx.draw(qx);
-      const rx = Math.round(F.x), ry = 62, eng = loadOn('engine');
-      if (eng) { const fl = (F.thrust ? 7 : 3) + (Math.floor(t * 20) % 2) * 2; px(qx, rx - 1, ry + 7, 3, fl, '#ff9a3c'); px(qx, rx, ry + 7, 1, fl - 2, '#fff0c8'); }
-      if (F.vx) px(qx, rx + (F.vx > 0 ? -4 : 4), ry, 1, 2, '#fff0c8');
-      px(qx, rx - 2, ry - 4, 5, 11, '#e2e5ec'); px(qx, rx + 1, ry - 4, 2, 11, '#b6bac4'); px(qx, rx - 1, ry - 7, 3, 3, '#e2e5ec'); px(qx, rx, ry - 9, 1, 2, '#e2e5ec');
-      px(qx, rx - 4, ry + 4, 2, 3, '#e8783c'); px(qx, rx + 3, ry + 4, 2, 3, '#c86432'); px(qx, rx + 3, ry - 2, 2, 2, '#78ffdc');
-      if (m.power.solar) { const w = m.power.target ? 6 : 3; px(qx, rx - 3 - w, ry, w, 2, '#2c4aa0'); px(qx, rx + 4, ry, w, 2, '#2c4aa0'); }
-      this.blit();
+      const eng = loadOn('engine');
+      // space, Earth, the destination, debris and the ship built from the four parts, on the 1280 x 720 art grid (js/flight-art.js)
+      HS.flightArt.pilot(HS.ax, F, { dest: S.mission.id, engine: eng }); HS.blitArt();
       // warnings
       const warned = F.pending.filter(p => p.warned);
       if (warned.length) tag(`DEBRIS IN ${Math.max(0, Math.ceil(Math.min(...warned.map(p => p.at - t))))} s  (link warning)`, 306, 48, C.amber, 7);
@@ -306,9 +282,8 @@
 
     eng() {
       const S = HS.S, t = F.t, m = F.m;
-      this.interior(); this.monitor(4, 8, 74, 80); this.monitor(82, 8, 76, 80);
-      px(qx, 86, 22, 68, 62, '#76808e'); for (let X = 88; X < 154; X += 6) for (let Y = 24; Y < 84; Y += 6) px(qx, X, Y, 1, 1, '#9aa2b0');
-      this.blit();
+      // the cabin wall, the breaker panel and the hull plate with its crack and weld bead (js/flight-art.js)
+      HS.flightArt.eng(HS.ax, F); HS.blitArt();
       // power bus
       T('POWER BUS', 24, 62, 9, C.eng, { w: 600 }); T(`${m.power.name}  ${Math.round(F.sup)} W`, 310, 62, 7, F.sup < m.supply * .98 ? C.amber : C.muted, { a: 'right' });
       const L = F.frac;
@@ -336,15 +311,9 @@
       if (!b) { T('no damage', 480, 200, 9, '#3c4654', { a: 'center', w: 600 }); T(`hull ${Math.round(S.hull)}%`, 624, 62, 7, C.muted, { a: 'right' }); }
       else {
         T('breach: cabin air is leaking', 624, 62, 7, Math.floor(t * 4) % 2 ? C.red : '#ffb0aa', { a: 'right', w: 600 });
-        g.lineCap = 'round'; g.lineJoin = 'round';
-        g.strokeStyle = '#141418'; g.lineWidth = 6; g.beginPath(); b.pts.forEach(([X, Y], i) => i ? g.lineTo(X, Y) : g.moveTo(X, Y)); g.stroke();
-        g.strokeStyle = '#3a1410'; g.lineWidth = 2; g.stroke();
-        g.strokeStyle = '#ffc46e'; g.lineWidth = 5; g.beginPath(); g.moveTo(b.pts[0][0], b.pts[0][1]);
-        let d = b.prog * b.len; for (let i = 1; i < b.pts.length && d > 0; i++) { const l = Math.hypot(b.pts[i][0] - b.pts[i - 1][0], b.pts[i][1] - b.pts[i - 1][1]), k = Math.min(1, d / l); g.lineTo(lerp(b.pts[i - 1][0], b.pts[i][0], k), lerp(b.pts[i - 1][1], b.pts[i][1], k)); d -= l; }
-        g.stroke(); g.lineCap = 'butt';
         const [hx, hy] = breachPoint(b, b.prog), pulse = 8 + Math.sin(t * 8) * 2;
         g.strokeStyle = C.cyan; g.lineWidth = 1.5; g.beginPath(); g.arc(hx, hy, pulse, 0, 7); g.stroke();
-        this.sparks();
+        HS.flightArt.sparks(g, F.fx2);
         bar(340, 326, 150, 6, b.prog, '#ffc46e'); T(Math.round(b.prog * 100) + '% welded', 496, 332, 7, C.white);
         T('SEALANT', 560, 332, 6.5, C.muted); bar(596, 326, 32, 6, b.sealant / 100, b.sealant < 25 ? C.red : C.cyan);
         T('hold the mouse on the ring and follow the crack   ([F] welds slowly)', 340, 344, 6.5, '#c8d2dc');
@@ -353,19 +322,10 @@
 
     comms() {
       const S = HS.S, t = F.t, m = F.m;
-      this.interior(); this.monitor(4, 8, 152, 80);
-      const r = HS.R(77); for (let i = 0; i < 50; i++) { const X = 6 + r() * 148, Y = 10 + r() * 74; if ((i + Math.floor(t * 2)) % 9) px(qx, X, Y, 1, 1, '#5a6478'); }
-      const ex = 36, ey = 28; ell(qx, ex, ey, 5, 5, '#2858aa'); ell(qx, ex - 1, ey - 1, 2, 2, '#46885a');
-      const pxv = 96, pyv = 78, tgt = Math.atan2(ey - pyv, ex - pxv), act = tgt + F.e * Math.PI / 180, half = m.comms.beam * .4 * Math.PI / 180 + .05;
-      for (const sg of [-1, 1]) { const a = tgt + sg * half; for (let k = 8; k < 66; k += 5) px(qx, pxv + Math.cos(a) * k, pyv + Math.sin(a) * k, 1, 1, '#c8a46e'); }
+      // beam geometry stays in the old 160 x 90 space (x 8 on the art grid): Earth at (36, 28), the dish at (96, 78)
+      const ex = 36, ey = 28, pxv = 96, pyv = 78, tgt = Math.atan2(ey - pyv, ex - pxv), act = tgt + F.e * Math.PI / 180, half = m.comms.beam * .4 * Math.PI / 180 + .05;
       const on = loadOn('comms'), bc = !on ? '#555c68' : F.link >= 95 ? '#78ffdc' : F.link > 60 ? '#ffd27a' : '#ff5a50';
-      for (const sg of [-1, 1]) { const a = act + sg * half; for (let k = 6; k < 72; k += 3) px(qx, pxv + Math.cos(a) * k, pyv + Math.sin(a) * k, 1, 1, bc); }
-      if (on && F.link > 60) { const k = (t * 40) % 66; px(qx, pxv + Math.cos(act) * k, pyv + Math.sin(act) * k, 2, 2, '#ffffff'); }
-      px(qx, pxv - 1, pyv, 3, 8, '#8c94a0'); px(qx, pxv - 6, pyv + 6, 13, 2, '#646c78');
-      const ca = Math.cos(act), sa = Math.sin(act);
-      for (let s = -6; s <= 6; s++) px(qx, pxv - sa * s + ca * (Math.abs(s) * .35 - 1), pyv + ca * s + sa * (Math.abs(s) * .35 - 1), 2, 2, '#e8eaee');
-      px(qx, pxv - 1, pyv - 1, 2, 2, '#ff7a3c');
-      this.blit();
+      HS.flightArt.comms(HS.ax, F, { tgt, act, half, bc, on, link: F.link }); HS.blitArt();
       tag('EARTH', ex * 4, ey * 4 - 30, C.cyan, 7.5);
       const L = F.link, locked = F.lockT > 2;
       box(440, 62, 186, 124, C.comms, 5);
@@ -385,24 +345,9 @@
 
     sci() {
       const S = HS.S, t = F.t, m = F.m;
-      this.interior(); this.monitor(4, 8, 74, 80); this.monitor(82, 8, 76, 80);
-      const tp = F.temp, hot = clamp((tp - 40) / 50, 0, 1), fl = Math.sin(t * 10) * .04;
-      px(qx, 16, 24, 20, 54, '#50545e'); for (let Y = 26; Y < 78; Y += 3) px(qx, 13, Y, 26, 1, '#7a7e8a');
-      px(qx, 20, 28, 12, 46, `rgb(255,${(200 - (hot + fl) * 120) | 0},${(120 - hot * 90) | 0})`); px(qx, 22, 30, 8, 42, `rgb(255,${(235 - (hot + fl) * 80) | 0},${(170 - hot * 90) | 0})`);
-      if (tp > 75) for (let i = 0; i < 3; i++) px(qx, 18 + ((t * 30 + i * 7) % 16), 24 - ((t * 20 + i * 5) % 10), 1, 1, '#ffb090');
-      const pumpOn = loadOn('pump'), pc = pumpOn ? '#4688e6' : '#3a4250';
-      px(qx, 36, 34, 16, 2, pc); px(qx, 36, 66, 16, 2, pc); px(qx, 50, 34, 2, 34, pc);
-      if (pumpOn && F.valve > .03) { const k = (t * (10 + F.valve * 40)) % 34; px(qx, 50, 34 + k, 2, 2, '#bfe0ff'); }
-      const va = t * F.valve * 6; qx.strokeStyle = '#dc4646'; qx.lineWidth = 1; qx.beginPath(); qx.arc(51, 50, 5, 0, 7); qx.stroke();
-      for (let i = 0; i < 3; i++) { const a = va + i * 2.1; px(qx, 51 + Math.cos(a) * 4, 50 + Math.sin(a) * 4, 1, 1, '#dc4646'); }
-      px(qx, 62, 14, 6, 68, '#18222e'); px(qx, 62, 14, 6, 17, '#5a1e1e'); px(qx, 62, 31, 6, 27, '#1e5032'); px(qx, 62, 58, 6, 24, '#1e325a');
-      px(qx, 60, 82 - (tp / 100) * 68, 10, 1, '#ffffff');
-      px(qx, 124, 30, 28, 46, '#5c626e'); px(qx, 126, 34, 24, 10, '#3c424e');
-      qx.fillStyle = '#464c5a'; qx.beginPath(); qx.moveTo(118, 22); qx.lineTo(158, 22); qx.lineTo(150, 30); qx.lineTo(126, 30); qx.fill(); px(qx, 130, 22, 16, 3, F.jam > 0 ? '#a02a2a' : '#101418');
-      px(qx, 128, 52, 20, 22, '#18222e'); const lev = clamp(S.cabinO2 / 100, 0, 1); px(qx, 128, 52 + 22 * (1 - lev), 20, 22 * lev, lev < .35 ? '#f08a6e' : '#6ec8f0');
-      for (let i = 0; i < 3; i++) px(qx, 131 + i * 6, 72 - ((t * 9 + i * 5) % (20 * lev + 1)), 1, 1, '#d8f0ff');
-      px(qx, 85, 75, 36, 9, '#383e4c');
-      this.blit();
+      const tp = F.temp, pumpOn = loadOn('pump');
+      // the reactor column, coolant loop, valve, gauge and the oxygen converter (js/flight-art.js)
+      HS.flightArt.sci(HS.ax, F, { pumpOn, o2: S.cabinO2 }); HS.blitArt();
       // core
       T('ENERGY CORE', 24, 62, 9, C.sci, { w: 600 });
       const band = tp > 75 ? ['too hot: the instrument is losing accuracy', C.red] : tp < 35 ? ['too cold: the ship loses 20% power', C.comms] : ['in the safe band', C.muted];
@@ -420,15 +365,12 @@
       F.tray.forEach((it, i) => {
         const x = 344 + i * 21, y = 306, d = ITEMS[it.type], hov = HS.over(x, 300, 20, 30), pop = clamp((t - it.born) * 5, 0, 1), yy = y + (hov ? -3 : 0) + (1 - pop) * 10;
         g.globalAlpha = pop;
-        if (it.type === 'ice') { g.fillStyle = d.col; g.fillRect(x + 2, yy, 15, 15); g.fillStyle = '#ffffff'; g.fillRect(x + 4, yy + 2, 4, 4); }
-        else if (it.type === 'co2') { g.fillStyle = d.col; g.fillRect(x + 4, yy - 2, 11, 18); g.fillStyle = '#5a5e66'; g.fillRect(x + 6, yy - 5, 7, 3); g.fillStyle = '#e6b946'; g.fillRect(x + 4, yy + 5, 11, 3); }
-        else if (it.type === 'food') { g.fillStyle = d.col; g.fillRect(x + 1, yy + 4, 17, 11); g.fillStyle = '#5c3e28'; g.fillRect(x + 3, yy + 6, 5, 4); g.fillRect(x + 11, yy + 9, 4, 3); }
-        else { g.fillStyle = d.col; g.fillRect(x + 8, yy - 3, 4, 19); g.fillRect(x + 4, yy - 5, 12, 5); g.fillStyle = '#383e4c'; g.fillRect(x + 8, yy - 5, 4, 3); }
+        HS.flightArt.item(g, it.type, x + 1.5, yy - 1);
         g.globalAlpha = 1;
         if (hov) { g.strokeStyle = C.white; g.lineWidth = 1; g.strokeRect(x - .5, 297.5, 21, 30); tag(it.type === 'wrench' ? 'wrench: jams the intake' : `${d.name}  +${d.o2}% O2`, x + 10, 290, it.type === 'wrench' ? C.red : C.cyan, 7); }
       });
-      for (const th of F.throws) { const k = th.t / .6, X = lerp(th.from, 552, k), Y = 306 - 300 * k + 96 * k * k; g.fillStyle = ITEMS[th.type].col; g.save(); g.translate(X, Y); g.rotate(k * 7); g.fillRect(-6, -6, 12, 12); g.restore(); }
-      this.sparks();
+      for (const th of F.throws) { const k = th.t / .6, X = lerp(th.from, 552, k), Y = 306 - 300 * k + 96 * k * k; HS.flightArt.thrown(g, th.type, X, Y, k * 7); }
+      HS.flightArt.sparks(g, F.fx2);
       if (F.popup) tag(F.popup.s, 480, 112, F.popup.col, 8);
       T('click an item to throw it in   [SPACE] throws the first one', 340, 344, 6.5, '#c8d2dc');
     }

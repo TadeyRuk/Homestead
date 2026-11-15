@@ -1,9 +1,8 @@
 // Homestead phase 3: sortie and homestead. Work through Mission Control's list before extraction.
 (() => {
   const HS = window.HS, g = HS.g;
-  const { T, box, bar, tag, C, PIX, clamp, lerp, seg, px, ell, fmt } = HS;
-  const [world, wx] = HS.off(640, 400);
-  const L = HS.LANDER;
+  const { T, box, bar, tag, C, PIX, clamp, seg, fmt } = HS;
+  const L = HS.LANDER, A = HS.surfaceArt;   // the art is in js/surface-art.js
   let U = null;
 
   const atLander = (p) => ((p.x - L.x) / 34) ** 2 + ((p.y - L.y) / 24) ** 2 < 1.15;
@@ -26,7 +25,7 @@
       const S = HS.S, m = HS.model(), mi = S.mission, r = HS.R(S.seed * 17 + 11), D = HS.SURFACE[mi.id], mars = mi.id === 'mars';
       const rich = HS.shuffle(D.rich, r).slice(0, mars ? 4 : 3), poor = HS.shuffle(D.poor, r).slice(0, mars ? 4 : 3);
       U = {
-        t: 0, left: HS.SURFACE_TIME, m, mars, p: { x: L.x + 4, y: L.y + 16, walk: 0, flip: false }, carry: null, o2: 100, pw: 100, fx: new HS.Parts(),
+        t: 0, left: HS.SURFACE_TIME, m, mars, p: { x: L.x + 4, y: L.y + 16, walk: 0, flip: false, face: 'down' }, carry: null, o2: 100, pw: 100, fx: new HS.Parts(),
         sites: rich.map(([x, y]) => ({ x, y, kind: 'rich', done: false })).concat(poor.map(([x, y]) => ({ x, y, kind: 'poor', done: false }))),
         sample: { x: D.sample[(r() * 2) | 0][0], y: 0, done: false }, deploy: { x: 0, y: 0, done: false, prog: 0 },
         hold: null, tab: 'MISSION', noteS: '', noteT: 0, noteCol: C.cyan, down: false, downT: 0, ext: null, done: false, inHazard: false, map: false, photoT: 0, lowBeep: 0,
@@ -37,6 +36,7 @@
       if (mars) { const d1 = r() < .5 ? 1 : -1; U.storms = [{ at: 26 + r() * 14, dir: d1, w: 230, x: null }, { at: 104 + r() * 18, dir: -d1, w: 260, x: null }]; U.devilSeed = r() * 6; }
       else { U.flares = [{ at: 34 + r() * 14, dur: 12 }, { at: 108 + r() * 20, dur: 13 }]; const o = D.overlook[(r() * D.overlook.length) | 0]; U.overlook = { x: o[0], y: o[1] }; }
       S.uplinked = 0; S.buffer = 0; S.carried = 0; S.lostDown = 0; S.yieldLost = 0; S.scansRich = 0; S.scansPoor = 0; S.sampleDone = false; S.deployDone = false; S.bonusDone = false; S.crewStanding = 1; S.hazardTime = 0;
+      A.enter(mi.id);   // builds this mission's ground and sprites the first time
       note(`Mission Control: ${mi.objectives.scans} rich sites, the ${mi.objectives.sampleSite.toLowerCase()}, the ${mi.objectives.deploy.toLowerCase()}. Data counts at the lander.`, C.amber, 6);
     },
 
@@ -71,6 +71,7 @@
         const sp = mi.walk * (U.carry ? .9 : 1) * (storm ? .8 : 1) * dt;
         p.x = clamp(p.x + a.x / len * sp, 6, 634); p.y = clamp(p.y + a.y / len * sp, 10, 394);
         p.walk += dt; if (a.x) p.flip = a.x < 0; U.hold = null;
+        p.face = a.x && Math.abs(a.x) >= Math.abs(a.y) ? 'side' : a.y < 0 ? 'up' : 'down';
         if (Math.random() < .3) U.fx.add(p.x, p.y + 3, (Math.random() - .5) * 8, -5, .5, U.mars ? 'rgba(220,150,110,.6)' : 'rgba(200,204,214,.6)', 1);
       } else p.walk = 0;
 
@@ -100,7 +101,7 @@
       } else {
         const k = storm ? 4 : flare ? 6 : 1; U.o2 -= .7 * k * dt; U.pw -= .32 * k * dt;
       }
-      if (S.buffer > 0) { const d = Math.min(S.buffer, m.comms.rate * dt); S.buffer -= d; S.uplinked += d; U.upT += dt; if (U.upT > .25) { U.upT = 0; U.fx.add(L.x + 22, L.y - 4, (Math.random() - .5) * 4, -30, 1.1, '#78ffdc', 1); } }
+      if (S.buffer > 0) { const d = Math.min(S.buffer, m.comms.rate * dt); S.buffer -= d; S.uplinked += d; U.upT += dt; if (U.upT > .25) { U.upT = 0; U.fx.add(L.x + A.ANT.x, L.y + A.ANT.y, (Math.random() - .5) * 4, -30, 1.1, '#78ffdc', 1); } }
       U.lowBeep -= dt;
       if ((U.o2 < 30 || U.pw < 30) && U.lowBeep <= 0) { U.lowBeep = 1.6; HS.sfx.warn(); }
       if (U.o2 <= 0 || U.pw <= 0) { U.o2 = Math.max(0, U.o2); U.pw = Math.max(0, U.pw); goDown(); }
@@ -120,36 +121,31 @@
 
     draw() {
       const S = HS.S, p = U.p, t = U.t, mi = S.mission, m = U.m, cam = HS.camera(p), mars = U.mars;
-      // ----- world
-      wx.drawImage(mars ? HS.marsBg : HS.moonBg, 0, 0);
-      for (const s of U.sites) { const col = s.done ? '#6e6460' : s.kind === 'rich' ? '#78ffe6' : '#5ab4aa'; HS.diamond(wx, s.x, s.y, col, s.kind === 'rich' ? 5 : 4); if (!s.done && s.kind === 'rich') { wx.strokeStyle = 'rgba(120,255,230,.6)'; wx.lineWidth = 1; wx.beginPath(); wx.ellipse(s.x, s.y, 7 + Math.sin(t * 3) * 2, 4 + Math.sin(t * 3), 0, 0, 7); wx.stroke(); } }
-      if (!U.sample.done) { const X = U.sample.x, Y = U.sample.y; wx.strokeStyle = '#aaaab4'; wx.lineWidth = 1; wx.beginPath(); wx.moveTo(X - 4, Y + 2); wx.lineTo(X, Y - 8); wx.lineTo(X + 4, Y + 2); wx.stroke(); px(wx, X, Y - 8 + (U.hold && U.hold.id === 'sample' ? Math.floor(t * 12) % 3 : 0), 1, 11, '#ff9640'); }
-      { const X = U.deploy.x, Y = U.deploy.y, k = U.deploy.done ? 1 : U.hold && U.hold.id === 'deploy' ? U.hold.prog : 0;
-        if (k > 0) { px(wx, X, Y - 12 * k, 1, Math.ceil(12 * k), '#e6e8ec'); if (k >= 1) { px(wx, X - 3, Y - 12, 7, 1, '#e6e8ec'); px(wx, Math.floor(t * 8) % 2 ? X - 3 : X + 3, Y - 13, 1, 1, '#fff'); } }
-        else { px(wx, X - 3, Y, 7, 1, '#e6e8ec'); if (Math.floor(t * 2) % 2) px(wx, X, Y - 2, 1, 2, C.cyan); } }
-      if (mars) { const d = U.devil; for (let i = 0; i < 9; i++) { const w = 2 + i * .9, sw = Math.sin(t * 7 + i * .8) * (1 + i * .4); ell(wx, d.x + sw, d.y - i * 3, w, 1.2, `rgba(226,170,120,${.75 - i * .06})`); } }
-      else { const o = U.overlook; px(wx, o.x - 1, o.y - 6, 1, 8, '#e6e8ec'); px(wx, o.x, o.y - 6, 5, 3, S.bonusDone ? '#6e6460' : '#4688e6'); }
-      for (let k = 0; k < 6; k++) if (S.buffer > 0) px(wx, L.x + 22, L.y - 1 - ((t * 30 + k * 7) % 42), 1, 1, '#78ffdc');
-      U.fx.draw(wx);
-      if (U.down) HS.astro(wx, p.x, p.y, S.suit, { down: 1 });
-      else if (!(U.ext && U.ext.t > 2.6)) HS.astro(wx, p.x, p.y, S.suit, { walk: p.walk, flip: p.flip, carry: U.carry ? '#aaaab4' : S.carried > 0 ? '#5adcff' : null });
-      // storm
-      for (const s of U.storms) if (s.x != null) {
-        const a = s.dir > 0 ? s.x - s.w : s.x, b = a + s.w;
-        for (let X = Math.max(0, Math.floor(a)); X < Math.min(640, b); X++) { const e = Math.min(X - a, b - X); wx.fillStyle = `rgba(198,132,88,${Math.min(.66, e * .012)})`; wx.fillRect(X, 0, 1, 400); }
-        const r = HS.R(3); for (let i = 0; i < 90; i++) { const X = a + ((r() * s.w + t * 60 * s.dir + 9999) % s.w), Y = (r() * 400 + t * 25) % 400; if (X < 0 || X > 640) continue; wx.strokeStyle = 'rgba(232,182,130,.55)'; wx.beginPath(); wx.moveTo(X, Y); wx.lineTo(X - 14 * s.dir, Y + 5); wx.stroke(); }
+      // ----- world, on the 1280 x 720 art grid (js/surface-art.js, js/art.js)
+      const x = HS.ax, id = mi.id, hold = (k) => (U.hold && U.hold.id === k ? U.hold.prog : 0), home = atLander(p);
+      A.ground(x, cam, id);
+      A.track(p, t, !mars); A.tracks(x, cam, t, !mars);
+      A.ring(x, cam, t, home);
+      if (!mars) { U.rocks.forEach(([X, Y], i) => A.boulderShadow(x, cam, X, Y, i)); if (flareOn() || flareSoon()) for (const [X, Y] of U.rocks) A.shelterRing(x, cam, X, Y, t); }
+      // depth-sorted by where each thing touches the ground
+      const list = [{ y: L.y + 4, draw: () => A.lander(x, cam, t, S.buffer > 0, home) }];
+      for (const s of U.sites) list.push({ y: s.y + 2, draw: () => A.site(x, cam, s, t, hold('site' + s.x), !mars) });
+      list.push({ y: U.sample.y + 2, draw: () => A.sample(x, cam, U.sample, t, hold('sample'), !mars) });
+      list.push({ y: U.deploy.y + 2, draw: () => A.deploy(x, cam, U.deploy, U.deploy.done ? 1 : hold('deploy'), t, !mars) });
+      if (mars) list.push({ y: U.devil.y + 2, draw: () => A.devil(x, cam, U.devil, t) });
+      else { list.push({ y: U.overlook.y + 2, draw: () => A.overlook(x, cam, U.overlook, S.bonusDone, t) }); U.rocks.forEach(([X, Y], i) => list.push({ y: Y + 4, draw: () => A.boulder(x, cam, X, Y, i) })); }
+      if (U.down || !(U.ext && U.ext.t > 2.6)) {
+        const held = U.down ? null : U.carry ? (mars ? 'core' : 'can') : S.carried > 0 ? 'data' : null;
+        list.push({ y: p.y + 4, draw: () => A.crew(x, cam, p, S.suit, { walk: p.walk, flip: p.flip, face: p.face, carry: !!held, down: U.down, t }, held, t) });
       }
-      // extraction ship
-      if (U.ext) {
-        const k = HS.ease(seg(U.ext.t, 0, 2.2)), up = HS.ease(seg(U.ext.t, 3, 5)), Y = lerp(L.y - 150, L.y - 26, k) - up * 170, X = L.x;
-        if (U.ext.t > 1.4 && U.ext.t < 3.2) { wx.fillStyle = 'rgba(120,255,220,.22)'; wx.beginPath(); wx.moveTo(X - 6, Y + 6); wx.lineTo(X + 6, Y + 6); wx.lineTo(X + 18, L.y + 12); wx.lineTo(X - 18, L.y + 12); wx.fill(); }
-        px(wx, X - 14, Y - 4, 28, 9, '#d8dce4'); px(wx, X - 9, Y - 9, 18, 5, '#e8ecf2'); px(wx, X - 5, Y - 7, 10, 2, '#24386a'); px(wx, X - 18, Y, 4, 3, '#e8783c'); px(wx, X + 14, Y, 4, 3, '#c86432');
-        const f = 3 + (Math.floor(t * 20) % 2) * 2; px(wx, X - 10, Y + 5, 3, f, '#ff9a3c'); px(wx, X + 7, Y + 5, 3, f, '#ff9a3c');
-      }
-      g.imageSmoothingEnabled = false; g.drawImage(world, cam.x, cam.y, HS.VW, HS.VH, 0, 0, 640, 360);
-      // flare overlay
-      if (!mars && flareOn()) { const safe = sheltered(p); g.fillStyle = `rgba(255,240,170,${safe ? .1 : .22 + Math.sin(t * 20) * .05})`; g.fillRect(0, 0, 640, 360); g.fillStyle = 'rgba(255,255,230,.18)'; for (let i = 0; i < 9; i++) g.fillRect(0, (t * 220 + i * 44) % 360, 640, 2); }
-      if (mars && stormAt(p.x) && !atLander(p)) { g.fillStyle = 'rgba(120,70,40,.28)'; g.fillRect(0, 0, 640, 360); }
+      list.sort((a, b) => a.y - b.y);
+      for (const d of list) d.draw();
+      HS.drawFx(x, cam, U.fx);
+      if (U.ext) A.ship(x, cam, U.ext, t);
+      for (const s of U.storms) if (s.x != null) A.storm(x, cam, s, t);
+      if (!mars && flareOn()) A.flare(x, cam, t, sheltered(p), U.rocks);
+      HS.blitArt();
+      if (mars && stormAt(p.x) && !home) { g.fillStyle = 'rgba(120,70,40,.28)'; g.fillRect(0, 0, 640, 360); }
 
       // ----- labels
       const lab = (X, Y, s, col, dy = 22) => { const q = HS.toScreen(cam, X, Y); if (q.x > 40 && q.x < 600 && q.y > 50 && q.y < 300 && !(q.x < 290 && q.y + dy > 222) && !U.ext) tag(s, q.x, q.y + dy, col, 7.5); };
@@ -221,17 +217,23 @@
       g.fillStyle = 'rgba(4,7,13,.72)'; g.fillRect(0, 0, 640, 360);
       box(x0 - 8, y0 - 22, 456, 312, C.cyan, 6);
       T('SURFACE MAP', x0, y0 - 8, 8.5, C.cyan, { w: 600 }); T('time does not stop while you look', x0 + 440, y0 - 8, 7, C.muted, { a: 'right' });
-      g.imageSmoothingEnabled = true; g.drawImage(U.mars ? HS.marsBg : HS.moonBg, x0, y0, 440, 275); g.imageSmoothingEnabled = false;
-      g.fillStyle = 'rgba(4,7,13,.3)'; g.fillRect(x0, y0, 440, 275);
-      for (const s of U.storms) if (s.x != null) { const a = clamp(s.dir > 0 ? s.x - s.w : s.x, 0, 640), b = clamp((s.dir > 0 ? s.x - s.w : s.x) + s.w, 0, 640); g.fillStyle = 'rgba(232,160,100,.42)'; g.fillRect(x0 + a * k, y0, (b - a) * k, 275); T('STORM', x0 + (a + b) / 2 * k, y0 + 12, 7, '#ffd9b0', { a: 'center', w: 600 }); }
-      const dot = (X, Y, col, s, lbl) => { HS.diamond(g, x0 + X * k, y0 + Y * k, col, s); if (lbl) T(lbl, x0 + X * k, y0 + Y * k - 7, 6.5, C.white, { a: 'center' }); };
-      for (const s of U.sites) dot(s.x, s.y, s.done ? '#6e6460' : s.kind === 'rich' ? '#78ffe6' : '#5ab4aa', s.kind === 'rich' ? 6 : 4, s.done ? '' : s.kind);
-      if (!U.sample.done) dot(U.sample.x, U.sample.y, C.amber, 6, U.mars ? 'core' : 'regolith');
-      if (!U.deploy.done) dot(U.deploy.x, U.deploy.y, '#e6e8ec', 6, 'deploy');
-      if (!S.bonusDone) dot(U.mars ? U.devil.x : U.overlook.x, U.mars ? U.devil.y : U.overlook.y, C.pink, 5, U.mars ? 'dust devil' : 'earth view');
+      // the ground at one art pixel per map pixel, and crisp icons that match the sprites
+      g.imageSmoothingEnabled = false; g.drawImage(A.mapImage(S.mission.id), x0, y0, 440, 275);
+      g.fillStyle = 'rgba(4,7,13,.18)'; g.fillRect(x0, y0, 440, 275);
+      for (const s of U.storms) if (s.x != null) { const a = clamp(s.dir > 0 ? s.x - s.w : s.x, 0, 640), b = clamp((s.dir > 0 ? s.x - s.w : s.x) + s.w, 0, 640); g.fillStyle = 'rgba(232,160,100,.42)'; g.fillRect(Math.round((x0 + a * k) * 2) / 2, y0, Math.round((b - a) * k * 2) / 2, 275); T('STORM', x0 + (a + b) / 2 * k, y0 + 12, 7, '#ffd9b0', { a: 'center', w: 600 }); }
+      // icons are drawn at half size here, which is one art pixel per screen pixel at 1280 wide
+      const icon = (kind, X, Y, lbl) => {
+        const s = A.icon(kind), dx = Math.round((x0 + X * k) * 2) - (s.width >> 1), dy = Math.round((y0 + Y * k) * 2) - s.height + 2;
+        g.drawImage(s, dx / 2, dy / 2, s.width / 2, s.height / 2);
+        if (lbl) T(lbl, x0 + X * k, dy / 2 - 2, 6.5, C.white, { a: 'center' });
+      };
+      for (const s of U.sites) icon(s.done ? 'done' : s.kind, s.x, s.y, s.done ? '' : s.kind);
+      if (!U.sample.done) icon('sample', U.sample.x, U.sample.y, U.mars ? 'core' : 'regolith');
+      if (!U.deploy.done) icon('deploy', U.deploy.x, U.deploy.y, 'deploy');
+      if (!S.bonusDone) { if (U.mars) icon('devil', U.devil.x, U.devil.y, 'dust devil'); else icon('overlook', U.overlook.x, U.overlook.y, 'earth view'); }
       T('LANDER', x0 + L.x * k, y0 + L.y * k + 24, 7, C.cyan, { a: 'center', w: 600 });
       g.strokeStyle = C.white; g.lineWidth = 1; g.strokeRect(x0 + cam.x * k, y0 + cam.y * k, HS.VW * k, HS.VH * k);
-      if (Math.floor(U.t * 4) % 2) { g.fillStyle = S.suit; g.fillRect(x0 + U.p.x * k - 2, y0 + U.p.y * k - 2, 5, 5); }
+      if (Math.floor(U.t * 4) % 2) { const px0 = Math.round((x0 + U.p.x * k) * 2) / 2, py0 = Math.round((y0 + U.p.y * k) * 2) / 2; g.fillStyle = HS.ART_OUT; g.fillRect(px0 - 3, py0 - 3, 6, 6); g.fillStyle = S.suit; g.fillRect(px0 - 2, py0 - 2, 4, 4); }
     }
   };
   HS.dbg = HS.dbg || {}; HS.dbg.surface = () => U;   // test hook

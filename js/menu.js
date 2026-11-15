@@ -148,7 +148,8 @@
     },
     draw() {
       const t = brief.t, m = HS.S.mission;
-      HS.starfield(t + 15, .3);
+      // deep space and the lit globe of the destination, on the 1280 x 720 art grid (js/cutscene-art.js)
+      HS.cutArt.brief(t, m.id); HS.blitArt();
       box(110, 34, 420, 290, C.cyan, 6);
       T('MISSION CONTROL  /  INCOMING BRIEF', 128, 56, 8.5, C.cyan, { w: 600 });
       T('seed ' + HS.S.seed, 512, 56, 7.5, C.muted, { a: 'right' });
@@ -168,8 +169,8 @@
   };
 
   // ---------- launch cutscene (also plays the overweight failure)
-  const [lp, lx] = off(320, 180);
-  const smoke = (() => { const r = HS.R(31); return Array.from({ length: 70 }, () => ({ t0: r() * 3.4, dx: (r() - .5) * 2, s: 3 + r() * 6 })); })();
+  // the picture is js/cutscene-art.js on the 1280 x 720 art grid; cut.fx stays in its 320 x 180 space and is
+  // drawn there centred on the explosion
   const cut = { t: 0, fail: false, boom: false, fx: new HS.Parts() };
   HS.scenes.launch = {
     enter() { cut.t = 0; cut.fail = HS.model().overweight; cut.boom = false; cut.fx = new HS.Parts(); HS.sfx.launch(); HS.flash('255,255,255', .9); },
@@ -186,14 +187,8 @@
     draw() {
       const t = cut.t, m = HS.model(), fail = cut.fail;
       const kUp = fail ? ease(seg(t, .6, 3)) * .32 : ease(seg(t, .6, 4));
-      const climb = kUp * 260;
-      for (let y = 0; y < 180; y++) { const k = clamp((y - climb * .4) / 180, 0, 1); lx.fillStyle = `rgb(${lerp(6, 70, k) | 0},${lerp(10, 120, k) | 0},${lerp(28, 190, k) | 0})`; lx.fillRect(0, y, 320, 1); }
-      const gy = 150 + climb; px(lx, 0, gy, 320, 40, '#2c584c'); px(lx, 120, gy - 6, 80, 6, '#9298a2'); px(lx, 100, gy - 60, 6, 54, '#707884');
-      const ry = 120 - kUp * 70 + Math.sin(t * 60) * (t > .4 ? .6 : 0);
-      for (const s of smoke) { const k = t - s.t0; if (k < 0 || k > 2.5) continue; const X = 160 + s.dx * k * 18, Y = gy - 6 - k * 4 + (climb * .2); ell(lx, X, Y, s.s + k * 6, (s.s + k * 6) * .6, `rgba(220,220,225,${.5 - k * .18})`); }
-      if (!cut.boom) HS.rocket(lx, 160.5, ry + 26, 1, t > .3 ? 10 + (Math.floor(t * 20) % 3) * 3 : 0);
-      cut.fx.draw(lx);
-      g.imageSmoothingEnabled = false; g.drawImage(lp, 0, 0, 640, 360);
+      HS.cutArt.launch(t, { kUp, fail, boom: cut.boom, fx: cut.fx });
+      HS.blitArt();
       const names = HS.SLOTS.map(s => HS.PARTS[HS.S.slots[s]].name).join('  /  ');
       if (!fail) {
         g.globalAlpha = seg(t, .8, 1.3) * (1 - seg(t, 3.4, 4.1));
@@ -218,14 +213,9 @@
     update(dt) { land.t += dt; if (land.t > 3.05 && !land.dust) { land.dust = true; HS.shake(5); HS.sfx.hitHull(); } if (land.t > 5.2 || (land.t > 3.6 && HS.hit('Enter', 'Space', 'KeyE'))) HS.go('surface'); },
     draw() {
       const t = land.t, mars = HS.S.mission.id === 'mars';
-      for (let y = 0; y < 180; y++) { const k = y / 180; lx.fillStyle = mars ? `rgb(${lerp(40, 210, k) | 0},${lerp(24, 130, k) | 0},${lerp(30, 100, k) | 0})` : `rgb(${lerp(4, 16, k) | 0},${lerp(6, 18, k) | 0},${lerp(12, 30, k) | 0})`; lx.fillRect(0, y, 320, 1); }
-      if (!mars) { const r = HS.R(9); for (let i = 0; i < 60; i++) px(lx, r() * 320, r() * 120, 1, 1, '#c8d0e0'); ell(lx, 250, 36, 12, 12, '#2858aa'); ell(lx, 246, 33, 5, 4, '#46885a'); ell(lx, 254, 40, 4, 3, '#e8eef4'); }
-      const gy = 180 - ease(seg(t, 0, 3)) * 50; px(lx, 0, gy, 320, 60, mars ? '#9a4a30' : '#7a7e8a'); for (let i = 0; i < 40; i++) px(lx, (i * 37) % 320, gy + 4 + (i * 13) % 40, 3, 2, mars ? '#6e341f' : '#565a66');
-      const ly = lerp(-20, gy - 16, ease(seg(t, 0, 3.1)));
-      if (t < 3.1) { const f = 4 + (Math.floor(t * 20) % 2) * 3; px(lx, 158, ly + 16, 4, f, '#ff9a3c'); px(lx, 159, ly + 16, 2, f - 2, '#fff0c8'); }
-      px(lx, 150, ly, 20, 12, '#b0924c'); px(lx, 154, ly - 5, 12, 5, '#c8aa62'); px(lx, 147, ly + 12, 2, 4, '#9a9aa4'); px(lx, 171, ly + 12, 2, 4, '#9a9aa4'); px(lx, 136, ly + 3, 12, 4, '#2c4aa0'); px(lx, 172, ly + 3, 12, 4, '#2c4aa0');
-      if (t > 3) { const k = seg(t, 3, 4); for (let i = 0; i < 14; i++) ell(lx, 160 + (i - 7) * 6 * (1 + k * 2), gy - 2 - Math.abs(i - 7) * .5, 4 + k * 6, 3 + k * 3, mars ? `rgba(220,150,110,${.6 - k * .5})` : `rgba(200,204,214,${.6 - k * .5})`); }
-      g.imageSmoothingEnabled = false; g.drawImage(lp, 0, 0, 640, 360);
+      // the lander comes down onto Mars or the Moon, touching down at 3.1 s (js/cutscene-art.js)
+      HS.cutArt.landing(t, mars);
+      HS.blitArt();
       g.globalAlpha = seg(t, 3.1, 3.4);
       T('TOUCHDOWN', 320, 60, 30, C.white, { w: 700, a: 'center', b: 'middle', f: PIX });
       const dmg = HS.S.instDamage > 1 ? `instrument at ${Math.round(100 - HS.S.instDamage)}%` : 'instrument intact';

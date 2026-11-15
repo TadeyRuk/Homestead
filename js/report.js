@@ -111,7 +111,8 @@
     },
     draw() {
       const t = Rp.t, a = Rp.a, S = HS.S, mi = S.mission;
-      HS.starfield(t + 90, .2);
+      // how the run ended, behind the panel: the lander on the surface, the burnt pad, or the planet never reached
+      HS.cutArt.report(t); HS.blitArt();
       box(20, 20, 600, 322, C.cyan, 6);
       const hd = `MISSION REPORT  /  ${mi.name}  /  `;
       T(hd, 38, 40, 8.5, C.cyan, { w: 600 }); T(a.outcome, 38 + HS.tw(hd, 8.5, { w: 600 }), 40, 8.5, a.col, { w: 600 });
