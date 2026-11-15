@@ -125,7 +125,7 @@
       text(s, x + w / 2, y + 22.5, 15, prim ? INK : C.white, { a: 'center' });
       hits.push({ id, x, y, w, h: 44 }); return w;
     };
-    const wb = btn('go', '[Enter] To the brief', L0, 'primary'); btn('back', '[Esc] Back', L0 + wb + 10, 'plain');
+    const wb = btn('go', HS.net && HS.net.want ? '[Enter] To the lobby' : '[Enter] To the brief', L0, 'primary'); btn('back', '[Esc] Back', L0 + wb + 10, 'plain');
     // the callsign over the preview, like the film's
     if (S.name) text('▼ ' + S.name, 430, 404 - Math.round(Math.sin(t * 2) * 2), 18, S.suit, { w: 600, a: 'center' });
     text('SUIT-UP BAY', 40, 160, 12, '#5a6886', { ls: 1.5 });
@@ -136,7 +136,7 @@
     if (id === 'name') { K.focus = 0; return; }
     if (id.startsWith('suit:')) { S.suit = id.slice(5); K.focus = 1; HS.sfx.blip(); return; }
     if (id.startsWith('visor:')) { S.visor = id.slice(6); K.focus = 2; HS.sfx.blip(); return; }
-    if (id === 'go') { HS.saveCrew(); HS.sfx.ok(); HS.go('brief'); return; }
+    if (id === 'go') { HS.saveCrew(); HS.sfx.ok(); HS.go(HS.net && HS.net.want ? 'lobby' : 'brief'); return; }
     if (id === 'back') { HS.saveCrew(); HS.sfx.blip(); HS.go('title'); }
   }
   HS.scenes.crew = {

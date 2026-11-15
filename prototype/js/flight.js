@@ -64,7 +64,7 @@
     enter() {
       const S = HS.S, m = HS.model(), heat = m.payload.heat + m.power.heat;
       F = {
-        t: 0, m, r: HS.R(S.seed * 31 + 7), dr: HS.R(S.seed * 41 + 5), prog: 0, D: S.mission.transit * m.prop.transit, st: 0, fx: new HS.Parts(), fx2: [], over: null, done: false,
+        t: 0, m, r: HS.R(S.seed * 31 + 7), dr: HS.R(S.seed * 41 + 5), prog: 0, D: S.mission.transit * m.prop.transit, st: 0, seats: {}, fx: new HS.Parts(), fx2: [], over: null, done: false,
         x: 80, vx: 0, pulse: 0, pulseDir: 0, speed: 7.3, target: 7.8, thrust: 0, rocks: [], pending: [], sections: [100, 100, 100, 100, 100], breach: null,
         loads: [
           { key: 'comms', name: m.comms.name, w: -m.comms.power, on: true }, { key: 'payload', name: m.payload.name, w: -m.payload.power, on: true },
@@ -77,6 +77,9 @@
         events: 0, nextEvent: 5, noteS: '', noteT: 0, noteCol: C.white, alertBeep: 0,
         note(s, col) { this.noteS = s; this.noteT = 4.5; this.noteCol = col; }
       };
+      // online, each crew member starts at their own station (the lobby's order); solo, the one player switches between all four
+      HS.ids().forEach((id) => { const mine = HS.rolesOf(id), r = HS.net.seat[id]; F.seats[id] = ST.indexOf(mine.includes(r) ? r : mine[0]); });
+      F.st = F.seats[HS.net.me] || 0;
       S.fuel = 100; S.hull = 100; S.cabinO2 = 100; S.instDamage = 0; S.hits = 0; S.hitsNoWarn = 0; S.trips = 0; S.telemetry = 0; S.hotTime = 0;
       F.note('Reach transfer speed: hold [W] at the pilot station', C.pilot);
     },
@@ -86,19 +89,32 @@
       if (F.done) return;
       if (F.over) { F.over.t += dt; F.fx.update(dt); if (F.over.t > 3.2) { F.done = true; HS.go('report'); } return; }
       F.t += dt; S.flightTime = F.t; F.noteT -= dt; F.fx.update(dt);
-      if (HS.hit('Digit1')) F.st = 0; if (HS.hit('Digit2')) F.st = 1; if (HS.hit('Digit3')) F.st = 2; if (HS.hit('Digit4')) F.st = 3;
-      if (HS.hit('Tab')) F.st = (F.st + 1) % 4;
-      if (HS.hit('Digit1', 'Digit2', 'Digit3', 'Digit4', 'Tab')) HS.sfx.blip();
-      for (let i = 0; i < 4; i++) if (HS.In.click && HS.over(214 + i * 46, 4, 42, 22)) { F.st = i; HS.sfx.blip(); HS.In.click = false; }
-      const role = ST[F.st], ax = HS.axis();
+      // each crew member moves between stations on their own; F.st is the station this screen shows
+      // online a player may only work the stations they hold; pressing another station asks its holder to swap
+      HS.each((id) => {
+        const mine = HS.rolesOf(id), moved = HS.net.moved[id];
+        let st = F.seats[id] ?? 0;
+        if (!mine.includes(ST[st])) st = ST.indexOf(mine.includes(moved) ? moved : mine[0]);   // a swap took this station
+        if (!HS.answerRole(id)) {
+          const go = (i) => { if (HS.pickRole(id, ST[i], ST[st])) { st = i; HS.sfx.blip(); } };
+          for (let i = 0; i < 4; i++) if (HS.hit('Digit' + (i + 1))) go(i);
+          if (HS.hit('Tab') && mine.length > 1) { st = ST.indexOf(mine[(mine.indexOf(ST[st]) + 1) % mine.length]); HS.sfx.blip(); }
+          for (let i = 0; i < 4; i++) if (HS.In.click && HS.over(214 + i * 46, 4, 42, 22)) { go(i); HS.In.click = false; }
+        }
+        F.seats[id] = st;
+      });
+      F.st = F.seats[HS.net.me] ?? 0;
+      // the first crew member at a station works its controls
+      const at = (st) => HS.ids().find(id => F.seats[id] === ST.indexOf(st));
+      const by = (st, fn) => { const id = at(st); if (id) HS.as(id, fn); };
       if (F.t >= F.nextEvent && F.prog < .94) event();
       F.surge -= dt; F.flare -= dt; F.spike -= dt; F.jam -= dt;
 
       // ----- power bus
       const pump = F.loads[4]; pump.w = Math.round(10 + 35 * F.valve);
-      if (role === 'eng') {
+      by('eng', () => {
         F.loads.forEach((l, i) => { if (HS.hit(LOAD_KEYS[i]) || (HS.In.click && HS.over(24, 141 + i * 22, 286, 20))) { l.on = !l.on; HS.sfx[l.on ? 'pick' : 'drop'](); } });
-      }
+      });
       F.sup = supply(); const frac = loadW() / F.sup; F.frac = frac;
       if (F.blackout > 0) { F.blackout -= dt; if (F.blackout <= 0) { F.loads[5].on = false; F.loads[6].on = false; F.note('Breaker reset. Lights and heater were left off.', C.eng); HS.sfx.ok(); } }
       else if (frac > 1) { F.overT += dt; if (F.overT > 4) { F.overT = 0; F.blackout = 4; S.trips++; HS.sfx.trip(); HS.shake(4); HS.flash('0,0,0', .7); F.note('BREAKER TRIPPED: everything is off for 4 s', C.red); HS.log('trip', { load: Math.round(loadW()), supply: Math.round(F.sup), flare: F.flare > 0, surge: F.surge > 0 }); } }
@@ -108,8 +124,9 @@
       // ----- pilot
       const heavy = Math.min(1, m.heavy), agility = 1 - .45 * heavy, prop = m.prop;
       let steer = 0;
-      if (role === 'pilot' && engineOn) {
-        steer = ax.x;
+      const pilot = engineOn && at('pilot');
+      if (pilot) HS.as(pilot, () => {
+        steer = HS.axis().x;
         if (prop.steer === 'smooth') F.vx = lerp(F.vx, steer * prop.turn * agility, Math.min(1, dt * 9));
         else if (prop.steer === 'slow') F.vx = clamp(F.vx + steer * prop.turn * 1.6 * agility * dt, -prop.turn * agility, prop.turn * agility) * (steer ? 1 : Math.max(0, 1 - dt * 1.2));
         else { // solid motor: fixed pulses
@@ -121,7 +138,7 @@
         F.thrust = th;
         if (th) { F.speed = clamp(F.speed + th * prop.accel * dt, 5, 10); S.fuel -= prop.burn * (1 + heavy * .5) * dt / HS.EVENT_K; }
         if (prop.steer !== 'pulse' && steer) S.fuel -= prop.burn * .12 * dt / HS.EVENT_K;
-      } else { F.thrust = 0; F.vx = prop.steer === 'slow' ? F.vx * Math.max(0, 1 - dt * 1.2) : 0; }
+      }); else { F.thrust = 0; F.vx = prop.steer === 'slow' ? F.vx * Math.max(0, 1 - dt * 1.2) : 0; }
       F.x = clamp(F.x + F.vx * dt, 12, 148); if (F.x <= 12 || F.x >= 148) F.vx = 0;
       if (F.thrust || F.t < 1) F.fx.add(F.x + (Math.random() - .5) * 2, 70, (Math.random() - .5) * 6, 26 + Math.random() * 20, .4, Math.random() < .5 ? '#ff9a3c' : '#fff0c8', 1);
       // debris
@@ -143,7 +160,7 @@
       // ----- hull breach and welding
       if (F.breach) {
         const b = F.breach; b.t += dt; S.cabinO2 -= .6 * dt; S.hull = Math.max(0, S.hull - .22 * dt);
-        if (role === 'eng') {
+        by('eng', () => {
           const [hx, hy] = breachPoint(b, b.prog), onLine = Math.hypot(HS.In.mx - hx, HS.In.my - hy) < 16;
           if ((HS.In.mdown && onLine && b.sealant > 0) || HS.key('KeyF')) {
             b.prog += dt * (HS.key('KeyF') && !(HS.In.mdown && onLine) ? .1 : .24);
@@ -151,7 +168,7 @@
             if (Math.random() < .2) HS.sfx.weld();
           } else if (HS.In.mdown && HS.over(332, 60, 300, 290)) b.sealant = Math.max(0, b.sealant - 26 * dt);
           else b.sealant = Math.min(100, b.sealant + 8 * dt);
-        }
+        });
         if (b.prog >= 1) { F.sections[b.sec] = 70; HS.log('weld', { t: b.t }); F.breach = null; HS.sfx.good(); F.note('Breach sealed after ' + b.t.toFixed(0) + ' s', C.green); }
         if (S.hull <= 0) { endRun('hull'); return; }
       }
@@ -160,20 +177,20 @@
       // ----- comms dish
       const c = m.comms;
       F.ev += ((F.r() - .5) * 26 * c.drift + F.e * .22 * c.drift + (F.vx / 70) * 30 * c.drift) * dt;
-      if (role === 'comms') F.ev -= ax.x * -40 * dt;
+      by('comms', () => { F.ev -= HS.axis().x * -40 * dt; });
       F.ev *= Math.max(0, 1 - 1.3 * dt); F.e = clamp(F.e + F.ev * dt, -48, 48); if (Math.abs(F.e) >= 48) F.ev = 0;
       F.lockT = link >= 95 ? F.lockT + dt : 0;
       S.telemetry += c.rate * (F.lockT > 2 ? 2 : 1) * link / 100 * dt;
 
       // ----- science: core and oxygen
-      if (role === 'sci') F.valve = clamp(F.valve - ax.y * .55 * dt, 0, 1);
+      by('sci', () => { F.valve = clamp(F.valve - HS.axis().y * .55 * dt, 0, 1); });
       const heat = (loadOn('payload') ? m.payload.heat : 0) + m.power.heat + (F.spike > 0 ? .7 : 0);
       F.temp = clamp(F.temp + (heat * 5.2 - (loadOn('pump') ? F.valve : 0) * 9.5 - 1.6) * dt, 0, 100);
       if (F.temp > 75) { S.instDamage = Math.min(60, S.instDamage + 1.4 * dt); S.hotTime += dt; }
       const life = loadOn('life'); S.cabinO2 -= (life ? .42 : 1.3) * dt;
       F.itemT -= dt;
       if (F.itemT <= 0 && F.tray.length < 6) { F.itemT = 2.6; const k = F.r(); F.tray.push({ type: k < .36 ? 'ice' : k < .66 ? 'co2' : k < .85 ? 'food' : 'wrench', born: F.t }); }
-      if (role === 'sci') {
+      by('sci', () => {
         let pick = -1;
         if (HS.In.click) F.tray.forEach((it, i) => { if (HS.over(344 + i * 21, 300, 20, 30)) pick = i; });
         if (HS.hit('Space') && F.tray.length) pick = 0;
@@ -181,7 +198,7 @@
           if (F.jam > 0 || !life) { HS.sfx.buzz(); F.popup = { s: life ? 'intake jammed' : 'life support is off', t: 1.5, col: C.red }; }
           else { const it = F.tray.splice(pick, 1)[0]; F.throws.push({ type: it.type, t: 0, from: 354 + pick * 21 }); HS.sfx.pick(); }
         }
-      }
+      });
       for (let i = F.throws.length - 1; i >= 0; i--) {
         const th = F.throws[i]; th.t += dt;
         if (th.t >= .6) {
@@ -199,6 +216,9 @@
       if (F.alertBeep <= 0 && F.alerts.some((a, i) => a && a.sev === 2 && i !== F.st)) { F.alertBeep = 2.2; HS.sfx.warn(); }
       if (F.prog >= 1) { F.done = true; HS.log('arrive', { fuel: Math.round(S.fuel), hull: Math.round(S.hull), dmg: Math.round(S.instDamage), t: Math.round(F.t) }); HS.sfx.jingle(); HS.go('landing'); }
     },
+
+    save() { return HS.pack(F); },
+    load(d) { if (!F) return; Object.assign(F, d); F.st = F.seats[HS.net.me] ?? F.st; },
 
     alerts() {
       const S = HS.S, m = F.m, out = [null, null, null, null];
@@ -227,13 +247,18 @@
       // station tabs, with alerts from the other stations
       HS.chip(role, 8, 6, SUB[role]);
       const al = F.alerts || [null, null, null, null];
+      const mine = HS.rolesOf(HS.net.me);
       ST.forEach((r, i) => {
+        g.globalAlpha = mine.includes(r) ? 1 : .4;   // a station someone else holds: press it to ask for a swap
         const x = 214 + i * 46, on = i === F.st, a = al[i], blink = a && Math.floor(t * (a.sev === 2 ? 5 : 2)) % 2;
         const edge = a ? (a.sev === 2 ? C.red : C.amber) : on ? C[r] : '#3a4a62';
         box(x, 4, 42, 22, edge, 4, a && blink ? HS.rgba(a.sev === 2 ? C.red : C.amber, .3) : on ? HS.rgba(C[r], .2) : 'rgba(8,14,26,.9)');
         T(`[${i + 1}]`, x + 4, 13, 6.5, C.muted, { b: 'middle' }); T(['PILOT', 'ENG', 'COMMS', 'SCI'][i], x + 38, 13, 6.5, on ? C.white : C[r], { w: 600, a: 'right', b: 'middle' });
         g.fillStyle = a ? edge : C[r]; g.fillRect(x + 4, 20, 34, 2);
+        g.globalAlpha = 1;
       });
+      const ask = HS.askLine && HS.askLine();
+      if (ask) HS.prompt(ask[0], 320, 40, ask[1]);
       const worst = al.map((a, i) => a && Object.assign({ i }, a)).filter(a => a && a.i !== F.st).sort((a, b) => b.sev - a.sev)[0];
       if (worst) { const col = worst.sev === 2 ? C.red : C.amber; tag(`[${worst.i + 1}] ${HS.NAME[ST[worst.i]]}: ${worst.s}`, 306, 34, col, 7); }
       // transit box
@@ -245,7 +270,7 @@
       T(F.rate < 1 ? 'slow: off the transfer speed' : 'on schedule', 452, 26.5, 6.5, F.rate < 1 ? C.amber : C.muted, { b: 'middle' });
       [['O2', S.cabinO2], ['HULL', S.hull], ['FUEL', S.fuel]].forEach(([n, v], i) => { T(n, 452 + i * 60, 36.5, 6.5, C.muted, { b: 'middle', w: 600 }); T(Math.round(v) + '%', 452 + i * 60 + (i ? 22 : 13), 36.5, 6.5, v < 30 ? C.red : v < 55 ? C.amber : C.white, { b: 'middle', w: 600 }); });
       if (F.noteT > 0) { g.globalAlpha = clamp(F.noteT * 2, 0, 1); tag(F.noteS, 306, role === 'pilot' ? 62 : 47, F.noteCol, 7); g.globalAlpha = 1; }
-      HS.hint('[1] [2] [3] [4] or [TAB] switch station');
+      HS.hint(HS.online() ? (mine.length > 1 ? '[TAB] switch between your stations   [1]-[4] ask for another' : '[1]-[4] ask another player for their station') : '[1] [2] [3] [4] or [TAB] switch station');
       if (F.over) {
         g.fillStyle = `rgba(4,7,13,${clamp(F.over.t * .6, 0, .8)})`; g.fillRect(0, 0, 640, 360);
         const msg = { hull: ['HULL LOST', 'The ship broke up before it arrived.'], fuel: ['OUT OF FUEL', 'The ship is drifting. Mission Control is sending a tug.'], oxygen: ['NO OXYGEN', 'The cabin ran out of air before arrival.'] }[F.over.reason];

@@ -55,18 +55,18 @@ Needs Node 22.
 ```sh
 npm install
 npm test         # unit tests (vitest)
-npm run dev      # local dev server
-npm run build    # typecheck and build to dist/
-npm run preview  # serve the built dist/
+npm run proto    # the game: builds prototype/js/net.js, then serves prototype/
 ```
+
+The game is `prototype/`, plain scripts with no build step. Online play comes from `src/net`, bundled into `prototype/js/net.js` by `npm run build:proto` (the file is not committed). Without it the game still plays solo and hides the online button. The TypeScript game at the root (`npm run dev`, `npm run build`) is the first version and is no longer what ships.
 
 To publish on itch.io:
 
 ```sh
-npm run package   # typecheck, build, and zip dist/ into homestead.zip
+npm run package   # typecheck, build net.js, and zip prototype/ into homestead.zip
 ```
 
-Then on itch.io: create a project, set the kind to HTML, upload `homestead.zip`, tick "This file will be played in the browser", set the viewport to 960 x 540, and open the page to check that Play solo starts. Re-run `npm run package` and upload again whenever main changes before the deadline. The zip is built by `scripts/zip.mjs` on Node's own zlib, with forward-slash paths; PowerShell 5.1's `Compress-Archive` writes backslash paths that itch.io can't serve.
+Then on itch.io: create a project, set the kind to HTML, upload `homestead.zip`, tick "This file will be played in the browser", set the viewport to 960 x 540, and open the page to check that solo starts and that [O] Play online gets a code. Re-run `npm run package` and upload again whenever main changes before the deadline. The zip is built by `scripts/zip.mjs` on Node's own zlib, with forward-slash paths; PowerShell 5.1's `Compress-Archive` writes backslash paths that itch.io can't serve.
 
 ## Status
 

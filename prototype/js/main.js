@@ -9,8 +9,11 @@
   window.addEventListener('resize', fit); fit();
   const PLAY = ['build', 'flight', 'surface'];
 
-  HS.go = (name, col) => { if (next) return; next = name; fadeDir = 1; fadeCol = col || '4,7,13'; };
-  const enter = (name) => { if (cur && cur.exit) cur.exit(); cur = HS.scenes[name]; HS.sceneName = name; HS.In.hit.clear(); HS.In.click = false; if (cur.enter) cur.enter(); };
+  const goTo = (name, col) => { if (next) return; next = name; fadeDir = 1; fadeCol = col || '4,7,13'; };
+  // a joiner's scene follows the host's (js/net-game.js), so its own scenes cannot move it on
+  HS.go = (name, col) => { if (!HS.net || HS.net.mode !== 'client') goTo(name, col); };
+  HS.netGo = (name) => { next = null; goTo(name); };
+  const enter = (name) => { if (cur && cur.exit) cur.exit(); cur = HS.scenes[name]; HS.sceneName = name; HS.local.hit.clear(); HS.local.click = false; if (cur.enter) cur.enter(); };
 
   // the simulation always advances in fixed steps of STEP seconds, whatever the display's frame rate, so the same
   // seed and the same inputs give the same run on a 60 Hz and a 144 Hz screen. 240 steps a second keeps motion
@@ -21,18 +24,29 @@
     const dt = Math.min(MAX_BACKLOG, (now - last) / 1000) || 0; last = now;
     acc = Math.min(acc + dt * HS.speed, MAX_BACKLOG * HS.speed);
     let n = 0;
-    // key presses count once: they are cleared after the first step that sees them, and kept for the next
-    // frame if this frame ran no step at all
-    while (acc >= STEP) { step(STEP); acc -= STEP; if (n++ === 0) HS.endFrame(); }
-    draw();
-    // spend a few spare milliseconds a frame building the launch campus ahead of time (js/campus.js)
-    if (HS.campusPrewarm && HS.sceneName !== 'build') HS.campusPrewarm(5);
-    requestAnimationFrame(frame);
+    try {
+      if (HS.netBefore) HS.netBefore();
+      // key presses count once: they are cleared after the first step that sees them, and kept for the next
+      // frame if this frame ran no step at all. Online, the other players' presses are cleared there too.
+      while (acc >= STEP) { step(STEP); acc -= STEP; if (n++ === 0) { HS.endFrame(); if (HS.clearRemotePresses) HS.clearRemotePresses(); } }
+      if (HS.netAfter) HS.netAfter();
+      draw();
+      // spend a few spare milliseconds a frame building the launch campus ahead of time (js/campus.js)
+      if (HS.campusPrewarm && HS.sceneName !== 'build') HS.campusPrewarm(5);
+    } catch (e) {
+      // one bad frame must not stop the loop; online, the host ends the game so nobody sits on a frozen screen
+      console.error('frame failed', e);
+      HS.endFrame();
+      if (HS.net && HS.net.mode === 'host') HS.net.room.end('The host hit an error');
+    } finally {
+      requestAnimationFrame(frame);
+    }
   }
   function step(dt) {
     HS.time += dt;
     if (HS.hit('KeyM') && !HS.typing) { HS.muted = !HS.muted; }
-    if (HS.hit('Escape') && PLAY.includes(HS.sceneName) && !next) { HS.paused = !HS.paused; HS.sfx.blip(); }
+    // no pause online: it would freeze the whole crew
+    if (HS.hit('Escape') && PLAY.includes(HS.sceneName) && !next && !(HS.online && HS.online())) { HS.paused = !HS.paused; HS.sfx.blip(); }
     if (HS.paused) {
       if (HS.hit('KeyT')) { HS.paused = false; HS.go('title'); }
       else if (HS.hit('KeyR')) { const S = HS.S; HS.paused = false; HS.newRun(S.mission.id, S.seed); HS.S.suit = S.suit; HS.go('brief'); }
@@ -41,7 +55,11 @@
     }
     if (fadeDir > 0) { fade += dt * 3.2; if (fade >= 1) { fade = 1; fadeDir = -1; enter(next); next = null; } }
     else if (fadeDir < 0) { fade -= dt * 2.4; if (fade <= 0) { fade = 0; fadeDir = 0; } }
-    if (cur && fadeDir <= 0) cur.update(dt);
+    const runs = HS.netRuns ? HS.netRuns(HS.sceneName) : 'full';
+    if (cur && fadeDir <= 0 && runs !== 'none') {
+      if (runs === 'quiet') { const keep = HS.In; HS.In = HS.blankInput; try { cur.update(dt); } finally { HS.In = keep; } }
+      else cur.update(dt);
+    }
     HS.shakeAmt = Math.max(0, HS.shakeAmt - dt * 14);
     HS.flashA = Math.max(0, HS.flashA - dt * 1.2);
   }
@@ -63,7 +81,7 @@
       HS.box(210, 112, 220, 136, HS.C.cyan, 6);
       HS.T('PAUSED', 320, 140, 22, HS.C.white, { w: 700, a: 'center', b: 'middle', f: HS.PIX });
       [['[ESC] or [ENTER]', 'resume'], ['[R]', 'restart this seed'], ['[T]', 'quit to title'], ['[M]', HS.muted ? 'sound is off' : 'sound is on']].forEach(([k, v], i) => { HS.T(k, 306, 170 + i * 17, 8, HS.C.amber, { w: 600, a: 'right' }); HS.T(v, 316, 170 + i * 17, 8, HS.C.white); });
-    } else if (PLAY.includes(HS.sceneName)) HS.T('[ESC] pause', 640 - w - 50, 355, 6.5, '#6f7d8c', { a: 'right', b: 'middle' });
+    } else if (PLAY.includes(HS.sceneName) && !(HS.online && HS.online())) HS.T('[ESC] pause', 640 - w - 50, 355, 6.5, '#6f7d8c', { a: 'right', b: 'middle' });
     if (fade > 0) { g.fillStyle = `rgba(${fadeCol},${fade})`; g.fillRect(-10, -10, 660, 380); }
   }
 

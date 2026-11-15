@@ -21,6 +21,7 @@
     else if (id === 'seed') { reroll(); HS.sfx.blip(); }
     else if (id === 'replay') { film().replay(); HS.sfx.blip(); }
     else if (id === 'start' && title.t > .4) HS.scenes.title.start();
+    else if (id === 'online' && title.t > .4 && HS.netAvailable && HS.netAvailable()) { HS.net.want = true; HS.net.msg = ''; HS.scenes.title.start(); }
   };
   // the setup panel: the main game's lobby form on the title (frosted glass, Pixelify heading, uppercase labels)
   const font = (size, w = 600, f = LO.MONO) => `${w} ${size}px ${f}`;
@@ -82,8 +83,12 @@
     y += 26; g.font = font(15); const wr = Math.ceil(g.measureText('[R] New seed').width) + 42;
     field(L0, y, PW - wr - 8); text(String(title.seed), L0 + 13, y + 22.5, 15, HS.C.white, { w: 500 });
     btn('seed', '[R] New seed', L0 + PW - wr, y, 'plain', wr);
-    y += 64; btn('start', '[Enter] Suit up', L0, y, 'primary');
-    y += 52; text('Solo run: all four roles. About 10 min.', L0, y + 10.5, 14, HS.C.muted, { w: 500 });
+    y += 64; const ws = btn('start', '[Enter] Suit up', L0, y, 'primary');
+    const online = HS.netAvailable && HS.netAvailable();
+    if (online) btn('online', '[O] Play online', L0 + ws + 8, y, 'plain');
+    y += 52; text(online ? 'Solo, or online with up to four crew.' : 'Solo run: all four roles. About 10 min.', L0, y + 10.5, 14, HS.C.muted, { w: 500 });
+    // why an online game ended, until the next one starts
+    if (HS.net && HS.net.msg && HS.net.mode === 'solo' && !HS.net.want) text(HS.net.msg, L0, Y - 18, 14, HS.C.amber, { w: 600 });
     if (best) text('Best score ' + best, L0, y + 39.5, 14, HS.C.amber, { w: 600 });
     g.restore();
   }
@@ -99,7 +104,7 @@
     title.hits.push({ id: 'replay', x, y, w, h });
   }
   HS.scenes.title = {
-    enter() { title.t = 0; title.last = performance.now(); title.hits = []; if (!HS.S) HS.S = HS.loadCrew(); if (title.film) title.film.replay(); },
+    enter() { if (HS.netQuit) HS.netQuit(); if (HS.net) HS.net.want = false; title.t = 0; title.last = performance.now(); title.hits = []; if (!HS.S) HS.S = HS.loadCrew(); if (title.film) title.film.replay(); },
     // nothing of the film runs outside this scene: it has no loop or listeners of its own, and draws offscreen
     exit() { if (title.film) { title.film.env.fx.clear(); title.film.tx.clear(); } title.hits = []; },
     update(dt) {
@@ -108,6 +113,7 @@
       if (HS.hit('KeyR')) act('seed');
       if (HS.hit('KeyC')) act('suit');
       if (HS.hit('Enter', 'Space')) act('start');
+      if (HS.hit('KeyO')) act('online');
       if (HS.In.click) { const mx = HS.In.mx * 2, my = HS.In.my * 2, h = title.hits.find(b => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h); if (h) act(h.id); }
     },
     // a new run keeps the crew's suit, visor and callsign; the crew page comes before the brief

@@ -1,15 +1,15 @@
-# Homestead: full-game UI prototype
+# Homestead: the game
 
-A standalone, plain-JavaScript prototype of the whole game (menu, build, flight, surface, report).
-It is **not** the TypeScript/Vite game at the root of this repo: nothing here is built, type-checked or tested by
-`npm run build` / `npm test`, and the game does not load anything from this folder. It was developed on the
-`ui/full-game-prototype` branch and copied here so it lives alongside the game.
+The whole game (menu, build, flight, surface, report) in plain JavaScript. This is what ships to itch.io.
+Online play is `js/net.js`, the network layer from `src/net` bundled by `npm run build:proto`, and
+`js/net-game.js`, which wires it in: the host runs the game and sends snapshots, joiners send their keys and
+only draw. `js/net.js` is not committed; without it the game plays solo and the online button stays hidden.
 
-Run it with any static server from this folder, for example:
+From the repo root:
 
-    python3 -m http.server 8080
+    npm run proto
 
-then open http://localhost:8080/. No build step and no install.
+or, solo only, any static server from this folder (`python3 -m http.server 8080`).
 
 ## Title film
 

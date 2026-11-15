@@ -29,3 +29,7 @@ AGENTS.md
 
 # itch.io upload
 homestead.zip
+
+# built from src/proto by npm run build:proto
+prototype/js/net.js
+dist-itch/
