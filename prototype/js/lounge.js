@@ -13,6 +13,7 @@
   const SHOW_S = 3.5;       // seconds the right answer stays up
   const TRIES = 6;
   const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const PANEL = { x: 160, y: 66, w: 320, h: 226 }, CLOSE = { x: PANEL.x + PANEL.w - 26, y: PANEL.y + 6, w: 20, h: 16 };   // the open panel and its close button
 
   // a question with its answers shuffled by the seed, as plain data for the snapshot
   function newQuestion(L) {
@@ -56,7 +57,10 @@
         if (U.lng) HS.sfx.ok();
         return !!U.lng;
       }
-      if (HS.hit('KeyQ')) { U.lng = null; HS.sfx.blip(); return true; }
+      const walkOff = HS.hit('ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown') || (U.lng === 'trivia' && HS.hit('KeyW', 'KeyA', 'KeyS', 'KeyD'));
+      const clickX = HS.In.click && HS.over(CLOSE.x, CLOSE.y, CLOSE.w, CLOSE.h);
+      if (HS.hit('KeyQ', 'Escape') || clickX) { U.lng = null; HS.sfx.blip(); return true; }
+      if (walkOff) { U.lng = null; return false; }   // false: this turn's keys walk the player off at once
       if (U.lng === 'trivia') {
         if (L.tq.reveal <= 0) for (let k = 1; k <= 4; k++) if (HS.hit('Digit' + k, 'Numpad' + k)) { L.tq.ans[U.me] = k - 1; HS.sfx.blip(); }
       } else {
@@ -98,8 +102,8 @@
 
     // the line under the hint bar
     hint(U) {
-      if (U.lng === 'trivia') return '[1] [2] [3] [4] answer   [V] vote for the ship   [Q] back';
-      if (U.lng === 'wordle') return U.lounge.wd.state === 'play' ? 'type a word   [ENTER] guess   [BACKSPACE] delete   [Q] back' : '[ENTER] next word   [Q] back';
+      if (U.lng === 'trivia') return '[1] [2] [3] [4] answer   [V] vote for the ship   [Q] or [Esc] close, or just walk off';
+      if (U.lng === 'wordle') return U.lounge.wd.state === 'play' ? 'type a word   [ENTER] guess   [BACKSPACE] delete   [Esc] close, or walk off with the arrows' : '[ENTER] next word   [Q] or [Esc] close';
       return null;
     },
 
@@ -118,20 +122,24 @@
         T('[1] trivia   [2] wordle', X + W - 8, Y + 21, 7, C.cyan, { a: 'right', w: 600 });
         return;
       }
-      const X = 160, Y = 66, W = 320, H = 226;
+      const X = PANEL.x, Y = PANEL.y, W = PANEL.w, H = PANEL.h;
       if (HS.fillStage) HS.fillStage('rgba(4,7,13,.55)'); else { g.fillStyle = 'rgba(4,7,13,.55)'; g.fillRect(0, 0, 640, 360); }
       box(X, Y, W, H, C.cyan, 6);
       if (U.lng === 'trivia') this.drawTrivia(L, U, X, Y, W, H, playingCount(U));
       else this.drawWordle(L.wd, X, Y, W, H);
       T(L.callT != null ? `ship in ${Math.max(0, Math.ceil(L.callT))} s` : `ship vote ${votes}/${standing.length}`, X + W - 10, Y + H - 9, 7, L.callT != null ? C.green : C.muted, { a: 'right' });
+      const hot = HS.over(CLOSE.x, CLOSE.y, CLOSE.w, CLOSE.h);
+      g.fillStyle = hot ? C.red : '#22303f'; g.fillRect(CLOSE.x, CLOSE.y, CLOSE.w, CLOSE.h);
+      T('X', CLOSE.x + CLOSE.w / 2, CLOSE.y + CLOSE.h / 2 + 1, 9, C.white, { a: 'center', b: 'middle', w: 700, f: HS.PIX });
+      T('[Q] or [Esc] close', CLOSE.x - 6, CLOSE.y + 11, 6.5, C.muted, { a: 'right' });
       function playingCount(U) { return Object.keys(U.ps).filter(id => !U.ps[id].down && U.ps[id].lng === 'trivia').length; }
     },
 
     drawTrivia(L, U, X, Y, W, H, playing) {
       const tq = L.tq, reveal = tq.reveal > 0, mine = tq.ans[U.me];
       T('CREW TRIVIA', X + 12, Y + 18, 9, C.cyan, { w: 700 });
-      T(`crew score ${tq.score}   question ${tq.asked + 1}`, X + W - 12, Y + 18, 7, C.muted, { a: 'right' });
-      HS.wrap(tq.q, W - 24, 8.5).slice(0, 3).forEach((line, i) => T(line, X + 12, Y + 40 + i * 12, 8.5, C.white, { w: 600 }));
+      T(`crew score ${tq.score}   question ${tq.asked + 1}`, X + W - 12, Y + 32, 7, C.muted, { a: 'right' });
+      HS.wrap(tq.q, W - 24, 8.5).slice(0, 3).forEach((line, i) => T(line, X + 12, Y + 46 + i * 11, 8.5, C.white, { w: 600 }));
       tq.opts.forEach((o, i) => {
         const y = Y + 82 + i * 26, right = reveal && i === tq.right, wrong = reveal && mine === i && i !== tq.right, picked = mine === i;
         g.fillStyle = right ? HS.rgba(C.green, .3) : wrong ? HS.rgba(C.red, .3) : picked ? HS.rgba(C.cyan, .22) : 'rgba(150,200,255,.08)';
@@ -149,7 +157,7 @@
 
     drawWordle(w, X, Y, W, H) {
       T('MISSION WORDLE', X + 12, Y + 18, 9, C.cyan, { w: 700 });
-      T(`solved ${w.solved}   one word for the whole crew`, X + W - 12, Y + 18, 7, C.muted, { a: 'right' });
+      T(`solved ${w.solved}`, X + 12, Y + 29, 7, C.muted);
       const S2 = 22, gap = 4, gx = X + W / 2 - (5 * S2 + 4 * gap) / 2, gy = Y + 30;
       for (let r = 0; r < TRIES; r++) {
         const guess = w.guesses[r] || (r === w.guesses.length && w.state === 'play' ? w.cur.padEnd(5) : '     '), m = w.guesses[r] ? marks(w.guesses[r], w.w) : null;

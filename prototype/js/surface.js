@@ -141,6 +141,7 @@
       if (U.o2 <= 0 || U.pw <= 0) { U.o2 = Math.max(0, U.o2); U.pw = Math.max(0, U.pw); goDown(); }
     },
 
+    exit() { HS.typing = false; },   // a lounge panel left open must not keep Esc and M switched off elsewhere
     save() { keep(U.me); return HS.pack(U); },
     load(d) { if (!U) return; Object.assign(U, d); use(U.ps[HS.net.me] ? HS.net.me : Object.keys(U.ps)[0]); },
     // joiner prediction (js/net-game.js), as in build.js
@@ -245,6 +246,7 @@
       }
       if (U.noteT > 0) { g.globalAlpha = clamp(U.noteT * 2, 0, 1); tag(U.noteS, 320, HS.Y0 + 72, U.noteCol, 8); g.globalAlpha = 1; }
       if (U.photoT > 0) HS.fillStage(`rgba(255,255,255,${U.photoT * 2})`);
+      HS.typing = !!(HS.lounge && U.lng && !U.down && !U.ext);   // an open lounge panel has this screen's keys: Esc closes it, M is a letter
       if (!U.ext && HS.lounge) HS.lounge.draw(U, atLander(p));
       if (!U.ext && HS.stability) HS.stability.drawHud(U, atLander(p));
       HS.hint(!U.down && !U.ext && HS.stability && HS.stability.hint(U) ? HS.stability.hint(U) : U.lng && HS.lounge && !U.down && !U.ext ? HS.lounge.hint(U) : U.game ? (HS.surfaceGames[U.game.kind] || {}).keys + '   [Q] step away   [TAB] hold for map' : '[E] hold to work   [F] photo   [Q] mission / suit   [TAB] hold for map');
