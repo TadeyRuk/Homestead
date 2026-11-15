@@ -111,7 +111,8 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 export function pilotRule(state: GameState, inputs: Record<string, Input>, now: number, dt: number): void {
   const p = ((state.flight.pilot as Pilot | undefined) ??= createPilot());
   const input = stationInput(state, inputs, "pilot");
-  const watched = stationPace(state, "pilot") >= 1;
+  const pace = stationPace(state, "pilot");
+  const watched = pace >= 1;
   const engine = engineOf(state);
   const heavy = heaviness(state);
   const burn = (engine.burn ?? 0.006) * heavy;
@@ -140,9 +141,10 @@ export function pilotRule(state: GameState, inputs: Record<string, Input>, now: 
     p.speed += -input.dy * (ACCEL / heavy) * dt;
     state.ship.fuel = Math.max(0, state.ship.fuel - burn * dt);
   }
-  p.speed = clamp(p.speed - SPEED_DECAY * dt, 0.5, 1.5);
+  // an unwatched station drifts gently (seat 1's stationPace), so a solo crew can leave it a while
+  p.speed = clamp(p.speed - SPEED_DECAY * pace * dt, 0.5, 1.5);
   // below the band, the flight computer burns to stay on the transfer, which costs fuel
-  if (p.speed < SPEED_LOW) state.ship.fuel = Math.max(0, state.ship.fuel - CORRECTION_BURN * dt);
+  if (p.speed < SPEED_LOW) state.ship.fuel = Math.max(0, state.ship.fuel - CORRECTION_BURN * pace * dt);
 
   if (state.ship.fuel < FUEL_LOW && !p.fuelWarned) {
     p.fuelWarned = true;
@@ -179,8 +181,8 @@ export function pilotRule(state: GameState, inputs: Record<string, Input>, now: 
   // the crew strip shows what the pilot is dealing with
   if (fields.length > 0) state.trouble.pilot = "Debris field";
   else if (state.ship.fuel < FUEL_LOW) state.trouble.pilot = "Fuel low";
-  else if (p.speed < SPEED_LOW) state.trouble.pilot = "Behind the transfer";
-  else if (p.speed > SPEED_HIGH) state.trouble.pilot = "Too fast for debris";
+  else if (p.speed < SPEED_LOW) state.trouble.pilot = "Too slow";
+  else if (p.speed > SPEED_HIGH) state.trouble.pilot = "Too fast";
   else delete state.trouble.pilot;
 }
 
