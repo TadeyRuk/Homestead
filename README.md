@@ -167,7 +167,15 @@ Challenge page: [Space Mission Design Game](https://www.spaceappschallenge.org/2
 
 ## AI use
 
-_To be filled in by the team: where AI tools were used for code, art or data._
+Homestead was made with AI assistance. The concept and design are the team's own, and AI was not used to come up with the idea.
+
+- **Code:** written with Claude Code (Anthropic) as an assistant. Every change went through a pull request that a team member merged, and a person played the game after each merge.
+- **Reviews:** a GitHub Action runs Claude on each pull request to point out bugs and missing tests (`.github/workflows/claude-review.yml`).
+- **Research and docs:** Claude helped find and check the NASA sources above and drafted parts of this README.
+- **Art:** drawn in code and labelled as made with AI. The game will show a "Made with AI assistance" label in a corner of the screen.
+- **No NASA branding:** no AI-made content uses NASA logos, flags or mission identifiers.
+
+The full record, area by area, is in [`docs/ai-use.md`](docs/ai-use.md).
 
 ## Credits and licences
 
