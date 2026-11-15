@@ -190,7 +190,7 @@ Homestead was made with AI assistance. The concept and design are the team's own
 - **Art:** drawn in code and labelled as made with AI. The game will show a "Made with AI assistance" label in a corner of the screen.
 - **No NASA branding:** no AI-made content uses NASA logos, flags or mission identifiers.
 
-The full record, area by area, is in [`docs/ai-use.md`](docs/ai-use.md).
+The full record is in [`docs/ai-use.md`](docs/ai-use.md).
 
 ## Credits and licences
 
