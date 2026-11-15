@@ -47,7 +47,9 @@ export const reportScene: Scene = {
 
     const k = easeInOut(seg(t, 0, 0.45));
     ctx.globalAlpha = k;
-    box(ctx, 18, 14, 604, 326, C.crew, 6);
+    // the card sits below the HUD's corner; its contents move down with it
+    box(ctx, 18, 26, 604, 316, C.crew, 6);
+    ctx.translate(0, 10);
     const head = `MISSION REPORT  /  ${mission.name.toUpperCase()}  /  `;
     text(ctx, head, 36, 34, 8.5, C.crew, { weight: 600 });
     text(ctx, a.outcome, 36 + textWidth(ctx, head, 8.5, { weight: 600 }), 34, 8.5, colour, { weight: 600 });
@@ -58,7 +60,7 @@ export const reportScene: Scene = {
     ctx.moveTo(36, 42);
     ctx.lineTo(604, 42);
     ctx.moveTo(384, 52);
-    ctx.lineTo(384, 314);
+    ctx.lineTo(384, 306);
     ctx.stroke();
     ctx.globalAlpha = 1;
 
@@ -101,7 +103,7 @@ export const reportScene: Scene = {
     }
     if (a.real && t > realAt) {
       ctx.globalAlpha = seg(t, realAt, realAt + 0.4);
-      box(ctx, 34, realY - 4, 340, Math.min(314 - realY, 22 + wrap(ctx, a.real.fact, 318, 7.5).length * 11), C.amber, 4, alpha(C.amber, 0.06));
+      box(ctx, 34, realY - 4, 340, Math.min(312 - realY, 22 + wrap(ctx, a.real.fact, 318, 7.5).length * 11), C.amber, 4, alpha(C.amber, 0.06));
       text(ctx, "WHAT REAL MISSIONS DO", 44, realY + 8, 7, C.amber, { weight: 600 });
       text(ctx, a.real.name, 368 - 4, realY + 8, 7, C.white, { weight: 600, align: "right" });
       wrap(ctx, a.real.fact, 318, 7.5).forEach((ln, i) => text(ctx, ln, 44, realY + 21 + i * 11, 7.5, "#e8dcc8"));
@@ -178,8 +180,8 @@ export const reportScene: Scene = {
     // the footer: when the crew goes back to the lobby, and the seed to share
     const left = Math.ceil(timeLeft(state, view.now));
     if (Number.isFinite(left)) {
-      text(ctx, `Back to the lobby in ${left} s`, 36, 330, 7.5, C.muted);
-      text(ctx, "Same seed, same parts and events: share it to race another crew.", 604, 330, 7, C.dim, { align: "right" });
+      text(ctx, `Back to the lobby in ${left} s`, 36, 326, 7.5, C.muted);
+      text(ctx, "Same seed, same parts and events: share it to race another crew.", 604, 326, 7, C.dim, { align: "right" });
     }
     ctx.restore();
   },
