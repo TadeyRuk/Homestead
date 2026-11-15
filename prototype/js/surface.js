@@ -23,7 +23,7 @@
     HS.log('down', { lost: S.lostDown, hazard: U.inHazard, left: Math.round(U.left) });
     HS.sfx.sad(); HS.shake(5); HS.flash('255,60,60', .4); U.downT = 0;
   }
-  function extraction() { if (U.ext) return; for (const id in U.ps) U.ps[id].lng = null; U.lng = null; keep(U.me); HS.S.carried = Object.values(U.ps).reduce((a, o) => a + o.carried, 0); U.ext = { t: 0 }; HS.S.surfaceLeft = Math.max(0, U.left); HS.log('extract', { uplinked: Math.floor(HS.S.uplinked), buffer: HS.S.buffer, carried: HS.S.carried }); HS.sfx.launch(); }
+  function extraction() { if (U.ext) return; for (const id in U.ps) U.ps[id].lng = null; U.lng = null; keep(U.me); HS.S.carried = Object.values(U.ps).reduce((a, o) => a + o.carried, 0); U.ext = { t: 0 }; HS.S.surfaceLeft = Math.max(0, U.left); HS.log('extract', { uplinked: Math.floor(HS.S.uplinked), buffer: HS.S.buffer, carried: HS.S.carried }); HS.sfx.extract(); }
 
   HS.scenes.surface = {
     enter() {
@@ -120,14 +120,14 @@
       if (!busy && HS.hit('KeyF') && !S.bonusDone) {
         const ok = U.mars ? Math.hypot(p.x - U.devil.x, p.y - U.devil.y) < 46 : Math.hypot(p.x - U.overlook.x, p.y - U.overlook.y) < 18;
         U.photoT = .35; HS.sfx.photo();
-        if (ok) { S.bonusDone = true; note(`Bonus photo taken. Mission Control loves it.`, C.green, 4); HS.sfx.jingle(); HS.log('bonus'); }
+        if (ok) { S.bonusDone = true; note(`Bonus photo taken. Mission Control loves it.`, C.green, 4); HS.sfx.done(); HS.log('bonus'); }
         else note(U.mars ? 'Too far from the dust devil for a photo' : 'Earth is only in view from the marked overlook', C.muted, 2.5);
       }
 
       // lander: drop off data and samples, recharge, uplink
       if (home) {
         if (U.carried > 0) { S.buffer += U.carried; note(`${U.carried} data units handed to the lander`, C.cyan); U.carried = 0; HS.sfx.good(); }
-        if (U.carry === 'sample') { U.carry = null; S.sampleDone = true; note(mi.objectives.sample + ': done', C.green); HS.sfx.jingle(); HS.log('sample'); }
+        if (U.carry === 'sample') { U.carry = null; S.sampleDone = true; note(mi.objectives.sample + ': done', C.green); HS.sfx.done(); HS.log('sample'); }
         const rc = m.power.recharge * (m.power.solar && U.mars ? .43 : 1) * dt; U.o2 = Math.min(100, U.o2 + rc); U.pw = Math.min(100, U.pw + rc);
       } else {
         const k = storm ? 4 : flare ? 6 : 1; U.o2 -= .7 * k * dt; U.pw -= .32 * k * dt;
@@ -162,7 +162,7 @@
         return { id: 'site' + s.x, x: s.x, y: s.y, col: '#78ffe6', time: m.payload.scan, label: `[E] hold to scan  +${got} data`, finish: () => { s.done = true; U.carried += got; S.yieldLost += base - got; if (s.kind === 'rich') S.scansRich++; else S.scansPoor++; HS.sfx.good(); note(`Scan done: +${got} data in your hands. Take it to the lander.`, C.cyan); HS.log('scan', { kind: s.kind, got, base }); } };
       }
       if (!U.sample.off && !U.sample.done && near(U.sample)) return { id: 'sample', x: U.sample.x, y: U.sample.y, col: '#ffb43c', time: 3.2, label: U.mars ? '[E] hold to drill the core' : '[E] hold to collect regolith', finish: () => { U.sample.done = true; U.carry = 'sample'; HS.sfx.pick(); note('Sample in hand. Carry it to the lander.', C.amber); } };
-      if (!U.deploy.off && !U.deploy.done && near(U.deploy)) return { id: 'deploy', x: U.deploy.x, y: U.deploy.y, col: '#e6e8ec', time: 4, label: `[E] hold to deploy the ${mi.objectives.deploy.toLowerCase()}`, finish: () => { U.deploy.done = true; S.deployDone = true; HS.sfx.jingle(); note(mi.objectives.deploy + ': deployed', C.green); HS.log('deploy'); } };
+      if (!U.deploy.off && !U.deploy.done && near(U.deploy)) return { id: 'deploy', x: U.deploy.x, y: U.deploy.y, col: '#e6e8ec', time: 4, label: `[E] hold to deploy the ${mi.objectives.deploy.toLowerCase()}`, finish: () => { U.deploy.done = true; S.deployDone = true; HS.sfx.done(); note(mi.objectives.deploy + ': deployed', C.green); HS.log('deploy'); } };
       for (const k of S.goals) {
         const def = HS.surfaceGames[k], s = def && HS.gameSpot(k, mi.id);
         if (s && !S.tasks[k] && near(s) && !HS.gameFrame.busy(U, k)) return { id: 'game:' + k, game: k, x: s.x, y: s.y, col: HS.CAT[def.slot] || C.cyan, label: `[E] ${def.name.toLowerCase()}` };

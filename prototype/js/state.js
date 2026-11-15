@@ -6,6 +6,9 @@
     const m = HS.MISSIONS[missionId];
     HS.S = {
       seed, mission: m, suit: (HS.S && HS.S.suit) || HS.C.pilot, visor: (HS.S && HS.S.visor) || 'gold', name: (HS.S && HS.S.name) || '',
+      // the mission's credits are its cost cap (S6-11). spent: what the build has cost so far (HS.spend); bought:
+      // part ids paid for at the kiosk. credits stays as cap minus spent for the readouts that still show credits left
+      cap: m.credits, spent: 0, bought: [], paid: {},   // paid: slot -> true when the part mounted there was bought
       credits: m.credits, creditsStart: m.credits,
       slots: { prop: null, power: null, comms: null, payload: null },
       salvaged: [], kioskBuys: 0, buildLeft: 0, emptyAtTimeout: [],
@@ -19,6 +22,19 @@
       log: []
     };
   };
+
+  // what the build has cost: every kiosk purchase at full cost, mounted or not, and every mounted part found on the
+  // campus at half, since found parts are surplus hardware. Salvage costs nothing. Over the cap never blocks launch.
+  HS.spent = () => {
+    const S = HS.S;
+    let n = 0;
+    for (const id of S.bought) n += HS.PARTS[id].cost || 0;
+    // a part keeps a paid flag from the kiosk through hands, the ground and the pad, so a bought part is never
+    // counted twice and a found copy of the same part still counts its half
+    for (const slot of HS.SLOTS) { const id = S.slots[slot]; if (id && !S.paid[slot]) n += (HS.PARTS[id].cost || 0) / 2; }
+    return n;
+  };
+  HS.spend = () => { const S = HS.S; S.spent = HS.spent(); S.credits = S.cap - S.spent; };
 
   HS.log = (type, data = {}) => { HS.S.log.push(Object.assign({ type }, data)); };
 
