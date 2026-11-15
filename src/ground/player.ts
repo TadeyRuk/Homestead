@@ -2,6 +2,7 @@ import type { Input } from "../core/input";
 import type { Point } from "../core/map";
 import type { GameState, Phase } from "../core/state";
 import { PLAYER_SPEED } from "../core/step";
+import { inSurfaceGame } from "../missions/games";
 import { moveWithWalls } from "./geom";
 import { groundOf, type GroundMap } from "./world";
 
@@ -24,7 +25,8 @@ export function collide(state: GameState, inputs: Record<string, Input>, dt: num
     const input = inputs[p.id];
     if (!input || p.down || (input.dx === 0 && input.dy === 0)) continue;
     const from = { x: p.x - input.dx * PLAYER_SPEED * dt, y: p.y - input.dy * PLAYER_SPEED * dt };
-    const to = moveWithWalls(from, p, map.walls, map);
+    // a player in a minigame overlay is frozen: their keys belong to the minigame (S2-19)
+    const to = inSurfaceGame(state, p.id) ? from : moveWithWalls(from, p, map.walls, map);
     p.x = to.x;
     p.y = to.y;
   }
