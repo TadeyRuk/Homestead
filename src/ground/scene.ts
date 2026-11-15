@@ -2,7 +2,8 @@ import type { Scene } from "../core/scene";
 import { KIOSK_REACH, PAD_REACH } from "./carry";
 import { edgeArrow, follow, PX_PER_M, type EdgeArrow } from "./camera";
 import { SLOTS, slotSpot } from "../build/pad";
-import { drawCountdown, drawGround, drawMarker, drawPadSlots, drawParts, drawPlayers, drawShip, drawSuitBars, drawTaskRing, drawHeldData, drawInstrument, paletteFor } from "./draw";
+import { C, MONO } from "../ui/tokens";
+import { drawCountdown, drawGround, drawHeldData, drawInstrument, drawLander, drawMarker, drawPadSlots, drawParts, drawPlayers, drawShip, drawSuitBars, drawTaskRing, paletteFor } from "./draw";
 import { bonusSpot } from "../missions/objectives";
 import { missionList } from "../missions/stats";
 import { shipDescent } from "./extraction";
@@ -29,12 +30,12 @@ export function groundScene(which: Ground): Scene {
 
       ctx.save();
       ctx.translate(-Math.round(cam.x), -Math.round(cam.y));
-      drawGround(ctx, map, paletteFor(which, state.mission));
+      drawGround(ctx, map, paletteFor(which, state.mission), { x: cam.x, y: cam.y, w, h });
       if (which === "campus") {
         if (map.pad) {
           const pad = map.pad;
           // the ring is where E mounts or starts the countdown
-          drawMarker(ctx, pad, "#7ef0d0", "Launch pad", PAD_REACH);
+          drawMarker(ctx, pad, C.crew, "Launch pad", PAD_REACH);
           drawPadSlots(
             ctx,
             SLOTS.map((slot) => ({
@@ -48,7 +49,7 @@ export function groundScene(which: Ground): Scene {
           if (state.launchAt !== null) drawCountdown(ctx, pad, Math.max(0, Math.ceil((state.launchAt - view.now) / 1000)));
         }
         // the ring is where E buys
-        if (map.kiosk) drawMarker(ctx, map.kiosk, "#ff5fae", "Kiosk", KIOSK_REACH);
+        if (map.kiosk) drawMarker(ctx, map.kiosk, C.pink, "Kiosk", KIOSK_REACH);
       } else {
         const sv = state.surface;
         for (const site of map.sites ?? []) {
@@ -66,7 +67,10 @@ export function groundScene(which: Ground): Scene {
           if (!state.objectives.bonus) drawMarker(ctx, bonusSpot(state), "#ffffff", "Photo spot", 12);
         }
         // the ring is the recharge zone
-        if (map.lander) drawMarker(ctx, map.lander, "#7ef0d0", "Lander", LANDER_REACH);
+        if (map.lander) {
+          drawLander(ctx, map.lander);
+          drawMarker(ctx, map.lander, C.crew, "Lander", LANDER_REACH);
+        }
       }
       drawParts(ctx, state.parts);
       drawPlayers(ctx, state.players, view.playerId);
@@ -105,7 +109,8 @@ function drawArrow(ctx: CanvasRenderingContext2D, a: EdgeArrow, name: string): v
   ctx.save();
   ctx.translate(a.x, a.y);
   ctx.rotate(a.angle);
-  ctx.fillStyle = "#7ef0d0";
+  // amber, as in the mocks: the way home stands out from the teal rings
+  ctx.fillStyle = C.amber;
   ctx.strokeStyle = "#0b0e14";
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -120,14 +125,14 @@ function drawArrow(ctx: CanvasRenderingContext2D, a: EdgeArrow, name: string): v
 
   // the label sits upright on the screen side of the arrow, pushed back far enough to clear it
   const text = `${name} ${Math.round(a.distance / PX_PER_M)} m`;
-  ctx.font = "600 12px sans-serif";
+  ctx.font = `600 12px ${MONO}`;
   const half = ctx.measureText(text).width / 2;
   const lx = a.x - Math.cos(a.angle) * (28 + half);
   const ly = a.y - Math.sin(a.angle) * 36 + 4;
   ctx.textAlign = "center";
   ctx.fillStyle = "#0b0e14";
   ctx.fillText(text, lx + 1, ly + 1);
-  ctx.fillStyle = "#7ef0d0";
+  ctx.fillStyle = C.amber;
   ctx.fillText(text, lx, ly);
   ctx.textAlign = "left";
 }
