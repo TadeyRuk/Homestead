@@ -47,9 +47,9 @@
   const COMMON = [
     ['MASS', (p) => p.mass, (v) => `${v} kg`, 'lo', 'counts against the engine\'s lift'],
     ['POWER DRAW', (p) => Math.max(0, -p.power), (v) => `${v} W`, 'lo', 'taken from the power supply'],
-    ['COST', (p) => p.cost || 0, (v) => `${v} CR`, 'lo', 'against the mission budget']
+    ['COST', (p) => p.cost || 0, (v) => `${v} CR`, 'lo', 'what the part costs the mission']
   ];
-  const rowsFor = (part) => STATS[part.slot].concat(part.slot === 'power' ? [COMMON[0]] : COMMON);
+  const rowsFor = (part) => STATS[part.slot].concat(part.slot === 'power' ? [COMMON[0], COMMON[2]] : COMMON);
   const pool = (slot) => Object.keys(HS.PARTS).filter((k) => HS.PARTS[k].slot === slot).map((k) => HS.PARTS[k]);
   // how good a value is among the parts for the same slot, 0 (worst) to 1 (best), and its place
   function standing(row, part) {

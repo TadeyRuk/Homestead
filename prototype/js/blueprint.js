@@ -158,7 +158,7 @@
     // chips: mass, power, the key number
     let cx = bx + 6;
     const chip = (s, c) => { const w = HS.tw(s, 6, { w: 600 }) + 6; if (cx + w > bx + bw - 4) return; g.fillStyle = 'rgba(150,200,255,.12)'; g.fillRect(cx, by + 29, w, 9); T(s, cx + 3, by + 35.5, 6, c, { w: 600 }); cx += w + 3; };
-    chip(`${part.mass} kg`, INK); chip(`${part.power > 0 ? '+' : ''}${part.power} W`, part.power > 0 ? C.green : AMBER); if (slot !== 'power') chip(keyStat(part), col); chip(`${part.cost || 0} CR`, C.pink);
+    chip(`${part.mass} kg`, INK); chip(`${part.power > 0 ? '+' : ''}${part.power} W`, part.power > 0 ? C.green : AMBER); if (slot !== 'power') chip(keyStat(part, slot === 'payload'), col); chip(`${part.cost || 0} CR`, C.pink);
     T('FLIGHT', bx + 6, by + 46, 5.5, DIM, { w: 600 }); T(fit(part.flight, 6, bw - 40), bx + 34, by + 46, 6, INK);
     T('SURFACE', bx + 6, by + 55, 5.5, DIM, { w: 600 }); T(fit(part.surf, 6, bw - 40), bx + 34, by + 55, 6, INK);
     T('REAL', bx + 6, by + 64, 5.5, DIM, { w: 600 }); T(fit(part.real, 6, bw - 40), bx + 34, by + 64, 6, '#f1d9cf');
