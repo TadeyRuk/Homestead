@@ -89,9 +89,9 @@
     if (HS.netDraw) { g.save(); HS.netDraw(); g.restore(); }
     if (HS.guide && PLAY.includes(HS.sceneName)) { g.save(); HS.guide.draw(); g.restore(); }
     if (HS.flashA > 0) HS.fillStage(`rgba(${HS.flashCol},${HS.flashA})`);
-    // watermark required by the Space Apps AI rules, plus the sound state
-    // on the title the film has its own words along the bottom, so the watermark moves to the top edge there
-    const s = 'AI-assisted placeholder art', w = HS.tw(s, 6.5), wy = HS.sceneName === 'title' ? HS.Y0 : HS.Y1 - 11, ex = HS.X1;
+    // the sound state, and on the title only the AI-art watermark the Space Apps rules ask for (README, rule 5);
+    // the title film has its own words along the bottom, so this strip sits on the top edge there
+    const s = HS.sceneName === 'title' ? 'Art made with AI assistance' : '', w = s ? HS.tw(s, 6.5) : 0, wy = HS.sceneName === 'title' ? HS.Y0 : HS.Y1 - 11, ex = HS.X1;
     g.fillStyle = 'rgba(8,14,26,.7)'; g.fillRect(ex - w - (PLAY.includes(HS.sceneName) ? 96 : 44), wy, w + 96, 11);
     HS.T(s, ex - 4, wy + 6, 6.5, '#aab6c2', { a: 'right', b: 'middle' });
     HS.T(HS.muted ? '[M] off' : '[M] snd', ex - w - 41, wy + 6, 6.5, HS.muted ? HS.C.red : '#6f7d8c', { b: 'middle' });
