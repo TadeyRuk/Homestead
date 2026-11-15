@@ -32,3 +32,7 @@ From now on:
 - Screenshot at 1280 x 720 and at 2560 x 1440. Nothing should look soft or stretched.
 - Cover the labels: can you still tell the twelve parts apart?
 - No sprite is smaller than the table above allows.
+
+## Where the rules are applied
+
+- **The title film** (`src/ui/liftoff`) draws into a 1280 x 720 buffer: crew at 24 x 32, the rocket on the pad at 48 x 168, every sprite with a 1 px outline. The hull camera's rocket is ray-traced at that full resolution. Only the far background is coarse: the sky and mesas are 2 x 2 chunks, and the planet below the hull camera is drawn at 640 x 360 and doubled. The buffer is shown with nearest-neighbour scaling, and all text is drawn afterwards at screen resolution, so it stays sharp at any size.
