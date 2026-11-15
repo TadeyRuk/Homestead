@@ -22,7 +22,7 @@ The flight shell already shows a stub for each role. Replace the Engineer and Sc
 **Done when:** both stations show up when Tab-switching in flight.
 
 ### S5-02 Engineer: power bus (hour 6)
-Total load against supply. Switch loads off before the breaker trips. Switching off the engine needs the pilot to agree, and switching off the antenna drops the comms link. The power part sets how close to the limit the bus runs. Logs `breaker_tripped`, `load_shed`.
+Total load against supply. Switch loads off before the breaker trips. Switching off the engine needs the pilot to agree, and switching off the antenna drops the comms link. The power part sets how close to the limit the bus runs. Logs `breaker_tripped`, `load_shed`. Keep the bus in `state.flight.bus`: the engine-off handshake (seat 1) reads `engineOffAsked` there and calls `answerEngineOff` when the Pilot presses E or Q.
 **Done when:** a small solar array trips the breaker much more often than an RTG.
 
 ### S5-03 Engineer: hull weld (hour 8, cut item 2)

@@ -1,5 +1,7 @@
 import { registerScene } from "../core/scene";
 import { registerRule } from "../core/step";
+import { begin, box, text } from "../ui/kit";
+import { engineOffPrompt } from "./handshake";
 import { nextStation, stationFor, stationLabel } from "./stations";
 
 // host: keep every player on one of their own stations, and move them on when they press Tab
@@ -22,5 +24,15 @@ registerScene("flight", {
     const hint = me.roles.length > 1 ? "   Tab: next station" : "";
     ctx.fillText(`${stationLabel(me.station)}${hint}`, 16, 28);
     stationFor(me.station).draw(ctx, state, view);
+    // the engine-off request: in the free strip above the Pilot's field, clear of the ship and the gauges,
+    // and as a reminder on any other station for whoever holds the Pilot role
+    const prompt = engineOffPrompt(state, me.id);
+    if (prompt) {
+      begin(ctx);
+      box(ctx, 214, 6, 202, 17, "#e8b04b", 4);
+      const msg = prompt === "answer" ? "ENGINEER: ENGINE OFF?  [E] YES  [Q] NO" : "ENGINE-OFF REQUEST: [TAB] TO PILOT";
+      text(ctx, msg, 222, 15, 7.5, "#e8b04b", { weight: 600, base: "middle" });
+      ctx.restore();
+    }
   },
 });
