@@ -21,19 +21,19 @@
     "fact": "Dawn's ion engines pushed about as hard as a sheet of paper weighs, but ran for years on very little xenon and visited two worlds."
   },
   {
-    "id": "small-solar", "slot": "power", "name": "Small solar array", "mass": 60, "power": 300, "solar": true, "target": 1,
+    "id": "small-solar", "slot": "power", "name": "Small solar array", "mass": 60, "power": 300, "solar": true, "target": 1, "torque": 0.16,
     "flight": "Drops in solar flares.", "surface": "Slow suit recharge, weak at Mars",
     "real": "InSight lander arrays",
     "fact": "InSight ran on two small solar arrays. Mars dust slowly covered them, and the mission ended in 2022 when power ran out."
   },
   {
-    "id": "large-solar", "slot": "power", "name": "Large solar array", "mass": 150, "power": 600, "solar": true, "target": 1.6,
+    "id": "large-solar", "slot": "power", "name": "Large solar array", "mass": 150, "power": 600, "solar": true, "target": 1.6, "torque": 0.24,
     "flight": "Plenty of power, bigger debris target.", "surface": "Fast recharge, weak at Mars",
     "real": "Juno's arrays",
     "fact": "Juno flies three 9 m solar wings to make about 500 W at Jupiter, where sunlight is 25 times weaker than at Earth. Big arrays are big targets."
   },
   {
-    "id": "rtg", "slot": "power", "name": "Radioisotope generator", "mass": 110, "power": 450, "heat": 0.02, "solar": false, "target": 1,
+    "id": "rtg", "slot": "power", "name": "Radioisotope generator", "mass": 110, "power": 450, "heat": 0.02, "solar": false, "target": 1, "torque": 0.34,
     "flight": "Steady, ignores flares, runs hot.", "surface": "Steady anywhere",
     "real": "MMRTG on Curiosity and Perseverance",
     "fact": "Curiosity and Perseverance carry an MMRTG, so dust storms and night do not stop them. Its waste heat has to be managed all the time."
@@ -82,7 +82,7 @@
     "fact": "Real missions pick the engine first, because it decides how much everything else is allowed to weigh."
   },
   {
-    "id": "salvage-battery", "slot": "power", "name": "Salvage battery", "mass": 90, "power": 150, "salvage": true, "solar": false, "target": 1,
+    "id": "salvage-battery", "slot": "power", "name": "Salvage battery", "mass": 90, "power": 150, "salvage": true, "solar": false, "target": 1, "torque": 0.12,
     "flight": "Barely enough power.", "surface": "Very slow recharge",
     "real": "scrap",
     "fact": "Real missions size the power system with margin. Running a spacecraft at its power limit leaves nothing for a bad day."

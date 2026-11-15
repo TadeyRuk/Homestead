@@ -21,6 +21,8 @@ export interface PartData extends PartInfo {
   solar?: boolean;
   /** power parts: how much wider the ship is to debris, 1 = normal */
   target?: number;
+  /** power parts: drill torque on the surface ice drill (S2-20), the width of its safe pressure band, 0..1 */
+  torque?: number;
   /** what the part does in flight, in a few words, from proposal section 04 */
   flight: string;
   /** what the part does on the surface, in a few words */
