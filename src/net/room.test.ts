@@ -228,4 +228,15 @@ describe("room", () => {
     expect(client.id()).toBe("p2");
     expect(client.members().map((m) => m.id)).toEqual(["host", "p2"]);
   });
+
+  it("does not write to a connection the joiner already closed", () => {
+    const { host, join } = setup();
+    const { hostSide, clientSide } = join("Ben");
+    host.lock();
+    let sentAfterClose = 0;
+    const send = hostSide.send;
+    hostSide.send = (msg) => { sentAfterClose++; send(msg); };
+    clientSide.close();
+    expect(sentAfterClose).toBe(0);
+  });
 });

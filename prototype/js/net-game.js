@@ -148,6 +148,25 @@
     else cur.load(blend(a.d, b.d, (rt - a.t) / (b.t - a.t)));
   }
 
+  // ---------- prediction on joiners: their own avatar moves on their own keys at once, with the host's rules
+  // (each play scene's predict()), instead of waiting a round trip. It drifts back to the host's position when it
+  // stops, and snaps when they disagree by more than SNAP_PX (a wall, a kiosk freeze the joiner did not foresee).
+  const SNAP_PX = 48;
+  let pred = null, predScene = '', lastFrame = 0;
+  function applyPrediction(now) {
+    const dt = lastFrame ? Math.min(.1, (now - lastFrame) / 1000) : 0;
+    lastFrame = now;
+    const cur = HS.scenes[HS.sceneName], live = cur && cur.me && cur.me();
+    const srv = buf.length && cur.mine ? cur.mine(buf[buf.length - 1].d) : null;
+    if (!live || !srv) { pred = null; return; }
+    if (!pred || predScene !== HS.sceneName) { pred = { x: srv.x, y: srv.y, walk: 0, flip: srv.flip, face: srv.face }; predScene = HS.sceneName; }
+    const moved = cur.predict(pred, dt);
+    const off = Math.hypot(pred.x - srv.x, pred.y - srv.y);
+    if (off > SNAP_PX) { pred.x = srv.x; pred.y = srv.y; }
+    else if (!moved) { const k = Math.min(1, dt * 6); pred.x += (srv.x - pred.x) * k; pred.y += (srv.y - pred.y) * k; }
+    live.x = pred.x; live.y = pred.y; live.walk = pred.walk; live.flip = pred.flip; live.face = pred.face;
+  }
+
   function onSnap(data) {
     if (N.mode !== 'client' || !data) return;
     if (N.client.id()) N.me = N.client.id();   // the welcome comes before the first snapshot
@@ -155,19 +174,37 @@
     if (data.roles) { N.roles = data.roles; N.seat = data.seat || {}; N.ask = data.ask || null; }
     if (data.fx) play(data.fx);
     if (data.S) loadS(data.S);
-    if (data.scene !== HS.sceneName && data.scene !== 'lobby') { buf = []; HS.netGo(data.scene); return; }
+    if (data.scene !== HS.sceneName && data.scene !== 'lobby') { buf = []; pred = null; HS.netGo(data.scene); return; }
     if (data.d) buf.push({ t: performance.now(), d: data.d });
   }
 
   // ---------- the frame hooks main.js calls
   const encode = (i) => ({ down: [...i.down].slice(0, 24), hit: [...i.hit].slice(0, 24), mx: Math.round(i.mx), my: Math.round(i.my), mdown: i.mdown, click: i.click });
+  // leaving a run: Esc once shows the question, Esc again within QUIT_MS leaves (the host leaving ends the game)
+  const QUIT_MS = 3000, NO_QUIT = ['lobby', 'title', 'crew'];
+  let quitAt = 0;
+  function quitKey(now) {
+    if (N.mode === 'solo' || NO_QUIT.includes(HS.sceneName) || !HS.local.hit.has('Escape')) return;
+    HS.local.hit.delete('Escape');
+    if (now - quitAt > QUIT_MS) { quitAt = now; HS.sfx.blip(); return; }
+    quitAt = 0;
+    if (N.mode === 'host') N.room.end('The host left the game');
+    else { N.client.leave(); leave('You left the game'); }
+  }
+  HS.netDraw = () => {
+    if (N.mode === 'solo' || !quitAt || performance.now() - quitAt > QUIT_MS) return;
+    HS.prompt(N.mode === 'host' ? 'Leave? This ends the game for everyone.  [ESC] again to leave' : 'Leave the game?  [ESC] again to leave', 320, 180, C.amber);
+  };
+
   HS.netBefore = () => {
+    quitKey(performance.now());
     if (N.mode === 'host') readRemote();
     if (N.mode !== 'client') return;
     const now = performance.now(), i = encode(HS.local), s = JSON.stringify(i);
     // presses go every frame they happen; held keys and the pointer only when they change
     if (s !== N.sent || i.hit.length || i.click) { N.sent = s; N.client.sendInput(i); }
     applySmoothed(now);
+    applyPrediction(now);
     if (now - N.lastPing > PING_MS) { N.lastPing = now; N.client.ping(); }
     N.client.check();
   };

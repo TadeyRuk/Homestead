@@ -129,6 +129,20 @@
 
     save() { keep(U.me); return HS.pack(U); },
     load(d) { if (!U) return; Object.assign(U, d); use(U.ps[HS.net.me] ? HS.net.me : Object.keys(U.ps)[0]); },
+    // joiner prediction (js/net-game.js), as in build.js
+    mine(d) { return d && d.ps && d.ps[HS.net.me] ? d.ps[HS.net.me].p : null; },
+    me() { return U && U.ps[HS.net.me] ? U.p : null; },
+    predict(q, dt) {
+      if (!this.me() || U.done || U.ext || U.down) return false;
+      const a = HS.axis(), len = Math.hypot(a.x, a.y);
+      if (!len) { q.walk = 0; return false; }
+      const storm = U.mars && stormAt(q.x) && !atLander(q);
+      const sp = HS.S.mission.walk * (U.carry ? .9 : 1) * (storm ? .8 : 1) * dt;
+      q.x = clamp(q.x + a.x / len * sp, 6, 634); q.y = clamp(q.y + a.y / len * sp, 10, 394);
+      q.walk += dt; if (a.x) q.flip = a.x < 0;
+      q.face = a.x && Math.abs(a.x) >= Math.abs(a.y) ? 'side' : a.y < 0 ? 'up' : 'down';
+      return true;
+    },
 
     // what holding E would work on right now
     target() {

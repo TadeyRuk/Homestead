@@ -83,14 +83,14 @@ export function createRoomHost(me: Profile, onEnd: (reason: string) => void, clo
     conn.close();
   };
 
-  function left(id: string) {
+  function left(id: string, closed = false) {
     const conn = crew.get(id);
     if (!conn) return;
     crew.delete(id);
     delete inputs[id];
     const reason = `${members.find((m) => m.id === id)?.name ?? "A crew member"} left`;
     // a joiner that went quiet may still be listening; tell it before closing its side
-    refuse(conn, reason);
+    if (!closed) refuse(conn, reason);
     // before the run starts, leaving the lobby only frees the seat; once it starts, the run needs everyone
     if (!locked) {
       members.splice(members.findIndex((m) => m.id === id), 1);
@@ -129,7 +129,7 @@ export function createRoomHost(me: Profile, onEnd: (reason: string) => void, clo
     });
     conn.onClose(() => {
       pending.delete(conn);
-      if (id !== null) left(id);
+      if (id !== null) left(id, true);
     });
   }
 
