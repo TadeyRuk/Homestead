@@ -178,12 +178,13 @@
         T('OR JOIN WITH A CODE', 170, 170, 7.5, C.muted, { w: 600 });
         box(170, 178, 150, 26, '#2a3a52', 4, '#050a14');
         const shown = L.typing + (Math.floor(L.t * 2) % 2 && L.typing.length < 6 ? '_' : '');
-        T(shown || 'type the code', 180, 195, shown ? 13 : 8, shown ? C.white : '#6f7d8c', { w: 600, f: shown ? PIX : undefined, b: 'middle' });
+        T(shown || 'type the code', 180, 192, shown ? 13 : 8, shown ? C.white : '#6f7d8c', { w: 600, b: 'middle' });
         btn('[ENTER] Join', 330, 181, 90, C.cyan, () => L.typing.length === 6 && joinGame(L.typing), L.typing.length === 6 && !N.busy);
         T('Up to four crew. Each of you runs one station in flight.', 170, 228, 7.5, C.muted);
       } else {
         T(N.mode === 'host' ? 'YOUR CODE' : 'JOINED', 170, 104, 7.5, C.muted, { w: 600 });
-        T(N.code, 170, 132, 26, C.white, { w: 700, f: PIX });
+        // the code is read aloud and typed: in the pixel font S/5, B/8 and Z/2 look the same, so it stays in mono
+        T(N.code.split('').join(' '), 170, 132, 24, C.white, { w: 700 });
         T('CREW', 170, 160, 7.5, C.muted, { w: 600 });
         N.crew.forEach((m, i) => {
           const y = 172 + i * 16; g.fillStyle = m.suit; g.fillRect(170, y, 9, 9);
