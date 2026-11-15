@@ -22,8 +22,9 @@ registerRule("flight", (state, _inputs, now) => {
 
 // solar flares dim solar arrays; the engineer's bus feels it as less supply (S4-07)
 registerRule("flight", (state, _inputs, now) => {
-  const bus = state.flight.bus as { supply: number } | undefined;
-  if (bus) bus.supply = busSupply(state, now);
+  // follows the bus's own source, so the part it names and the watts it gets can't disagree
+  const bus = state.flight.bus as { supply: number; source: string } | undefined;
+  if (bus) bus.supply = busSupply(state, now, bus.source);
 });
 
 onEnterPhase("surface", (state, now) => {

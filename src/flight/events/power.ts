@@ -6,9 +6,12 @@ import { activeEvents } from "./director";
 /** share of a solar array's output a full-strength flare knocks out; an RTG doesn't care (S4-07) */
 const FLARE_CUT = 0.6;
 
-/** watts the mounted power part supplies right now: full, or less for a solar array during a flare */
-export function busSupply(state: DeepReadonly<GameState> | GameState, now: number): number {
-  const power = partData(state.ship.slots.power);
+/**
+ * watts a power part supplies right now: full, or less for a solar array during a flare.
+ * `source` is the part feeding the bus; it defaults to the mounted power slot
+ */
+export function busSupply(state: DeepReadonly<GameState> | GameState, now: number, source = state.ship.slots.power): number {
+  const power = partData(source);
   if (!power || power.power <= 0) return 0;
   if (!power.solar) return power.power;
   const flare = activeEvents(state as GameState, now)

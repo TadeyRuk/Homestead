@@ -34,4 +34,24 @@ describe("solar flares and the power supply (S4-07)", () => {
     step(s, {}, 1_000, 0.016);
     expect((s.flight.bus as Bus).supply).toBeLessThan(600);
   });
+
+  it("scales with flare strength, uses the strongest of overlapping flares, and recovers when it ends", () => {
+    const s = flight("small-solar", false);
+    s.flight.events = [{ kind: "flare", at: 0, until: 10_000, strength: 0.5 }];
+    expect(busSupply(s, 1_000)).toBe(Math.round(300 * (1 - 0.6 * 0.5)));
+    s.flight.events = [
+      { kind: "flare", at: 0, until: 10_000, strength: 0.4 },
+      { kind: "flare", at: 0, until: 10_000, strength: 0.9 },
+    ];
+    expect(busSupply(s, 1_000)).toBe(Math.round(300 * (1 - 0.6 * 0.9)));
+    expect(busSupply(s, 10_000)).toBe(300);
+  });
+
+  it("follows the part the bus is fed by, not whatever sits in the power slot", () => {
+    const s = flight("rtg", true);
+    s.flight.bus = createBus(1, { id: "small-solar", watts: 300 }, []);
+    step(s, {}, 1_000, 0.016);
+    expect((s.flight.bus as Bus).supply).toBeLessThan(300);
+    expect(busSupply(s, 1_000, "small-solar")).toBe((s.flight.bus as Bus).supply);
+  });
 });
