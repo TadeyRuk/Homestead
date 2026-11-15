@@ -8,7 +8,8 @@ export function heatFor(slots: Readonly<Ship["slots"]>): HeatSource {
   const power = slots.power ? findPart(slots.power) : undefined;
   const fromPayload = payload?.heat ?? 0;
   const fromPower = power?.heat ?? 0;
-  // the report names the part that ran the core hot, so blame whichever adds more
-  const part = fromPower > fromPayload ? slots.power : (slots.payload ?? slots.power);
+  // the report names the part that ran the core hot, so blame whichever adds more, and never a part
+  // that adds nothing
+  const part = fromPower > fromPayload ? slots.power : (slots.payload ?? (fromPower > 0 ? slots.power : null));
   return { part: part ?? "core", heat: fromPayload + fromPower };
 }

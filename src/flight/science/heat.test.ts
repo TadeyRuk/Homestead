@@ -37,4 +37,8 @@ describe("core heat from the mounted parts", () => {
   it("leaves a ship with nothing mounted cold and blames the core itself", () => {
     expect(heatFor(build({}))).toEqual({ part: "core", heat: 0 });
   });
+
+  it("never blames a power part that adds no heat", () => {
+    expect(heatFor(build({ power: "small-solar" }))).toEqual({ part: "core", heat: 0 });
+  });
 });
