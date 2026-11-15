@@ -6,6 +6,7 @@ import type { GameState, Phase, Player } from "../core/state";
 import { timeLeft } from "../core/timer";
 import { MISSIONS, partData, partName } from "../data/data";
 import { follow } from "../ground/camera";
+import { hazardAt, hazardBanner } from "../ground/hazards";
 import { atLander } from "../ground/suit";
 import { groundFor } from "../ground/world";
 import { SURFACE } from "../ground/surface";
@@ -92,8 +93,14 @@ export function startHud(): void {
   const list = at(el("div", "hs-panel hs-mission", [listTitle, listBody, listHint]), 4, 4, 168);
   let showSuit = false;
 
-  root.append(mask, clock, credits, metersPanel, carry, crew, list);
-  for (const n of [mask, clock, credits, metersPanel, carry, crew, list]) n.hidden = true;
+  // surface: seat 6's hazard warning (S6-10), centred along the top
+  const banner = el("div", "hs-panel hs-banner");
+  banner.style.left = "50%";
+  banner.style.transform = "translateX(-50%)";
+  at(banner, null, 4);
+
+  root.append(mask, clock, credits, metersPanel, carry, crew, list, banner);
+  for (const n of [mask, clock, credits, metersPanel, carry, crew, list, banner]) n.hidden = true;
 
   window.addEventListener("keydown", (e) => {
     if (e.code !== "KeyQ" || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -118,6 +125,7 @@ export function startHud(): void {
     show(crew, live && phase === "flight");
     show(list, live && phase === "surface");
     if (!frame || !live) {
+      show(banner, false);
       show(carry, false);
       return;
     }
@@ -167,6 +175,20 @@ export function startHud(): void {
     if (phase === "campus") drawCampus(state, left, holding);
     else if (phase === "flight") drawFlight(state, me);
     else if (phase === "surface") drawSurface(state, me, left);
+
+    // the hazard is derived from the seed and the clock, so every tab shows the same warning
+    const hazard = phase === "surface" ? hazardAt(state, view.now) : null;
+    const line = hazardBanner(hazard);
+    show(banner, !!line);
+    if (line) {
+      put(banner, line);
+      const tone = hazard?.kind === "flare" && hazard.stage === "warning" ? "warn" : "bad";
+      if (banner.dataset.tone !== tone) {
+        // a new warning or the hazard arriving: one beep
+        sfx.warn();
+        banner.dataset.tone = tone;
+      }
+    } else banner.dataset.tone = "";
   });
 
   function drawCampus(state: DeepReadonly<GameState>, left: number, holding: string | null): void {
