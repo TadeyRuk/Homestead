@@ -152,11 +152,12 @@ describe("power bus", () => {
     expect(powered(bus, "propulsion")).toBe(true);
   });
 
-  it("drops the question when the engineer presses the engine again", () => {
+  it("keeps the question standing until the pilot answers, however often the engineer presses", () => {
     const bus = busOn(300);
     stepBus(bus, press, 0.1, () => {});
     stepBus(bus, press, 0.1, () => {});
-    expect(bus.engineOffAsked).toBe(false);
+    expect(bus.engineOffAsked).toBe(true);
+    expect(powered(bus, "propulsion")).toBe(true);
   });
 
   it("lists only the slots that have a part, so an empty slot has nothing to switch", () => {
