@@ -5,7 +5,7 @@ import { enterPhase } from "../../core/phases";
 import { createState, type Player, type Role } from "../../core/state";
 import { step } from "../../core/step";
 import { openBreach, type Welder } from "../engineer/weld";
-import { LOW_OXYGEN, type Converter } from "./converter";
+import { LOST_OXYGEN, LOW_OXYGEN, type Converter } from "./converter";
 import type { Core } from "./core";
 
 const still: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
@@ -77,5 +77,38 @@ describe("science station in flight", () => {
     s.ship.cabinOxygen = LOW_OXYGEN + 0.001;
     step(s, {}, 100, 1);
     expect(s.log).toContainEqual(expect.objectContaining({ kind: "oxygen_low", part: "large-solar" }));
+  });
+
+  it("loses the crew and ends the run when the cabin runs out of air", () => {
+    const s = flight("camera", crew("sci", ["science"]));
+    s.ship.cabinOxygen = 0.001;
+    step(s, {}, 100, 1);
+    expect(s.phase).toBe("report");
+    expect(s.log).toContainEqual(expect.objectContaining({ kind: "oxygen_low", value: 0, phase: "flight" }));
+    expect(s.log).toContainEqual(expect.objectContaining({ kind: "ship_lost", value: LOST_OXYGEN }));
+  });
+
+  it("names the breach that bled the cabin dry", () => {
+    const s = flight("camera", crew("sci", ["science"]), crew("eng", ["engineer"]));
+    openBreach(s.flight.weld as Welder, 0.2, "large-solar");
+    s.ship.cabinOxygen = 0.001;
+    step(s, {}, 100, 1);
+    expect(s.log).toContainEqual(expect.objectContaining({ kind: "ship_lost", value: LOST_OXYGEN, part: "large-solar" }));
+  });
+
+  it("keeps flying while there is air left", () => {
+    const s = flight("camera", crew("sci", ["science"]));
+    s.ship.cabinOxygen = 0.2;
+    step(s, {}, 100, 1);
+    expect(s.phase).toBe("flight");
+    expect(s.log.some((e) => e.kind === "ship_lost")).toBe(false);
+  });
+
+  it("ends the run once even if the hull gives out on the same tick", () => {
+    const s = flight("camera", crew("sci", ["science"]));
+    s.ship.cabinOxygen = 0.001;
+    s.ship.hull = 0;
+    step(s, {}, 100, 1);
+    expect(s.log.filter((e) => e.kind === "ship_lost")).toHaveLength(1);
   });
 });

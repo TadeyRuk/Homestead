@@ -16,6 +16,11 @@ export const REFILL_SECONDS = 2.5;
 export const JAM_SECONDS = 4;
 /** the cabin warning line; S5-08 carries the warning to the crew strip */
 export const LOW_OXYGEN = 0.25;
+/**
+ * `ship_lost` value when the cabin ran out of air (S5-08), next to seat 1's LOST_HULL 0 and LOST_FUEL 1
+ * in src/flight/flight.register.ts
+ */
+export const LOST_OXYGEN = 2;
 
 // one in ten items is a wrench; the rest split evenly between the three that help
 const DEAL: readonly Item[] = ["ice", "ice", "ice", "co2", "co2", "co2", "food", "food", "food", "wrench"];
