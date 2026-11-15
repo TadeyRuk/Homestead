@@ -9,8 +9,7 @@ import { follow } from "../ground/camera";
 import { hazardAt, hazardBanner } from "../ground/hazards";
 import { atLander } from "../ground/suit";
 import { groundFor } from "../ground/world";
-import { SURFACE } from "../ground/surface";
-import { missionList } from "../missions/stats";
+import { objectiveLines } from "../missions/objectives";
 import { el, meter, onFrame, overlay, type Frame } from "./overlay";
 import { sfx } from "./sfx";
 import { ROLE_COLOUR, ROLE_NAME, SLOT_COLOUR, SLOT_NAME } from "./tokens";
@@ -230,18 +229,21 @@ export function startHud(): void {
   }
 
   function drawSurface(state: DeepReadonly<GameState>, me: DeepReadonly<Player> | undefined, left: number): void {
-    const l = missionList(state.mission);
     const sv = state.surface;
     if (!showSuit) {
       put(listTitle, "Mission Control");
-      const rich = SURFACE.sites.filter((s) => s.rich && sv.scanned.includes(s.id)).length;
-      const rows: [string, string, boolean][] = [
-        [`Scan rich sites`, `${Math.min(rich, l.scans)} / ${l.scans}`, !!state.objectives.scan],
-        [l.sampleLabel, state.objectives.sample ? "done" : sv.sampleDrilled ? "carry it home" : "", !!state.objectives.sample],
-        [l.instrumentLabel, state.objectives.deploy ? "done" : "", !!state.objectives.deploy],
-        [`Uplink data`, `${Math.floor(state.data.uplinked)} / ${state.data.target}`, state.data.uplinked >= state.data.target],
-        [`Bonus: ${l.bonusLabel.toLowerCase()}`, state.objectives.bonus ? "done" : "", !!state.objectives.bonus],
-      ];
+      // seat 2's list (S2-18): this run's drawn objectives, then the uplink and the bonus
+      const rows = objectiveLines(state).map((line): [string, string, boolean] => {
+        const value =
+          line.need > 1
+            ? `${line.count} / ${line.need}`
+            : line.done
+              ? "done"
+              : line.id === "sample" && sv.sampleDrilled
+                ? "carry it home"
+                : "";
+        return [line.id === "uplink" ? "Uplink data" : line.label, value, line.done];
+      });
       renderRows(rows);
       const held = me ? Math.floor(sv.held[me.id] ?? 0) : 0;
       put(listHint, `${held > 0 ? `You hold ${held} data units: bring them to the lander. ` : ""}Q: suit`);

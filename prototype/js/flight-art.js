@@ -363,6 +363,8 @@
     }
   }
   function engine(x, id, info) {
+    // no engine mounted yet (only the build screen's blueprint asks for this)
+    if (!id) { Object.assign(info, { kind: 'none', exitY: 112, exitHW: 10 }); return; }
     if (id === 'ion') {
       // no bell: a wide gridded thruster face that glows blue
       for (let y = 112; y < 121; y++) bands(x, CX - 15, y, 30, STEEL);
@@ -421,6 +423,16 @@
     }, OUT);
     return Object.assign(info, { c });
   }
+
+  // the same ship for the build screen's blueprint, cached per part set; ids may be '' for an empty slot
+  const shipCache = new Map();
+  FA.ship = (ids) => {
+    const k = [ids.prop, ids.power, ids.comms, ids.payload].join('|');
+    let s = shipCache.get(k);
+    if (!s) { s = buildShip(ids); shipCache.set(k, s); }
+    return s;
+  };
+  FA.SHIP_GEOM = { SW, SH, CX, BL, BR };
 
   // the exhaust: four flicker frames, short at idle, long under thrust; the ion drive is a blue glow
   const FLAME = {

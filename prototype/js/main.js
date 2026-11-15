@@ -15,11 +15,20 @@
   HS.netGo = (name) => { next = null; goTo(name); };
   const enter = (name) => { if (cur && cur.exit) cur.exit(); cur = HS.scenes[name]; HS.sceneName = name; HS.local.hit.clear(); HS.local.click = false; if (cur.enter) cur.enter(); };
 
+  // the simulation always advances in fixed steps of STEP seconds, whatever the display's frame rate, so the same
+  // seed and the same inputs give the same run on a 60 Hz and a 144 Hz screen. 240 steps a second keeps motion
+  // smooth on fast displays. After a long stall the backlog is dropped instead of being replayed all at once.
+  const STEP = 1 / 240, MAX_BACKLOG = .25;
+  let acc = 0;
   function frame(now) {
-    let dt = Math.min(.05, (now - last) / 1000) || 0; last = now;
+    const dt = Math.min(MAX_BACKLOG, (now - last) / 1000) || 0; last = now;
+    acc = Math.min(acc + dt * HS.speed, MAX_BACKLOG * HS.speed);
+    let n = 0;
     try {
       if (HS.netBefore) HS.netBefore();
-      for (let i = 0; i < HS.speed; i++) { step(dt); if (i === 0 && HS.speed > 1) HS.endFrame(); }   // key presses count once per frame
+      // key presses count once: they are cleared after the first step that sees them, and kept for the next
+      // frame if this frame ran no step at all. Online, the other players' presses are cleared there too.
+      while (acc >= STEP) { step(STEP); acc -= STEP; if (n++ === 0) { HS.endFrame(); if (HS.clearRemotePresses) HS.clearRemotePresses(); } }
       if (HS.netAfter) HS.netAfter();
       draw();
       // spend a few spare milliseconds a frame building the launch campus ahead of time (js/campus.js)
@@ -27,9 +36,9 @@
     } catch (e) {
       // one bad frame must not stop the loop; online, the host ends the game so nobody sits on a frozen screen
       console.error('frame failed', e);
+      HS.endFrame();
       if (HS.net && HS.net.mode === 'host') HS.net.room.end('The host hit an error');
     } finally {
-      HS.endFrame();
       requestAnimationFrame(frame);
     }
   }

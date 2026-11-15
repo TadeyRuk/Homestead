@@ -3,6 +3,7 @@ import type { DeepReadonly } from "../core/scene";
 import type { GameEvent, GameState, Slot } from "../core/state";
 import { MISSIONS, partData, partName } from "../data/data";
 import { LOST_FUEL } from "../flight/flight.register";
+import { surfaceGame } from "../missions/games";
 import { scanStats, uplinkRate } from "../missions/stats";
 
 /**
@@ -83,10 +84,12 @@ export function scoreRows(state: State): ScoreRow[] {
   const { standing, crew } = crewStanding(state);
   const build = buildTimeLeft(state.log);
   const extra = Math.max(0, up - target);
-  const done = ["scan", "sample", "deploy"].filter((k) => state.objectives[k]).length;
+  // this run's list (seat 2, S2-18): every objective but the uplink, which scores above, and the bonus
+  const goals = Object.keys(state.objectives).filter((k) => k !== "uplink" && k !== "bonus");
+  const done = goals.filter((k) => state.objectives[k]).length;
   return [
     { label: "Data uplinked", detail: `${Math.floor(up)} / ${state.data.target}`, points: round(600 * Math.min(1, up / target) + Math.min(100, extra * 2)) },
-    { label: "Objectives", detail: `${done} / 3${state.objectives.bonus ? " + bonus" : ""}`, points: done * 30 + (state.objectives.bonus ? 40 : 0) },
+    { label: "Objectives", detail: `${done} / ${goals.length || 3}${state.objectives.bonus ? " + bonus" : ""}`, points: done * 30 + (state.objectives.bonus ? 40 : 0) },
     { label: "Crew standing", detail: reachedSurface ? `${standing} / ${crew}` : "-", points: reachedSurface && crew > 0 ? round((150 * standing) / crew) : 0 },
     { label: "Credits unspent", detail: `${state.credits}`, points: state.credits * 2 },
     { label: "Build time left", detail: `${Math.floor(build)} s`, points: round(build / 2) },
@@ -226,7 +229,7 @@ function success(state: State): Pick<Report, "headline" | "chain" | "blame"> {
 /** the lines that didn't make the main chain but are worth a mention */
 function alsoLines(state: State): string[] {
   const log = state.log;
-  const out: string[] = [];
+  const out: string[] = gameLines(state).slice(0, 2);
   const trips = count(log, "breaker_tripped");
   if (trips > 0) out.push(`The breaker tripped ${plural(trips, "time")} on the ${partName(state.ship.slots.power).toLowerCase()}.`);
   const lost = count(log, "link_lost");
@@ -234,7 +237,25 @@ function alsoLines(state: State): string[] {
   const down = count(log, "player_down");
   if (down > 0 && state.arrival) out.push(`${plural(down, "crew member")} went down on the surface.`);
   if (state.objectives.bonus) out.push(`Bonus: ${MISSIONS[state.mission].bonus.toLowerCase()}. Mission Control loved it.`);
-  return out.slice(0, 2);
+  return out.slice(0, 3);
+}
+
+/** surface minigames (seat 2, S2-19): how often each failed and on which part, and a real-missions line */
+export function gameLines(state: State): string[] {
+  const fails: string[] = [];
+  const facts: string[] = [];
+  for (const kind of Object.keys(state.objectives)) {
+    const def = surfaceGame(kind);
+    if (!def) continue;
+    const failed = state.log.filter((e) => e.kind === "task_failed" && e.objective === kind);
+    if (failed.length > 0) {
+      const part = failed[failed.length - 1].part;
+      const on = part ? ` with the ${partName(part).toLowerCase()}` : "";
+      fails.push(`The ${def.name.toLowerCase()} failed ${plural(failed.length, "time")}${on}${state.objectives[kind] ? " before it worked" : ""}.`);
+    }
+    if (state.objectives[kind] && def.fact) facts.push(def.fact(state.mission));
+  }
+  return [...fails, ...facts];
 }
 
 export function analyze(state: State): Report {

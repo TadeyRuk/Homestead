@@ -3,7 +3,7 @@
   const HS = window.HS, g = HS.g;
   const { T, box, bar, tag, C, CAT, PIX, clamp, px, fmt } = HS;
   const SPEED = 58, PAD = HS.PAD, KIOSK = HS.KIOSK;
-  let B = null;
+  let B = null, sheetOpen = false;   // the [B] sheet is this screen's own view, never sent
 
   const inSolid = (x, y) => HS.CAMPUS_SOLID.some(([X, Y, w, h]) => x > X - 3 && x < X + w + 3 && y > Y - 2 && y < Y + h + 4);
   const near = (a, bx, by, d) => Math.hypot(a.x - bx, a.y - by) < d;
@@ -47,6 +47,7 @@
 
   HS.scenes.build = {
     enter() {
+      sheetOpen = false;
       const S = HS.S, r = HS.R(S.seed * 7 + 3);
       const spots = HS.shuffle(HS.CAMPUS_SPAWNS.filter(([x, y]) => !inSolid(x, y)), r);
       // one part for each slot is always out there; five more are random
@@ -56,7 +57,7 @@
       B = {
         t: 0, left: HS.BUILD_TIME, p: null, ps: {}, me: 'host', done: false,
         parts: picked.concat(rest).map((id, i) => ({ id, x: spots[i][0], y: spots[i][1], seen: false })),
-        kr: HS.R(S.seed * 13 + 101), roll: null, count: null, fx: new HS.Parts(), toast: '', toastT: 0, toastCol: C.cyan, mountFlash: 0, lastTick: 0, map: false
+        kr: HS.R(S.seed * 13 + 101), roll: null, count: null, fx: new HS.Parts(), toast: '', toastT: 0, toastCol: C.cyan, mountFlash: 0, lastTick: 0
       };
       // one avatar per crew member, side by side at the pad; B.p is whoever the update is moving right now
       HS.ids().forEach((id, i) => { B.ps[id] = { x: 520 + i * 14, y: 188, walk: 0, flip: false, face: 'down', carry: null }; });
@@ -88,7 +89,7 @@
       const p = B.p, S = HS.S;
       // move
       const a = HS.axis(), len = Math.hypot(a.x, a.y);
-      if (len && !(B.roll && B.roll.who === B.me)) {
+      if (len && !(B.roll && B.roll.who === B.me) && !p.inspect) {
         const sp = SPEED * (p.carry ? .92 : 1) * dt, nx = clamp(p.x + a.x / len * sp, 6, 634), ny = clamp(p.y + a.y / len * sp, 10, 394);
         if (!inSolid(nx, p.y)) p.x = nx; if (!inSolid(p.x, ny)) p.y = ny;
         p.walk += dt; if (a.x) p.flip = a.x < 0;
@@ -98,10 +99,21 @@
       // camera sees parts
       const cam = HS.camera(p);
       for (const q of B.parts) if (q.x > cam.x && q.x < cam.x + HS.VW && q.y > cam.y && q.y < cam.y + HS.VH) q.seen = true;
-      if (HS.hit('KeyE', 'Space')) interact();
-      if (HS.hit('KeyQ') && p.carry) { dropAt(p.carry, p.x + (p.flip ? -8 : 8), p.y + 2); p.carry = null; HS.sfx.drop(); }
+      // [I] inspects the part in your hands, or the nearest one at your feet; you stand still while it is open
+      if (HS.hit('KeyI')) {
+        if (p.inspect) { p.inspect = null; HS.sfx.blip(); }
+        else {
+          let id = p.carry, bd = 15;
+          if (!id) for (const q of B.parts) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd) { bd = d; id = q.id; } }
+          if (id) { p.inspect = { id, t: 0 }; HS.sfx.scan(); }
+          else { toast('Carry a part, or stand by one, to inspect it', C.muted); HS.sfx.buzz(); }
+        }
+      }
+      if (p.inspect) p.inspect.t += dt;
+      if (HS.hit('KeyE', 'Space')) { p.inspect = null; interact(); }
+      if (HS.hit('KeyQ') && p.carry) { p.inspect = null; dropAt(p.carry, p.x + (p.flip ? -8 : 8), p.y + 2); p.carry = null; HS.sfx.drop(); }
       // launch countdown: anyone at the pad can start it, anyone can cancel it
-      if (HS.hit('KeyL')) {
+      if (HS.hit('KeyL') && !p.inspect) {
         if (B.count != null) { B.count = null; toast('Launch cancelled', C.amber); HS.sfx.drop(); }
         else if (near(p, PAD.mx, PAD.my, 30)) { B.count = 5; HS.sfx.warn(); }
         else { toast('Stand at the launch pad to start the countdown', C.muted); HS.sfx.buzz(); }
@@ -151,9 +163,11 @@
       HS.chip('crew', 8, 30, carry ? 'carrying ' + carry.name : 'hands empty');
       const low = B.left < 30;
       HS.topBox('BUILD TIME  ' + fmt(B.left), `slots ${HS.model().mounted} of 4`, low && Math.floor(t * 4) % 2 ? C.red : low ? C.amber : C.white, 320);
-      this.meters(carry || (nearest && nd < 15 ? HS.PARTS[nearest.id] : null), carry ? p.carry : nearest && nd < 15 ? nearest.id : null);
-      const info = carry || (nearest ? HS.PARTS[nearest.id] : null);
-      if (info) this.card(info, carry ? 'IN YOUR HANDS' : 'NEARBY');
+      // the rocket as it stands (or would, with the part in your hands or at your feet), as a blueprint
+      const pvId = carry ? p.carry : nearest && nd < 15 ? nearest.id : null, pv = pvId ? HS.PARTS[pvId] : null;
+      HS.blueprint.panel(pv, pvId);
+      const infoId = carry ? p.carry : nearest ? nearest.id : null;
+      if (infoId) this.card(infoId, carry ? 'IN YOUR HANDS' : 'NEARBY');
 
       // prompt for the action E would do right now
       let pr = null, pc = C.cyan;
@@ -166,11 +180,11 @@
       if (pr) HS.prompt(pr, 320, 300, pc);
       if (atPad && B.count == null) {
         const m = HS.model();
-        if (m.overweight) tag(`TOO HEAVY: ${m.mass} kg on a ${m.lift} kg engine. It will not reach orbit.`, 320, 60, C.red, 8.5);
-        else if (m.supply && m.draw > m.supply) tag(`POWER SHORT: ${m.draw} W needed, ${m.supply} W supplied. Breakers will trip.`, 320, 60, C.amber, 8.5);
+        if (m.overweight) tag(`TOO HEAVY: ${m.mass} kg on a ${m.lift} kg engine. It will not reach orbit.`, 285, 60, C.red, 8.5);
+        else if (m.supply && m.draw > m.supply) tag(`POWER SHORT: ${m.draw} W needed, ${m.supply} W supplied. Breakers will trip.`, 285, 60, C.amber, 8.5);
       }
       if (B.toastT > 0) { g.globalAlpha = clamp(B.toastT * 2, 0, 1); tag(B.toast, 320, 322, B.toastCol, 8.5); g.globalAlpha = 1; }
-      HS.hint('[E] use   [Q] drop   [L] launch   [TAB] hold for map');
+      HS.hint('[E] use   [Q] drop   [L] launch   [I] inspect   [B] blueprint   [TAB] map');
 
       // kiosk roll
       if (B.roll) {
@@ -181,7 +195,12 @@
         T(name, 320, 160, 18, done ? C.cyan : C.white, { w: 700, a: 'center', f: PIX });
         T(done ? `it is in your hands  (${HS.SLOT_NAME[res.slot].toLowerCase()} slot)` : 'rolling...', 320, 182, 8, C.muted, { a: 'center' });
       }
-      if (HS.local.down.has('Tab')) this.map(cam);   // each screen holds its own map
+      // the map, the blueprint sheet and the inspector are each screen's own view
+      const mapHeld = HS.local.down.has('Tab');
+      if (HS.local.hit.has('KeyB')) sheetOpen = !sheetOpen;
+      if (sheetOpen && !mapHeld) HS.blueprint.sheet(t, pv, pvId);
+      if (p.inspect && !mapHeld) HS.inspect.panel(p.inspect.id, p.inspect.t, { action: pr || (p.carry === p.inspect.id ? 'carry it to the pad to mount it   [Q] drop it' : ''), left: B.left });
+      if (mapHeld) this.map(cam);
       if (B.count != null) {
         g.fillStyle = 'rgba(4,7,13,.5)'; g.fillRect(0, 0, 640, 360);
         const n = Math.ceil(B.count), pop = 1 + (B.count % 1) * .25;
@@ -191,39 +210,22 @@
       if (B.mountFlash > 0) { g.fillStyle = `rgba(120,255,220,${B.mountFlash * .25})`; g.fillRect(0, 0, 640, 360); }
     },
 
-    // six meters. pv previews what the build becomes if this part is mounted.
-    meters(pv, pvId) {
-      const S = HS.S, m = HS.model(), n = pv ? HS.model({ [pv.slot]: pvId }) : null, x = 462, y = 30;
-      box(x, y, 172, 104, C.cyan, 5); T('LAUNCH PAD', x + 8, y + 13, 8, C.cyan, { w: 600 });
-      if (n) T('if mounted', x + 164, y + 13, 7, C.amber, { a: 'right', w: 600 });
-      const tr = (mm) => mm.prop ? Math.round(S.mission.transit * mm.prop.transit) : 0;
-      const rows = [
-        ['MASS', (mm) => mm.lift ? mm.mass / mm.lift : mm.mass / 900, (mm) => mm.lift ? `${mm.mass}/${mm.lift} kg` : `${mm.mass} kg`, (mm) => mm.overweight ? C.red : mm.massFrac > .8 ? C.amber : C.cyan],
-        ['POWER', (mm) => mm.supply ? mm.draw / mm.supply : 0, (mm) => mm.supply ? `${mm.draw}/${mm.supply} W` : 'no source', (mm) => mm.supply && mm.draw > mm.supply ? C.red : mm.loadFrac > .85 ? C.amber : C.eng],
-        ['BUDGET', () => S.credits / S.creditsStart, () => `${S.credits} CR`, () => C.pink],
-        ['DATA', (mm) => mm.payload ? mm.payload.rich / 19 : 0, (mm) => mm.payload ? `${mm.payload.rich} per rich scan` : 'none', () => C.amber],
-        ['COMMS', (mm) => mm.comms ? mm.comms.rate / .95 : 0, (mm) => mm.comms ? `${mm.comms.rate.toFixed(2)} units/s` : 'none', () => C.comms],
-        ['TIME', (mm) => mm.prop ? 1 - (tr(mm) / (S.mission.transit * 1.3)) + .2 : 0, (mm) => mm.prop ? `flight ${fmt(tr(mm))}` : '-', () => C.green]
-      ];
-      rows.forEach(([name, f, v, col], i) => {
-        const yy = y + 21 + i * 13.5, mm = n || m, changed = n && v(n) !== v(m);
-        T(name, x + 8, yy + 7, 7, C.muted, { w: 600 }); bar(x + 46, yy + 1, 50, 6, f(mm), col(mm));
-        if (changed) { g.strokeStyle = C.amber; g.lineWidth = 1; g.strokeRect(x + 45.5, yy + .5, 51, 7); }
-        T(v(mm), x + 164, yy + 7, 7, changed ? C.amber : C.white, { a: 'right', w: changed ? 600 : 500 });
-      });
-    },
-
-    card(part, head) {
-      const x = 8, y = 232, w = 240, col = part.slot === 'comms' ? C.cyan : CAT[part.slot];
-      box(x, y, w, 80, col, 5);
-      T(head + '  /  ' + HS.SLOT_NAME[part.slot], x + 8, y + 12, 7, col, { w: 600 });
-      T(part.name, x + 8, y + 27, 12, C.white, { w: 700, f: PIX });
-      T(`${part.mass} kg`, x + w - 8, y + 12, 7.5, C.white, { a: 'right' });
-      T(`${part.power > 0 ? '+' : ''}${part.power} W`, x + w - 8, y + 26, 7.5, part.power > 0 ? C.green : C.amber, { a: 'right', w: 600 });
-      T('FLIGHT', x + 8, y + 41, 6.5, C.muted, { w: 600 }); T(part.flight, x + 46, y + 41, 7, C.white);
-      T('SURFACE', x + 8, y + 53, 6.5, C.muted, { w: 600 }); T(part.surf, x + 46, y + 53, 7, C.white);
-      T('REAL', x + 8, y + 65, 6.5, C.muted, { w: 600 }); T(part.real, x + 46, y + 65, 7, '#f1d9cf');
-      T('uses the ' + HS.NAME[HS.SLOT_ROLE[part.slot]].toLowerCase() + '\'s station in flight', x + 8, y + 75, 6, C.muted);
+    // the part you hold or stand by: the part itself, big, with its numbers as chips (the full specs are on [B])
+    card(id, head) {
+      const part = HS.PARTS[id], x = 8, y = 220, w = 236, h = 68, col = part.slot === 'comms' ? C.cyan : CAT[part.slot];
+      box(x, y, w, h, col, 5);
+      g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(x + 6, y + 6, 44, 44);
+      g.fillStyle = col; g.fillRect(x + 6, y + 48, 44, 2);
+      const s = HS.partIcon(id); g.imageSmoothingEnabled = false; g.drawImage(s, x + 11, y + 10, s.width, s.height);
+      T(head, x + 56, y + 12, 6.5, C.muted, { w: 600 }); T(HS.SLOT_NAME[part.slot], x + w - 7, y + 12, 6.5, col, { w: 600, a: 'right' });
+      T(part.name, x + 56, y + 26, 11, C.white, { w: 700, f: PIX });
+      let cx = x + 56;
+      const chip = (s2, c) => { const cw = HS.tw(s2, 6.5, { w: 600 }) + 8; g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(cx, y + 31, cw, 10); T(s2, cx + 4, y + 38.5, 6.5, c, { w: 600 }); cx += cw + 3; };
+      chip(`${part.mass} kg`, C.white); chip(`${part.power > 0 ? '+' : ''}${part.power} W`, part.power > 0 ? C.green : C.amber);
+      if (part.slot !== 'power') chip(HS.blueprint.keyStat(part), col);
+      T('FLIGHT', x + 8, y + 57, 5.5, C.muted, { w: 600 }); T(part.flight, x + 40, y + 57, 6.5, C.white);
+      T('SURFACE', x + 8, y + 65, 5.5, C.muted, { w: 600 }); T(part.surf, x + 40, y + 65, 6.5, C.white);
+      T('[I] inspect', x + w - 7, y + 65, 6.5, C.cyan, { w: 600, a: 'right' });
     },
 
     map(cam) {

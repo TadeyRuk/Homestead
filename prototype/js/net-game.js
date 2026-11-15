@@ -89,6 +89,8 @@
       else { i.down.clear(); i.hit.clear(); i.click = false; }
     }
   };
+  // the main loop runs several fixed steps a frame; a remote press counts in the first one only
+  HS.clearRemotePresses = () => { for (const id in remote) { remote[id].hit.clear(); remote[id].click = false; } };
   HS.inputOf = (id) => id === N.me ? HS.local : (remote[id] = remote[id] || blank());
   // run fn with HS.key, HS.hit, HS.axis and HS.In reading crew member id's input
   HS.as = (id, fn) => { const keep = HS.In; HS.In = HS.inputOf(id); try { return fn(); } finally { HS.In = keep; } };

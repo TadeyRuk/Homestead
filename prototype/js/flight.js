@@ -25,14 +25,16 @@
     HS.sfx.boom(); HS.shake(8); HS.flash('255,60,60', .6);
   }
   function hitShip(rock) {
-    const S = HS.S, dmg = 5 + rock.s * .9;
+    const S = HS.S, dmg = (5 + rock.s * .9) / HS.EVENT_K;
     S.hull = Math.max(0, S.hull - dmg); S.hits++; if (!rock.warned) S.hitsNoWarn++;
-    const sec = (Math.random() * 5) | 0; F.sections[sec] = Math.max(0, F.sections[sec] - 34);
+    // which section is hit and the crack's shape come from the run's own damage stream, so the same seed
+    // and the same hits give the same repair job (F.dr is separate from F.r, so hits never shift the debris)
+    const sec = (F.dr() * 5) | 0; F.sections[sec] = Math.max(0, F.sections[sec] - 34);
     F.speed -= .15; F.fx.burst(F.x, 60, 22, 34, .7, ['#ffd27a', '#ff6a3c', '#ffffff'], 1);
     HS.sfx.hitHull(); HS.shake(7); HS.flash('255,60,60', .35);
     HS.log('hit', { warned: rock.warned, link: Math.round(linkPct()), hull: Math.round(S.hull) });
     if (!F.breach) {
-      const r = Math.random, pts = [[364, 120]]; let x = 364, y = 120;
+      const r = F.dr, pts = [[364, 120]]; let x = 364, y = 120;
       while (x < 580) { x += 22 + r() * 16; y = clamp(y + (r() - .35) * 44, 96, 300); pts.push([Math.min(x, 596), y]); }
       let len = 0; for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
       F.breach = { pts, len, prog: 0, sealant: 100, sec, t: 0 };
@@ -62,7 +64,7 @@
     enter() {
       const S = HS.S, m = HS.model(), heat = m.payload.heat + m.power.heat;
       F = {
-        t: 0, m, r: HS.R(S.seed * 31 + 7), prog: 0, D: S.mission.transit * m.prop.transit, st: 0, seats: {}, fx: new HS.Parts(), fx2: [], over: null, done: false,
+        t: 0, m, r: HS.R(S.seed * 31 + 7), dr: HS.R(S.seed * 41 + 5), prog: 0, D: S.mission.transit * m.prop.transit, st: 0, seats: {}, fx: new HS.Parts(), fx2: [], over: null, done: false,
         x: 80, vx: 0, pulse: 0, pulseDir: 0, speed: 7.3, target: 7.8, thrust: 0, rocks: [], pending: [], sections: [100, 100, 100, 100, 100], breach: null,
         loads: [
           { key: 'comms', name: m.comms.name, w: -m.comms.power, on: true }, { key: 'payload', name: m.payload.name, w: -m.payload.power, on: true },
@@ -129,13 +131,13 @@
         else if (prop.steer === 'slow') F.vx = clamp(F.vx + steer * prop.turn * 1.6 * agility * dt, -prop.turn * agility, prop.turn * agility) * (steer ? 1 : Math.max(0, 1 - dt * 1.2));
         else { // solid motor: fixed pulses
           F.pulse -= dt;
-          if (steer && F.pulse <= -.2) { F.pulse = .14; F.pulseDir = steer; S.fuel -= prop.burn * .09; HS.sfx.tick(); }
+          if (steer && F.pulse <= -.2) { F.pulse = .14; F.pulseDir = steer; S.fuel -= prop.burn * .09 / HS.EVENT_K; HS.sfx.tick(); }
           F.vx = F.pulse > 0 ? F.pulseDir * prop.turn * 1.9 * agility : 0;
         }
         const th = (HS.key('KeyW', 'ArrowUp') ? 1 : 0) - (HS.key('KeyS', 'ArrowDown') ? 1 : 0);
         F.thrust = th;
-        if (th) { F.speed = clamp(F.speed + th * prop.accel * dt, 5, 10); S.fuel -= prop.burn * (1 + heavy * .5) * dt; }
-        if (prop.steer !== 'pulse' && steer) S.fuel -= prop.burn * .12 * dt;
+        if (th) { F.speed = clamp(F.speed + th * prop.accel * dt, 5, 10); S.fuel -= prop.burn * (1 + heavy * .5) * dt / HS.EVENT_K; }
+        if (prop.steer !== 'pulse' && steer) S.fuel -= prop.burn * .12 * dt / HS.EVENT_K;
       }); else { F.thrust = 0; F.vx = prop.steer === 'slow' ? F.vx * Math.max(0, 1 - dt * 1.2) : 0; }
       F.x = clamp(F.x + F.vx * dt, 12, 148); if (F.x <= 12 || F.x >= 148) F.vx = 0;
       if (F.thrust || F.t < 1) F.fx.add(F.x + (Math.random() - .5) * 2, 70, (Math.random() - .5) * 6, 26 + Math.random() * 20, .4, Math.random() < .5 ? '#ff9a3c' : '#fff0c8', 1);

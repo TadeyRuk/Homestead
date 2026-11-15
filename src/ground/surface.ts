@@ -77,6 +77,11 @@ export type SurfaceMap = SurfaceGround & {
   bonusSpots: Point[];
   rocks: Rect[];
   crater: Circle;
+  /**
+   * Where each surface minigame (S2-19) is played, per mission, by its kind. A minigame whose kind
+   * has no spot here can never be opened, so seats 4 and 5 agree a kind name with seat 2.
+   */
+  gameSpots: Record<string, Record<MissionId, Point>>;
 };
 
 export const SURFACE: SurfaceMap = {
@@ -124,4 +129,22 @@ export const SURFACE: SurfaceMap = {
   ],
   rocks: ROCKS,
   crater: CRATER,
+  gameSpots: {
+    // S2-20: Mars has water ice just under the soil on the open plain north of the ridge;
+    // the Moon's is in the permanently shadowed side of the crater, away from the regolith on its floor
+    "ice-drill": {
+      mars: { x: 600, y: 470 },
+      moon: { x: CRATER.x - 70, y: CRATER.y - 120 },
+    },
+    // S4-11: open sky clear of the ridge and rocks, for tracking an orbiter's pass
+    "relay-align": {
+      mars: { x: 1260, y: 640 },
+      moon: { x: 1260, y: 640 },
+    },
+    // S5-11: the lander's west solar wing
+    "panel-clean": {
+      mars: { x: LANDER.x - 104, y: LANDER.y + 4 },
+      moon: { x: LANDER.x - 104, y: LANDER.y + 4 },
+    },
+  },
 };
