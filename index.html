@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Homestead</title>
+<meta name="description" content="Homestead: scavenge a rocket, fly it, do the job, go home. A space mission design game for NASA Space Apps 2026.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060b16'/%3E%3Cpath d='M8 1l3 5v6H5V6z' fill='%23e2e5ec'/%3E%3Cpath d='M5 10l-2 4h2zM11 10l2 4h-2z' fill='%23e8783c'/%3E%3Cpath d='M7 12h2l-1 3z' fill='%23ffb43c'/%3E%3C/svg%3E">
+<style>
+  @font-face { font-family: "Pixelify Sans"; src: url(assets/fonts/PixelifySans.ttf) format("truetype"); font-weight: 400 700; font-display: block; }
+  @font-face { font-family: "IBM Plex Mono"; src: url(assets/fonts/IBMPlexMono-Regular.ttf) format("truetype"); font-weight: 400 500; font-display: block; }
+  @font-face { font-family: "IBM Plex Mono"; src: url(assets/fonts/IBMPlexMono-SemiBold.ttf) format("truetype"); font-weight: 600 700; font-display: block; }
+  html, body { margin: 0; height: 100%; background: #04070d; color: #e6edf3; overflow: hidden; }
+  body { display: grid; place-items: center; font: 14px "IBM Plex Mono", ui-monospace, Consolas, monospace; }
+  #screen { width: min(100vw, calc(100vh * 16 / 9)); height: auto; aspect-ratio: 16 / 9; display: block; background: #060b16; cursor: crosshair; touch-action: none; }
+  .preload { position: absolute; left: -9999px; visibility: hidden; }
+  noscript { position: absolute; padding: 24px; }
+</style>
+</head>
+<body>
+<canvas id="screen" width="1280" height="720" tabindex="0" aria-label="Homestead game screen"></canvas>
+<span class="preload" style="font-family:'Pixelify Sans';font-weight:700">H</span>
+<span class="preload" style="font-family:'IBM Plex Mono';font-weight:500">H</span>
+<span class="preload" style="font-family:'IBM Plex Mono';font-weight:600">H</span>
+<noscript>Homestead needs JavaScript to run.</noscript>
+<script src="js/core.js"></script>
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/world.js"></script>
+<script src="js/menu.js"></script>
+<script src="js/build.js"></script>
+<script src="js/flight.js"></script>
+<script src="js/surface.js"></script>
+<script src="js/report.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
