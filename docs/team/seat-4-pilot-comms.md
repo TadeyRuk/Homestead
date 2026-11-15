@@ -12,7 +12,7 @@ Two of the four flight stations, plus flight events. The flight shell (S4-01) is
 
 ## If still open at hour 3
 
-Seat 3 (TadeyRuk) takes S4-02 and S4-03. Seat 1 has done S4-04, S4-05, S4-06, S4-08, S4-09 and S4-10. S4-07 is next. See the fallback table in `docs/team/README.md`.
+Seat 3 (TadeyRuk) takes S4-02 and S4-03. Seat 1 has done S4-04 to S4-10, with S4-07 shared with seat 3. See the fallback table in `docs/team/README.md`.
 
 ## Issues
 
@@ -39,7 +39,7 @@ A steady lock doubles the send rate and gives the pilot early debris warning.
 Seeded flight events: debris fields, solar flares hitting solar arrays, load spikes. More events on Mars than the Moon, fewer in solo.
 **Done when:** the same seed gives the same events, and Mars has more of them.
 
-### S4-07 Part effects in flight (hour 8)
+### S4-07 Part effects in flight (done: flares in `src/flight/events/power.ts` by seat 1, debris target in seat 3's Pilot)
 Mounted parts change the flight beyond handling: a large solar array is a bigger debris target, solar flares from the event director cut solar array output, an RTG ignores flares. Read every number from `src/data/parts.json`.
 **Done when:** the same debris field hits a large-array ship more often than a small-array one, and a flare drops supply only on solar builds.
 
