@@ -55,7 +55,7 @@
       B = {
         t: 0, left: HS.BUILD_TIME, p: { x: 520, y: 188, walk: 0, flip: false, face: 'down', carry: null }, done: false,
         parts: picked.concat(rest).map((id, i) => ({ id, x: spots[i][0], y: spots[i][1], seen: false })),
-        kr: HS.R(S.seed * 13 + 101), roll: null, count: null, fx: new HS.Parts(), toast: '', toastT: 0, toastCol: C.cyan, mountFlash: 0, lastTick: 0, map: false
+        kr: HS.R(S.seed * 13 + 101), roll: null, count: null, fx: new HS.Parts(), toast: '', toastT: 0, toastCol: C.cyan, mountFlash: 0, lastTick: 0, map: false, sheet: false
       };
       S.slots = { prop: null, power: null, comms: null, payload: null }; S.credits = S.creditsStart; S.salvaged = []; S.emptyAtTimeout = [];
       toast('Find a part for each of the four slots and carry it to the pad', C.amber); B.toastT = 5;
@@ -65,6 +65,7 @@
       const p = B.p, S = HS.S;
       B.t += dt; B.left -= dt; B.toastT -= dt; B.mountFlash = Math.max(0, B.mountFlash - dt); B.fx.update(dt);
       B.map = HS.key('Tab');
+      if (HS.hit('KeyB')) { B.sheet = !B.sheet; HS.sfx.blip(); }
       if (B.left <= 10 && Math.ceil(B.left) !== B.lastTick) { B.lastTick = Math.ceil(B.left); HS.sfx.tick(); }
       if (B.left <= 0) { toast('Build time is over'); finishBuild(true); return; }
       // move
@@ -132,9 +133,11 @@
       HS.chip('crew', 8, 30, carry ? 'carrying ' + carry.name : 'hands empty');
       const low = B.left < 30;
       HS.topBox('BUILD TIME  ' + fmt(B.left), `slots ${HS.model().mounted} of 4`, low && Math.floor(t * 4) % 2 ? C.red : low ? C.amber : C.white, 320);
-      this.meters(carry || (nearest && nd < 15 ? HS.PARTS[nearest.id] : null), carry ? p.carry : nearest && nd < 15 ? nearest.id : null);
-      const info = carry || (nearest ? HS.PARTS[nearest.id] : null);
-      if (info) this.card(info, carry ? 'IN YOUR HANDS' : 'NEARBY');
+      // the rocket as it stands (or would, with the part in your hands or at your feet), as a blueprint
+      const pvId = carry ? p.carry : nearest && nd < 15 ? nearest.id : null, pv = pvId ? HS.PARTS[pvId] : null;
+      HS.blueprint.panel(pv, pvId);
+      const infoId = carry ? p.carry : nearest ? nearest.id : null;
+      if (infoId) this.card(infoId, carry ? 'IN YOUR HANDS' : 'NEARBY');
 
       // prompt for the action E would do right now
       let pr = null, pc = C.cyan;
@@ -147,11 +150,11 @@
       if (pr) HS.prompt(pr, 320, 300, pc);
       if (atPad && B.count == null) {
         const m = HS.model();
-        if (m.overweight) tag(`TOO HEAVY: ${m.mass} kg on a ${m.lift} kg engine. It will not reach orbit.`, 320, 60, C.red, 8.5);
-        else if (m.supply && m.draw > m.supply) tag(`POWER SHORT: ${m.draw} W needed, ${m.supply} W supplied. Breakers will trip.`, 320, 60, C.amber, 8.5);
+        if (m.overweight) tag(`TOO HEAVY: ${m.mass} kg on a ${m.lift} kg engine. It will not reach orbit.`, 285, 60, C.red, 8.5);
+        else if (m.supply && m.draw > m.supply) tag(`POWER SHORT: ${m.draw} W needed, ${m.supply} W supplied. Breakers will trip.`, 285, 60, C.amber, 8.5);
       }
       if (B.toastT > 0) { g.globalAlpha = clamp(B.toastT * 2, 0, 1); tag(B.toast, 320, 322, B.toastCol, 8.5); g.globalAlpha = 1; }
-      HS.hint('[E] use   [Q] drop   [L] launch   [TAB] hold for map');
+      HS.hint('[E] use   [Q] drop   [L] launch   [B] blueprint   [TAB] map');
 
       // kiosk roll
       if (B.roll) {
@@ -162,6 +165,7 @@
         T(name, 320, 160, 18, done ? C.cyan : C.white, { w: 700, a: 'center', f: PIX });
         T(done ? `it is in your hands  (${HS.SLOT_NAME[res.slot].toLowerCase()} slot)` : 'rolling...', 320, 182, 8, C.muted, { a: 'center' });
       }
+      if (B.sheet && !B.map) HS.blueprint.sheet(t, pv, pvId);
       if (B.map) this.map(cam);
       if (B.count != null) {
         g.fillStyle = 'rgba(4,7,13,.5)'; g.fillRect(0, 0, 640, 360);
@@ -172,39 +176,21 @@
       if (B.mountFlash > 0) { g.fillStyle = `rgba(120,255,220,${B.mountFlash * .25})`; g.fillRect(0, 0, 640, 360); }
     },
 
-    // six meters. pv previews what the build becomes if this part is mounted.
-    meters(pv, pvId) {
-      const S = HS.S, m = HS.model(), n = pv ? HS.model({ [pv.slot]: pvId }) : null, x = 462, y = 30;
-      box(x, y, 172, 104, C.cyan, 5); T('LAUNCH PAD', x + 8, y + 13, 8, C.cyan, { w: 600 });
-      if (n) T('if mounted', x + 164, y + 13, 7, C.amber, { a: 'right', w: 600 });
-      const tr = (mm) => mm.prop ? Math.round(S.mission.transit * mm.prop.transit) : 0;
-      const rows = [
-        ['MASS', (mm) => mm.lift ? mm.mass / mm.lift : mm.mass / 900, (mm) => mm.lift ? `${mm.mass}/${mm.lift} kg` : `${mm.mass} kg`, (mm) => mm.overweight ? C.red : mm.massFrac > .8 ? C.amber : C.cyan],
-        ['POWER', (mm) => mm.supply ? mm.draw / mm.supply : 0, (mm) => mm.supply ? `${mm.draw}/${mm.supply} W` : 'no source', (mm) => mm.supply && mm.draw > mm.supply ? C.red : mm.loadFrac > .85 ? C.amber : C.eng],
-        ['BUDGET', () => S.credits / S.creditsStart, () => `${S.credits} CR`, () => C.pink],
-        ['DATA', (mm) => mm.payload ? mm.payload.rich / 19 : 0, (mm) => mm.payload ? `${mm.payload.rich} per rich scan` : 'none', () => C.amber],
-        ['COMMS', (mm) => mm.comms ? mm.comms.rate / .95 : 0, (mm) => mm.comms ? `${mm.comms.rate.toFixed(2)} units/s` : 'none', () => C.comms],
-        ['TIME', (mm) => mm.prop ? 1 - (tr(mm) / (S.mission.transit * 1.3)) + .2 : 0, (mm) => mm.prop ? `flight ${fmt(tr(mm))}` : '-', () => C.green]
-      ];
-      rows.forEach(([name, f, v, col], i) => {
-        const yy = y + 21 + i * 13.5, mm = n || m, changed = n && v(n) !== v(m);
-        T(name, x + 8, yy + 7, 7, C.muted, { w: 600 }); bar(x + 46, yy + 1, 50, 6, f(mm), col(mm));
-        if (changed) { g.strokeStyle = C.amber; g.lineWidth = 1; g.strokeRect(x + 45.5, yy + .5, 51, 7); }
-        T(v(mm), x + 164, yy + 7, 7, changed ? C.amber : C.white, { a: 'right', w: changed ? 600 : 500 });
-      });
-    },
-
-    card(part, head) {
-      const x = 8, y = 232, w = 240, col = part.slot === 'comms' ? C.cyan : CAT[part.slot];
-      box(x, y, w, 80, col, 5);
-      T(head + '  /  ' + HS.SLOT_NAME[part.slot], x + 8, y + 12, 7, col, { w: 600 });
-      T(part.name, x + 8, y + 27, 12, C.white, { w: 700, f: PIX });
-      T(`${part.mass} kg`, x + w - 8, y + 12, 7.5, C.white, { a: 'right' });
-      T(`${part.power > 0 ? '+' : ''}${part.power} W`, x + w - 8, y + 26, 7.5, part.power > 0 ? C.green : C.amber, { a: 'right', w: 600 });
-      T('FLIGHT', x + 8, y + 41, 6.5, C.muted, { w: 600 }); T(part.flight, x + 46, y + 41, 7, C.white);
-      T('SURFACE', x + 8, y + 53, 6.5, C.muted, { w: 600 }); T(part.surf, x + 46, y + 53, 7, C.white);
-      T('REAL', x + 8, y + 65, 6.5, C.muted, { w: 600 }); T(part.real, x + 46, y + 65, 7, '#f1d9cf');
-      T('uses the ' + HS.NAME[HS.SLOT_ROLE[part.slot]].toLowerCase() + '\'s station in flight', x + 8, y + 75, 6, C.muted);
+    // the part you hold or stand by: the part itself, big, with its numbers as chips (the full specs are on [B])
+    card(id, head) {
+      const part = HS.PARTS[id], x = 8, y = 220, w = 236, h = 68, col = part.slot === 'comms' ? C.cyan : CAT[part.slot];
+      box(x, y, w, h, col, 5);
+      g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(x + 6, y + 6, 44, 44);
+      g.fillStyle = col; g.fillRect(x + 6, y + 48, 44, 2);
+      const s = HS.partIcon(id); g.imageSmoothingEnabled = false; g.drawImage(s, x + 11, y + 10, s.width, s.height);
+      T(head, x + 56, y + 12, 6.5, C.muted, { w: 600 }); T(HS.SLOT_NAME[part.slot], x + w - 7, y + 12, 6.5, col, { w: 600, a: 'right' });
+      T(part.name, x + 56, y + 26, 11, C.white, { w: 700, f: PIX });
+      let cx = x + 56;
+      const chip = (s2, c) => { const cw = HS.tw(s2, 6.5, { w: 600 }) + 8; g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(cx, y + 31, cw, 10); T(s2, cx + 4, y + 38.5, 6.5, c, { w: 600 }); cx += cw + 3; };
+      chip(`${part.mass} kg`, C.white); chip(`${part.power > 0 ? '+' : ''}${part.power} W`, part.power > 0 ? C.green : C.amber);
+      if (part.slot !== 'power') chip(HS.blueprint.keyStat(part), col);
+      T('FLIGHT', x + 8, y + 57, 5.5, C.muted, { w: 600 }); T(part.flight, x + 40, y + 57, 6.5, C.white);
+      T('SURFACE', x + 8, y + 65, 5.5, C.muted, { w: 600 }); T(part.surf, x + 40, y + 65, 6.5, C.white);
     },
 
     map(cam) {
