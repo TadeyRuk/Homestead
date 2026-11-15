@@ -6,7 +6,6 @@
 
   HS.CABIN_MASS = 200;   // crew cabin and tanks, kg (game assumption)
   HS.BASE_LOAD = 150;    // life support 90 W + galley heater 40 W + cabin lights 20 W (game assumption)
-  HS.KIOSK_COST = 20;
   // pacing: a run is about 14-15 minutes. PACE stretches every phase clock (3:00 became 5:00); the goals are
   // rescaled with it so a longer run is fuller, not easier. Flight events come EVENT_K times further apart, so a
   // longer flight has about 30% more of them; fuel burn and hull damage per hit are divided by EVENT_K to match.
@@ -21,8 +20,8 @@
   HS.SLOT_ROLE = { prop: 'pilot', power: 'eng', comms: 'comms', payload: 'sci' };
 
   // cost: a part's price in credits, from real-world cost ratios (an MMRTG costs far more than a small solar array),
-  // scaled to the Moon's 20 and Mars's 40 credit budgets. Salvage parts cost 0. Shown in the inspector and blueprint;
-  // not charged yet: credits are still spent only through HS.KIOSK_COST until the cost cap (S6-11) lands.
+  // scaled to the Moon's 20 and Mars's 40 credit budgets, which are each mission's cost cap. Salvage parts cost 0.
+  // What a build spends is worked out by HS.spend in state.js.
   HS.PARTS = {
     // propulsion: lift kg, steer mode, steer speed, fuel burn per second of thrust, transit time multiplier
     solid: { slot: 'prop', cost: 6, name: 'Solid motor', mass: 180, power: -10, lift: 600, steer: 'pulse', turn: 46, burn: 5.2, accel: .3, transit: 1, flight: 'Lifts 600 kg. Steers in fixed pulses', surf: 'Fuel left scores', real: 'Solid rocket boosters (Space Shuttle, SLS)', fact: 'Solid boosters give huge thrust but cannot be throttled or shut down once lit. Shuttle and SLS pair them with liquid engines for control.' },
