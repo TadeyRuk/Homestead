@@ -10,7 +10,7 @@ The game's code was written with AI assistance (Claude Code). Every change went 
 
 ## Music
 
-The game's music was made with AI assistance.
+The game's five background tracks were generated with AI: the ElevenLabs sound-effects model, from text prompts. A script cut each one into a loop with an intro, and NASA recordings were mixed in (credited in the README). The tracks are in `prototype/assets/sfx/music-*.ogg`.
 
 ## Art and video
 
