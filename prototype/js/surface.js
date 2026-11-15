@@ -95,7 +95,7 @@
       const busy = !!U.game || lounging || shaken;
       if (U.game) { const n = HS.gameFrame.step(U, dt); if (n) note(n[0], n[1]); }
       if (!busy && HS.hit('KeyQ')) { U.tab = U.tab === 'MISSION' ? 'SUIT' : 'MISSION'; HS.sfx.blip(); }
-      if (!busy && HS.In.click && HS.over(8, this.panelY() + 2, 204, 20)) { U.tab = HS.In.mx < 100 ? 'MISSION' : 'SUIT'; HS.sfx.blip(); }
+      if (!busy && HS.In.click && HS.over(HS.X0 + 8, this.panelY() + 2, 204, 20)) { U.tab = HS.In.mx < HS.X0 + 100 ? 'MISSION' : 'SUIT'; HS.sfx.blip(); }
       const home = atLander(p), storm = U.mars && stormAt(p.x) && !home, flare = !U.mars && flareOn() && !sheltered(p);
       U.inHazard = storm || flare; if (U.inHazard) S.hazardTime += dt;
       // move
@@ -208,10 +208,10 @@
       if (!mars && flareOn()) A.flare(x, cam, t, sheltered(p), U.rocks);
       HS.blitArt();
       if (!U.ext) HS.nameTags(cam, Object.fromEntries(Object.entries(U.ps).map(([id, o]) => [id, o.p])));
-      if (mars && stormAt(p.x) && !home) { g.fillStyle = 'rgba(120,70,40,.28)'; g.fillRect(0, 0, 640, 360); }
+      if (mars && stormAt(p.x) && !home) HS.fillStage('rgba(120,70,40,.28)');
 
       // ----- labels
-      const lab = (X, Y, s, col, dy = 22) => { const q = HS.toScreen(cam, X, Y); if (q.x > 40 && q.x < 600 && q.y > 50 && q.y < 300 && !(q.x < 290 && q.y + dy > 222) && !U.ext) tag(s, q.x, q.y + dy, col, 7.5); };
+      const lab = (X, Y, s, col, dy = 22) => { const q = HS.toScreen(cam, X, Y); if (q.x > HS.X0 + 40 && q.x < HS.X1 - 40 && q.y > HS.Y0 + 50 && q.y < HS.Y1 - 60 && !(q.x < HS.X0 + 290 && q.y + dy > HS.Y1 - 138) && !U.ext) tag(s, q.x, q.y + dy, col, 7.5); };
       for (const s of U.sites) if (!s.done) { const base = m.payload[s.kind]; lab(s.x, s.y, `${s.kind.toUpperCase()} SITE +${Math.max(1, Math.round(base * (1 - S.instDamage / 100)))}`, s.kind === 'rich' ? C.cyan : '#8ac8c0'); }
       if (!U.sample.off && !U.sample.done) lab(U.sample.x, U.sample.y, mi.objectives.sampleSite, C.amber);
       if (!U.deploy.off && !U.deploy.done) lab(U.deploy.x, U.deploy.y, mi.objectives.deploySite, C.cyan);
@@ -229,28 +229,29 @@
 
       // ----- HUD
       const st = U.down ? 'DOWN' : U.carry ? 'carrying the sample' : U.carried > 0 ? `carrying ${U.carried} data units` : atLander(p) ? 'at the lander: recharging' : 'hands empty';
-      HS.chip('crew', 8, 30, st);
+      // the HUD is pinned to the screen's corners and edges (js/art.js)
+      HS.chip('crew', HS.X0 + 8, HS.Y0 + 30, st);
       const low = U.left < 20;
       HS.topBox(U.ext ? 'EXTRACTION' : 'EXTRACTION IN ' + fmt(U.left), `data uplinked ${Math.floor(S.uplinked)} / ${mi.target}`, low && Math.floor(t * 4) % 2 ? C.red : low ? C.amber : C.white);
-      this.panel(8, this.panelY());
+      this.panel(HS.X0 + 8, this.panelY());
       if (!U.down && !U.ext) {
         const tg = U.game || U.lng || U.qte ? null : this.target();
         if (U.game) HS.gameFrame.panel(U);
-        if (tg) { const k = U.hold && U.hold.id === tg.id ? U.hold.prog : 0; HS.prompt(k > 0 ? `${tg.label}  ${Math.round(k * 100)}%` : tg.label, 430, 318, tg.col === '#e6e8ec' ? C.cyan : tg.col); if (k > 0) bar(360, 330, 140, 4, k, C.cyan); }
-        else if (!U.game && (U.o2 < 35 || U.pw < 35)) HS.prompt(`${U.o2 < U.pw ? 'oxygen' : 'suit power'} ${Math.round(Math.min(U.o2, U.pw))}%  get to the lander`, 430, 318, C.red);
-        if (U.inHazard) tag(mars ? 'IN THE DUST STORM: suit drain x4' : 'SOLAR FLARE: suit drain x6. Find shelter.', 320, 54, C.red, 8.5);
-        else if (!mars && flareOn()) tag('Sheltered from the flare', 320, 54, C.green, 8.5);
-        else { const f = flareSoon(); if (f) tag(`SOLAR FLARE IN ${Math.ceil(f.at - t)} s`, 320, 54, C.amber, 8.5); }
+        if (tg) { const k = U.hold && U.hold.id === tg.id ? U.hold.prog : 0; HS.prompt(k > 0 ? `${tg.label}  ${Math.round(k * 100)}%` : tg.label, 430, HS.Y1 - 42, tg.col === '#e6e8ec' ? C.cyan : tg.col); if (k > 0) bar(360, HS.Y1 - 30, 140, 4, k, C.cyan); }
+        else if (!U.game && (U.o2 < 35 || U.pw < 35)) HS.prompt(`${U.o2 < U.pw ? 'oxygen' : 'suit power'} ${Math.round(Math.min(U.o2, U.pw))}%  get to the lander`, 430, HS.Y1 - 42, C.red);
+        if (U.inHazard) tag(mars ? 'IN THE DUST STORM: suit drain x4' : 'SOLAR FLARE: suit drain x6. Find shelter.', 320, HS.Y0 + 54, C.red, 8.5);
+        else if (!mars && flareOn()) tag('Sheltered from the flare', 320, HS.Y0 + 54, C.green, 8.5);
+        else { const f = flareSoon(); if (f) tag(`SOLAR FLARE IN ${Math.ceil(f.at - t)} s`, 320, HS.Y0 + 54, C.amber, 8.5); }
       }
-      if (U.noteT > 0) { g.globalAlpha = clamp(U.noteT * 2, 0, 1); tag(U.noteS, 320, 72, U.noteCol, 8); g.globalAlpha = 1; }
-      if (U.photoT > 0) { g.fillStyle = `rgba(255,255,255,${U.photoT * 2})`; g.fillRect(0, 0, 640, 360); }
+      if (U.noteT > 0) { g.globalAlpha = clamp(U.noteT * 2, 0, 1); tag(U.noteS, 320, HS.Y0 + 72, U.noteCol, 8); g.globalAlpha = 1; }
+      if (U.photoT > 0) HS.fillStage(`rgba(255,255,255,${U.photoT * 2})`);
       if (!U.ext && HS.lounge) HS.lounge.draw(U, atLander(p));
       if (!U.ext && HS.stability) HS.stability.drawHud(U, atLander(p));
       HS.hint(!U.down && !U.ext && HS.stability && HS.stability.hint(U) ? HS.stability.hint(U) : U.lng && HS.lounge && !U.down && !U.ext ? HS.lounge.hint(U) : U.game ? (HS.surfaceGames[U.game.kind] || {}).keys + '   [Q] step away   [TAB] hold for map' : '[E] hold to work   [F] photo   [Q] mission / suit   [TAB] hold for map');
       if (HS.local.down.has('Tab')) this.map(cam);   // each screen holds its own map
-      if (U.down && !U.ext) { g.fillStyle = 'rgba(4,7,13,.45)'; g.fillRect(0, 0, 640, 360); HS.prompt(S.lostDown ? `suit empty: ${S.lostDown} carried units lost` : 'suit empty', 320, 180, C.red); }
+      if (U.down && !U.ext) { HS.fillStage('rgba(4,7,13,.45)'); HS.prompt(S.lostDown ? `suit empty: ${S.lostDown} carried units lost` : 'suit empty', 320, 180, C.red); }
       if (U.ext) {
-        g.fillStyle = `rgba(4,7,13,${seg(U.ext.t, .2, 1.2) * .55})`; g.fillRect(0, 0, 640, 360); g.globalAlpha = seg(U.ext.t, .4, 1);
+        HS.fillStage(`rgba(4,7,13,${seg(U.ext.t, .2, 1.2) * .55})`); g.globalAlpha = seg(U.ext.t, .4, 1);
         T('EXTRACTION', 320, 150, 32, C.white, { w: 700, a: 'center', b: 'middle', f: PIX }); T('the ship from Earth leaves on time', 320, 180, 9, C.muted, { a: 'center', b: 'middle' });
         g.globalAlpha = 1;
       }
@@ -264,7 +265,7 @@
         : [HS.surfaceGames[k] ? HS.surfaceGames[k].label(mi.id) : k, S.tasks[k] ? 1 : 0, 1])
         .concat([['Uplink data', Math.floor(S.uplinked), mi.target], ['Bonus: ' + o.bonus[0].toLowerCase() + o.bonus.slice(1), S.bonusDone ? 1 : 0, 1]]);
     },
-    panelY() { return 236 - Math.max(0, this.rows().length - 5) * 15; },
+    panelY() { return HS.Y1 - 124 - Math.max(0, this.rows().length - 5) * 15; },   // pinned to the bottom edge
     panel(x, y) {
       const S = HS.S, mi = S.mission, w = 204, rows = this.rows();
       box(x, y, w, 346 - y, C.cyan, 5);
@@ -289,7 +290,7 @@
 
     map(cam) {
       const S = HS.S, x0 = 100, y0 = 44, k = 440 / 640;
-      g.fillStyle = 'rgba(4,7,13,.72)'; g.fillRect(0, 0, 640, 360);
+      HS.fillStage('rgba(4,7,13,.72)');
       box(x0 - 8, y0 - 22, 456, 312, C.cyan, 6);
       T('SURFACE MAP', x0, y0 - 8, 8.5, C.cyan, { w: 600 }); T('time does not stop while you look', x0 + 440, y0 - 8, 7, C.muted, { a: 'right' });
       // the ground at one art pixel per map pixel, and crisp icons that match the sprites

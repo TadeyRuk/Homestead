@@ -13,7 +13,8 @@
   const hash = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
   const WW = 640 * U, WH = 400 * U;                 // the whole map in art pixels, 3840 x 2400
   const LX = -.5, LY = -.62, LZ = .6;                // the one light: top left, high
-  const vis = (X, Y, w, h) => X + w > 0 && X < 1280 && Y + h > 0 && Y < 720;
+  // on the stage (the window, margins included; js/art.js)
+  const vis = (X, Y, w, h) => X + w > HS.AX0 && X < HS.AX1 && Y + h > HS.AY0 && Y < HS.AY1;
   const calm = () => L.calm();
 
   // ---------- whole-pixel drawing helpers
@@ -543,7 +544,7 @@
     ANT: { x: (ANT_AT[0] - LANDER_AT[0]) / U, y: (ANT_AT[1] - LANDER_AT[1]) / U },
     ready,
     enter(id) { ready(id); steps = []; last = null; },
-    ground(x, cam, id) { x.imageSmoothingEnabled = false; x.drawImage(ready(id).ground, cam.ox, cam.oy, 1280, 720, 0, 0, 1280, 720); },
+    ground(x, cam, id) { x.imageSmoothingEnabled = false; x.drawImage(ready(id).ground, cam.ox + HS.AX0, cam.oy + HS.AY0, HS.AW, HS.AH, HS.AX0, HS.AY0, HS.AW, HS.AH); },
     track, tracks,
 
     // the landing zone: a dashed cyan ring at the exact edge of the recharge area, brighter while you are inside
@@ -700,7 +701,7 @@
 
     // the storm: haze from the trailing edge, then the wall of dust at the leading edge, and grains blowing ahead
     storm(x, cam, s, t) {
-      const A = cache.mars, a = Math.round((s.dir > 0 ? s.x - s.w : s.x) * U) - cam.ox, b = a + s.w * U, x0 = Math.max(0, a), x1 = Math.min(1280, b);
+      const A = cache.mars, a = Math.round((s.dir > 0 ? s.x - s.w : s.x) * U) - cam.ox, b = a + s.w * U, x0 = Math.max(HS.AX0, a), x1 = Math.min(HS.AX1, b);
       const lead = s.dir > 0 ? b : a, tt = calm() ? t * .2 : t;
       if (x1 > x0) {
         const ox = ((Math.round(tt * 70 * s.dir) % 256) + 256) % 256, oy = ((Math.round(tt * 18 + cam.oy) % 256) + 256) % 256;
@@ -709,19 +710,19 @@
           const ba = s.dir > 0 ? a + band * 24 : b - (band + 1) * 24, bw = band < 9 ? 24 : 0;
           const c0 = band < 9 ? Math.max(x0, ba) : s.dir > 0 ? Math.max(x0, a + 216) : x0, c1 = band < 9 ? Math.min(x1, ba + bw) : s.dir > 0 ? x1 : Math.min(x1, b - 216);
           if (c1 <= c0) continue;
-          x.save(); x.beginPath(); x.rect(c0, 0, c1 - c0, 720); x.clip(); x.globalAlpha = band < 9 ? (band + 1) / 10 : 1;
-          for (let X = Math.floor((c0 - ox) / 256) * 256 + ox - 256; X < c1; X += 256) for (let Yy = -oy; Yy < 720; Yy += 256) if (X + 256 > c0) x.drawImage(A.haze, X, Yy);
+          x.save(); x.beginPath(); x.rect(c0, HS.AY0, c1 - c0, HS.AH); x.clip(); x.globalAlpha = band < 9 ? (band + 1) / 10 : 1;
+          for (let X = Math.floor((c0 - ox) / 256) * 256 + ox - 256; X < c1; X += 256) for (let Yy = -oy - Math.ceil(HS.AOY / 256) * 256; Yy < HS.AY1; Yy += 256) if (X + 256 > c0) x.drawImage(A.haze, X, Yy);
           x.restore();
         }
       }
       // the wall
       const wy = ((Math.round(tt * 12 + cam.oy) % 256) + 256) % 256, wall = s.dir > 0 ? A.wall : A.wallL, wxp = s.dir > 0 ? lead - 104 : lead - 56;
-      if (wxp < 1280 && wxp + 160 > 0) for (let Yy = -wy; Yy < 720; Yy += 256) x.drawImage(wall, wxp, Yy);
+      if (wxp < HS.AX1 && wxp + 160 > HS.AX0) for (let Yy = -wy - Math.ceil(HS.AOY / 256) * 256; Yy < HS.AY1; Yy += 256) x.drawImage(wall, wxp, Yy);
       // grains blowing ahead of and through the storm
       x.globalAlpha = .7;
       for (let i = 0; i < 140; i++) {
-        const span = s.w * U + 220, q = ((hash(i, 7) * span + tt * (160 + hash(i, 3) * 140)) % span), X = Math.round(s.dir > 0 ? a + q : b - q), Y = Math.round((hash(i, 11) * 720 + tt * (20 + hash(i, 5) * 30) + 720 * 4) % 720);
-        if (X < 0 || X >= 1280) continue;
+        const span = s.w * U + 220, q = ((hash(i, 7) * span + tt * (160 + hash(i, 3) * 140)) % span), X = Math.round(s.dir > 0 ? a + q : b - q), Y = HS.AY0 + Math.round((hash(i, 11) * HS.AH + tt * (20 + hash(i, 5) * 30) + HS.AH * 4) % HS.AH);
+        if (X < HS.AX0 || X >= HS.AX1) continue;
         const l = 3 + ((hash(i, 13) * 8) | 0); R(x, s.dir > 0 ? X - l : X, Y, l, 1, i % 3 ? PAL.mars.dust[1] : PAL.mars.dust[0]);
       }
       x.globalAlpha = 1;
@@ -729,17 +730,17 @@
 
     // a solar flare: hard light washing over everything except the shade, with streaks and particle hits
     flare(x, cam, t, safe, rocks) {
-      x.fillStyle = `rgba(255,244,205,${safe ? .1 : .2 + (calm() ? 0 : Math.sin(t * 20) * .04)})`; x.fillRect(0, 0, 1280, 720);
+      x.fillStyle = `rgba(255,244,205,${safe ? .1 : .2 + (calm() ? 0 : Math.sin(t * 20) * .04)})`; x.fillRect(HS.AX0, HS.AY0, HS.AW, HS.AH);
       rocks.forEach(([X, Y], i) => SA.boulderShadow(x, cam, X, Y, i, .42));
       const tt = calm() ? 0 : t;
       x.globalAlpha = .55;
       for (let i = 0; i < 18; i++) {
         const sp = 600 + hash(i, 1) * 500, len = 60 + ((hash(i, 2) * 160) | 0), q = (tt * sp + hash(i, 3) * 2400) % 2400, X0 = Math.round(q - 600 + hash(i, 4) * 700), Y0 = Math.round(q * .62 - 400 + hash(i, 5) * 500);
-        for (let k = 0; k < len; k += 2) { const X = X0 - k, Y = Y0 - Math.round(k * .62); if (X < 0 || X >= 1280 || Y < 0 || Y >= 720) continue; R(x, X, Y, 2, 1, k < len * .3 ? '#ffffff' : '#fff0c0'); }
+        for (let k = 0; k < len; k += 2) { const X = X0 - k, Y = Y0 - Math.round(k * .62); if (X < HS.AX0 || X >= HS.AX1 || Y < HS.AY0 || Y >= HS.AY1) continue; R(x, X, Y, 2, 1, k < len * .3 ? '#ffffff' : '#fff0c0'); }
       }
       x.globalAlpha = 1;
       const f = Math.floor(tt * 12);
-      for (let i = 0; i < 90; i++) { if (hash(i, f) < .5) continue; R(x, (hash(i * 3, f) * 1280) | 0, (hash(i * 5, f + 1) * 720) | 0, 1, 1, '#ffffff'); }
+      for (let i = 0; i < 90; i++) { if (hash(i, f) < .5) continue; R(x, (HS.AX0 + hash(i * 3, f) * HS.AW) | 0, (HS.AY0 + hash(i * 5, f + 1) * HS.AH) | 0, 1, 1, '#ffffff'); }
     },
 
     mapImage: (id) => ready(id).map,

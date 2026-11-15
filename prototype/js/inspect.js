@@ -164,7 +164,7 @@
   function panel(id, t, o = {}) {
     const part = HS.PARTS[id], S = HS.S, col = SLOTC(part.slot), anim = calm() ? 99 : t;
     const k0 = easeOut(anim / .25), X = 26, Y = 18 + (1 - k0) * 8, W = 588, H = 326;
-    g.fillStyle = `rgba(4,7,13,${.72 * k0})`; g.fillRect(0, 0, 640, 360);
+    HS.fillStage(`rgba(4,7,13,${.72 * k0})`);
     g.globalAlpha = k0;
     HS.box(X, Y, W, H, col, 6, 'rgba(8,14,26,.97)');
     T('INSPECT', X + 12, Y + 14, 8, col, { w: 700 });

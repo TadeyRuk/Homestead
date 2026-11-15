@@ -424,6 +424,20 @@
     return Object.assign(info, { c });
   }
 
+  // the margins round a station (js/art.js): the static backdrop mirrored out, and for the pilot the live stars
+  // carried on across them (no debris or readouts are copied)
+  FA.bleed = (x, kind, F) => {
+    if (!HS.AOX && !HS.AOY) return;
+    HS.bleedFrom(kind === 'pilot' ? background() : cabin(kind));
+    if (kind !== 'pilot') return;
+    const cm = calm();
+    for (const [dx, dy] of [[-1280, 0], [1280, 0], [0, -720], [0, 720]]) {
+      if ((dx < 0 && !HS.AOX) || (dy && !HS.AOY)) continue;
+      x.save(); x.beginPath(); x.rect(dx < 0 ? -HS.AOX : dx > 0 ? 1280 : 0, dy < 0 ? -HS.AOY : dy > 0 ? 720 : 0, dx ? (dx < 0 ? HS.AOX : HS.AX1 - 1280) : 1280, dy ? (dy < 0 ? HS.AOY : HS.AY1 - 720) : 720); x.clip();
+      x.translate(dx, dy); drawStars(x, scroll, F.speed, F.t, cm); x.restore();
+    }
+  };
+
   // the same ship for the build screen's blueprint, cached per part set; ids may be '' for an empty slot
   const shipCache = new Map();
   FA.ship = (ids) => {

@@ -235,7 +235,7 @@
     if (N.mode === 'host') N.room.end('The host left the game');
     else { N.client.leave(); leave('You left the game'); }
   }
-  // the joiner's link, top left: the round trip to the host and whether it runs direct or through the relay
+  // the joiner's link, bottom right above the watermark: the round trip to the host and whether it runs direct or through the relay
   let route = '', routeAt = 0;
   const linkLine = () => {
     if (N.mode !== 'client') return;
@@ -243,7 +243,7 @@
     if (now - routeAt > 5000) { routeAt = now; N.client.route().then((r) => { route = r; }, () => {}); }
     const rtt = N.client.rtt();
     const s = (rtt == null ? 'ping ...' : `ping ${Math.round(rtt)} ms`) + (route && route !== 'unknown' ? `  ${route}` : '');
-    HS.T(s, 636, 341, 6.5, rtt != null && rtt > 250 ? C.amber : '#6f7d8c', { a: 'right', b: 'middle' });
+    HS.T(s, HS.X1 - 4, HS.Y1 - 19, 6.5, rtt != null && rtt > 250 ? C.amber : '#6f7d8c', { a: 'right', b: 'middle' });
   };
   HS.netDraw = () => {
     if (PLAY.includes(HS.sceneName) || HS.sceneName === 'lobby') linkLine();
