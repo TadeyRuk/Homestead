@@ -97,7 +97,7 @@
     pad.textContent = ''; top.textContent = '';
     // while you type the rocket's name, Esc means cancel (the Cancel button), so Pause and Leave step aside
     if (play && !HS.typing) button(top, HS.online && HS.online() ? 'Leave' : 'Pause', 'Escape');
-    if (HS.paused) { button(pad, 'Resume', 'Enter', true); button(pad, 'Restart', 'KeyR'); button(pad, 'Title', 'KeyT'); return; }
+    if (HS.paused) { button(pad, 'Resume', 'Enter', true); button(pad, 'Restart', 'KeyR'); button(pad, 'Title', 'KeyT'); if (HS.guide) button(pad, 'How to play', 'KeyH'); return; }
     if (askedMe()) { button(pad, 'Swap', 'Enter', true); button(pad, 'No', 'KeyN'); }
     if (s === 'build' && HS.typing) { button(pad, 'Cancel', 'Escape'); button(pad, 'Suggest', 'Tab'); button(pad, 'Save', 'Enter'); button(pad, 'Type', keyboard, true); }
     else if (s === 'build') { button(pad, 'Map', 'Tab'); button(pad, 'Inspect', 'KeyI'); button(pad, 'Blueprint', 'KeyB'); button(pad, 'Name', 'KeyN'); button(pad, 'Launch', 'KeyL'); button(pad, 'Drop', 'KeyQ'); button(pad, 'Use', 'KeyE', true); }

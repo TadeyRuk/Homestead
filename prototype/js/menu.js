@@ -25,6 +25,7 @@
     else if (id === 'seed') { reroll(); HS.sfx.blip(); }
     else if (id === 'replay') { film().replay(); HS.sfx.blip(); }
     else if (id === 'hide') { toggleHidden(); HS.sfx.blip(); }
+    else if (id === 'tutorial' && HS.guide) { HS.guide.toggle(); HS.sfx.blip(); }
     else if (id === 'start' && title.t > .4) HS.scenes.title.start();
     else if (id === 'online' && title.t > .4 && HS.netAvailable && HS.netAvailable()) { HS.net.want = true; HS.net.msg = ''; HS.scenes.title.start(); }
   };
@@ -116,6 +117,16 @@
     // why an online game ended, until the next one starts
     if (HS.net && HS.net.msg && HS.net.mode === 'solo' && !HS.net.want) text(HS.net.msg, L0, Y - 18, 14, HS.C.amber, { w: 600 });
     if (best) text('Best score ' + best, L0, y + 39.5, 14, HS.C.amber, { w: 600 });
+    if (HS.guide) {
+      // the tutorial switch (js/tutorial.js), just under the panel: Mission Control's cards on the next run, or not
+      const on = HS.guide.on(), s = on ? '[G] Tutorial: on' : '[G] Tutorial: off'; g.font = font(13); if ('letterSpacing' in g) g.letterSpacing = '0px';
+      const w = PW + PAD * 2 + 2, h = 32, x = X, by = Y + H + 10, hot = over(x, by, w, h);
+      rrect(x + .5, by + .5, w - 1, h - 1, 4); g.fillStyle = hot ? '#252e40' : 'rgba(10,16,30,.72)'; g.fill();
+      g.strokeStyle = on ? CREW : hot ? '#3a4558' : EDGE; g.stroke();
+      text(s, x + 14, by + h / 2 + .5, 13, on ? CREW : HS.C.muted);
+      text(on ? 'explains each phase' : 'press to see the cards again', x + w - 14, by + h / 2 + .5, 12, '#aab6c2', { w: 500, a: 'right' });
+      hits.push({ id: 'tutorial', x, y: by, w, h });
+    }
     g.restore();
   }
   function drawShowPill(S, art, k) {
@@ -154,6 +165,7 @@
       if (HS.hit('Enter', 'Space')) act('start');
       if (HS.hit('KeyO')) act('online');
       if (HS.hit('KeyH')) act('hide');
+      if (HS.hit('KeyG')) act('tutorial');
       if (HS.In.click) { const mx = HS.In.mx * 2, my = HS.In.my * 2, h = title.hits.find(b => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h); if (h) act(h.id); }
     },
     // a new run keeps the crew's suit, visor and callsign; the crew page comes before the brief
