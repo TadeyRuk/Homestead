@@ -47,14 +47,15 @@
   const COMMON = [
     ['MASS', (p) => p.mass, (v) => `${v} kg`, 'lo', 'counts against the engine\'s lift'],
     ['POWER DRAW', (p) => Math.max(0, -p.power), (v) => `${v} W`, 'lo', 'taken from the power supply'],
-    ['COST', (p) => p.cost || 0, (v) => `${v} CR`, 'lo', 'what the part costs the mission']
+    ['COST', (p) => p.cost || 0, (v) => `${v} CR`, 'lo', 'its price in credits']
   ];
   const rowsFor = (part) => STATS[part.slot].concat(part.slot === 'power' ? [COMMON[0], COMMON[2]] : COMMON);
   const pool = (slot) => Object.keys(HS.PARTS).filter((k) => HS.PARTS[k].slot === slot).map((k) => HS.PARTS[k]);
   // how good a value is among the parts for the same slot, 0 (worst) to 1 (best), and its place
   function standing(row, part) {
     if (row[3] === 'none') return { g: null, others: [], place: '', v: row[1](part) };
-    const vals = pool(part.slot).map((p) => row[1](p)), v = row[1](part), lo = Math.min(...vals), hi = Math.max(...vals);
+    // salvage parts cost nothing, so cost is ranked among the real parts only
+    const vals = pool(part.slot).filter((p) => row[0] !== 'COST' || !p.salvage).map((p) => row[1](p)), v = row[1](part), lo = Math.min(...vals), hi = Math.max(...vals);
     const good = (x) => (hi === lo ? 1 : row[3] === 'hi' ? (x - lo) / (hi - lo) : (hi - x) / (hi - lo));
     const better = vals.filter((x) => good(x) > good(v) + 1e-9).length, n = vals.length;
     const place = better === 0 ? 'BEST' : better === n - 1 ? 'WORST' : `${better + 1}${['ST', 'ND', 'RD'][better] || 'TH'} OF ${n}`;

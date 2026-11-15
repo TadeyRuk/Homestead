@@ -20,8 +20,9 @@
   HS.SLOT_NAME = { prop: 'PROPULSION', power: 'POWER', comms: 'COMMS', payload: 'PAYLOAD' };
   HS.SLOT_ROLE = { prop: 'pilot', power: 'eng', comms: 'comms', payload: 'sci' };
 
-  // cost: credits against the mission budget, from real-world cost ratios (an MMRTG costs far more than a small
-  // solar array), scaled to the Moon's 20 and Mars's 40 credit budgets. Salvage parts cost nothing.
+  // cost: a part's price in credits, from real-world cost ratios (an MMRTG costs far more than a small solar array),
+  // scaled to the Moon's 20 and Mars's 40 credit budgets. Salvage parts cost 0. Shown in the inspector and blueprint;
+  // not charged yet: credits are still spent only through HS.KIOSK_COST until the cost cap (S6-11) lands.
   HS.PARTS = {
     // propulsion: lift kg, steer mode, steer speed, fuel burn per second of thrust, transit time multiplier
     solid: { slot: 'prop', cost: 6, name: 'Solid motor', mass: 180, power: -10, lift: 600, steer: 'pulse', turn: 46, burn: 5.2, accel: .3, transit: 1, flight: 'Lifts 600 kg. Steers in fixed pulses', surf: 'Fuel left scores', real: 'Solid rocket boosters (Space Shuttle, SLS)', fact: 'Solid boosters give huge thrust but cannot be throttled or shut down once lit. Shuttle and SLS pair them with liquid engines for control.' },
