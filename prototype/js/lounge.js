@@ -47,7 +47,7 @@
       const L = U.lounge; if (!L) return false;
       if (!home || U.down || !this.ready(HS.S)) { U.lng = null; delete L.votes[U.me]; return false; }
       // [V], or [E] (the Work button on touch screens) from the lounge bar; never a V typed into Wordle
-      if (L.callT == null && (U.lng !== 'wordle' && HS.hit('KeyV') || !U.lng && HS.hit('KeyE'))) {
+      if (L.callT == null && (U.lng !== 'wordle' && HS.hit('KeyV') || !U.lng && !(U.stab && U.stab.fault.on) && HS.hit('KeyE'))) {
         if (L.votes[U.me]) delete L.votes[U.me]; else L.votes[U.me] = true;
         HS.sfx.blip();
       }
