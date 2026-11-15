@@ -7,16 +7,82 @@
   const HS = window.HS, L = HS.liftoff;
   const { R, hex, mix, sprite, make, shade } = L;
 
-  // ---------- the art layer and the world camera
+  // ---------- the stage: the whole window, with the 640 x 360 safe box (1280 x 720 art) in its middle
+  // The game fills the window at any shape. Everything is laid out in the safe box as before; the stage adds
+  // margins round it (HS.X0..HS.X1, HS.Y0..HS.Y1 in HUD units, HS.AX0..HS.AX1, HS.AY0..HS.AY1 in art pixels,
+  // both measured from the safe box's top left). World scenes show more of the world in the margins, fixed
+  // pictures cover or extend into them, and HUD panels pin to the stage's edges.
   // one world unit (the 640 x 400 maps) is 6 art pixels; the camera snaps to 2 art pixels, so the
   // 2 x 2 ground chunks never shimmer
   const U = HS.U = 6;
   const [art, ax] = make(1280, 720);
   HS.art = art; HS.ax = ax;
-  HS.blitArt = () => { const g = HS.g; g.imageSmoothingEnabled = false; g.drawImage(art, 0, 0, 640, 360); };
+  HS.layout = (w, h, scale) => {
+    const AW = Math.max(1280, Math.round(w / scale * 2)), AH = Math.max(720, Math.round(h / scale * 2));
+    const AOX = (AW - 1280) >> 1, AOY = (AH - 720) >> 1;
+    Object.assign(HS, {
+      scale, AW, AH, AOX, AOY, OX: AOX / 2, OY: AOY / 2,
+      AX0: -AOX, AY0: -AOY, AX1: AW - AOX, AY1: AH - AOY,
+      X0: -AOX / 2, Y0: -AOY / 2, X1: (AW - AOX) / 2, Y1: (AH - AOY) / 2, SW: AW / 2, SH: AH / 2,
+      VW: AW / U, VH: AH / U
+    });
+    if (art.width !== AW || art.height !== AH) { art.width = AW; art.height = AH; }
+    // the art layer's origin is the safe box's top left, so 0..1280 x 0..720 draws exactly where it always did
+    ax.setTransform(1, 0, 0, 1, AOX, AOY); ax.imageSmoothingEnabled = false;
+  };
+  HS.layout(1280, 720, 2);
+  HS.blitArt = () => { const g = HS.g; g.imageSmoothingEnabled = false; g.drawImage(art, HS.X0, HS.Y0, HS.SW, HS.SH); };
+  // a fixed 1280 x 720 picture drawn into the safe box (the title film, the brief, the cutscenes, the report's
+  // backdrop) carries on into the margins as a mirror image of its own edges, darkened a little: nothing is
+  // cropped, every caption stays beside its art, and there is no seam and no bar
+  // the margins darken towards the screen's edges, like a vignette, so they read as the edge of vision
+  const vignette = () => {
+    const { AOX, AOY, AW, AH } = HS, R0 = AW - AOX - 1280, B0 = AH - AOY - 720;
+    ax.save(); ax.setTransform(1, 0, 0, 1, 0, 0);
+    const band = (x0, y0, x1, y1, w, h, rx, ry) => {
+      if (w <= 0 || h <= 0) return;
+      const gr = ax.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, 'rgba(4,7,13,.14)'); gr.addColorStop(1, 'rgba(4,7,13,.62)');
+      ax.fillStyle = gr; ax.fillRect(rx, ry, w, h);
+    };
+    band(AOX, 0, 0, 0, AOX, AH, 0, 0); band(AOX + 1280, 0, AW, 0, R0, AH, AOX + 1280, 0);
+    band(0, AOY, 0, 0, 1280, AOY, AOX, 0); band(0, AOY + 720, 0, AH, 1280, B0, AOX, AOY + 720);
+    ax.restore();
+  };
+  // skip: mirror from this many pixels in from the edge, for pictures with marks right at their edges
+  HS.bleedArt = (skip = 0) => {
+    const { AOX, AOY, AW, AH } = HS;
+    if (!AOX && !AOY) return;
+    ax.save(); ax.setTransform(1, 0, 0, 1, 0, 0); ax.imageSmoothingEnabled = false;
+    const R0 = AW - AOX - 1280, B0 = AH - AOY - 720, sx = Math.min(skip, 1280 - Math.max(AOX, R0)), sy = Math.min(skip, 720 - Math.max(AOY, B0));
+    const flip = (sx0, sy0, sw, sh, dx, dy, fx, fy) => { if (sw <= 0 || sh <= 0) return; ax.save(); ax.translate(dx + (fx ? sw : 0), dy + (fy ? sh : 0)); ax.scale(fx ? -1 : 1, fy ? -1 : 1); ax.drawImage(art, sx0, sy0, sw, sh, 0, 0, sw, sh); ax.restore(); };
+    flip(AOX + sx, AOY, AOX, 720, 0, AOY, 1, 0); flip(AOX + 1280 - R0 - sx, AOY, R0, 720, AOX + 1280, AOY, 1, 0);
+    flip(0, AOY + sy, AW, AOY, 0, 0, 0, 1); flip(0, AOY + 720 - B0 - sy, AW, B0, 0, AOY + 720, 0, 1);
+    ax.restore();
+    vignette();
+  };
+  // ... or the margins mirror a static backdrop (an empty cabin wall, deep space) when the live picture has things
+  // in it that must not be copied (debris, readouts)
+  HS.bleedFrom = (img) => {
+    const { AOX, AOY } = HS;
+    if (!AOX && !AOY) return;
+    const x = ax, R0 = HS.AX1 - 1280, B0 = HS.AY1 - 720;
+    x.save(); x.imageSmoothingEnabled = false;
+    const put = (sx, sy, sw, sh, dx, dy, fx, fy) => { if (sw <= 0 || sh <= 0) return; x.save(); x.translate(dx + (fx ? sw : 0), dy + (fy ? sh : 0)); x.scale(fx ? -1 : 1, fy ? -1 : 1); x.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh); x.restore(); };
+    // left and right, then top and bottom (corners mirrored both ways)
+    put(0, 0, Math.min(AOX, 1280), 720, -AOX, 0, 1, 0); put(1280 - Math.min(R0, 1280), 0, Math.min(R0, 1280), 720, 1280, 0, 1, 0);
+    for (const [dy, sy, sh, ok] of [[-AOY, 0, Math.min(AOY, 720), AOY > 0], [720, 720 - Math.min(B0, 720), Math.min(B0, 720), B0 > 0]]) {
+      if (!ok) continue;
+      put(0, sy, 1280, sh, 0, dy, 0, 1);
+      put(0, sy, Math.min(AOX, 1280), sh, -AOX, dy, 1, 1); put(1280 - Math.min(R0, 1280), sy, Math.min(R0, 1280), sh, 1280, dy, 1, 1);
+    }
+    x.restore();
+    vignette();
+  };
+  // the camera shows the whole stage, the player in its middle; ox, oy map world art pixels to the safe box
   HS.camera = (p) => {
-    const x = HS.clamp(p.x - HS.VW / 2, 0, 640 - HS.VW), y = HS.clamp(p.y - HS.VH / 2, 0, 400 - HS.VH);
-    return { x: Math.round(x * 3) / 3, y: Math.round(y * 3) / 3, ox: Math.round(x * 3) * 2, oy: Math.round(y * 3) * 2 };
+    const vw = HS.VW, vh = HS.VH, x = HS.clamp(p.x - vw / 2, 0, Math.max(0, 640 - vw)), y = HS.clamp(p.y - vh / 2, 0, Math.max(0, 400 - vh));
+    const sx = Math.round(x * 3) * 2, sy = Math.round(y * 3) * 2;
+    return { x: sx / U, y: sy / U, ox: sx + HS.AOX, oy: sy + HS.AOY };
   };
   // world point -> art pixel
   HS.wa = (cam, X, Y) => [Math.round(X * U) - cam.ox, Math.round(Y * U) - cam.oy];

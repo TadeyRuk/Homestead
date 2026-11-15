@@ -563,7 +563,7 @@
   function fences(x, cam) {
     for (const [X, Y, w, h] of [[420, 232, 62, 40], [66, 300, 88, 46]]) {
       const [a, b] = HS.wa(cam, X, Y), W = w * U, H = h * U;
-      if (a > 1280 || b > 720 || a + W < 0 || b + H < 0) continue;
+      if (a > HS.AX1 || b > HS.AY1 || a + W < HS.AX0 || b + H < HS.AY0) continue;
       x.fillStyle = 'rgba(4,10,18,.25)'; x.fillRect(a + 4, b + 2, W, 2); x.fillRect(a + 4, b + H + 2, W, 2);
       for (let k = 0; k <= W; k += 4) { R(x, a + k, b - 8, 1, 9, 'rgba(160,166,176,.5)'); R(x, a + k, b + H - 8, 1, 9, 'rgba(160,166,176,.5)'); }
       R(x, a, b - 9, W, 2, '#a0a6b0'); R(x, a, b - 9, W, 1, '#d8dce4'); R(x, a, b + H - 9, W, 2, '#a0a6b0'); R(x, a, b + H - 9, W, 1, '#d8dce4');
@@ -573,7 +573,7 @@
   }
 
   let ground = null;
-  const GHOST = make(1280, 720);
+  const GHOST = make(1280, 720);   // resized to the stage when drawn
   // the campus is built by one generator: the sprites, the props, then the ground row by row
   let prep = null;
   function* prepAll() { yield* buildSprites(); placeProps(); yield; return yield* buildGround(SHADOWS); }
@@ -590,18 +590,19 @@
   HS.drawCampus = (x, cam, t, dyn, count) => {
     HS.campusReady();
     x.imageSmoothingEnabled = false;
-    x.drawImage(ground, cam.ox / 2, cam.oy / 2, 640, 360, 0, 0, 1280, 720);
+    // the ground under the whole stage (it is stored at 3 px per unit, shown at 2x)
+    x.drawImage(ground, (cam.ox + HS.AX0) / 2, (cam.oy + HS.AY0) / 2, HS.AW / 2, HS.AH / 2, HS.AX0, HS.AY0, HS.AW, HS.AH);
     fences(x, cam);
     const list = dyn.slice();
     if (HS.campusLife) for (const e of HS.campusLife.entries(cam, t, dyn)) list.push(e);
     for (const b of BLD) {
       const s = SPR[b.k], [a, top] = HS.wa(cam, b.X, b.Y - b.Rz);
-      if (a > 1280 || top > 720 || a + s.width < 0 || top + s.height < 0) continue;
+      if (a > HS.AX1 || top > HS.AY1 || a + s.width < HS.AX0 || top + s.height < HS.AY0) continue;
       list.push({ y: b.Y + b.h, tall: [a - 1, top - 1, s.width, s.height], draw: (x) => { x.drawImage(s, a - 1, top - 1); if (b.k === 'tracking') drawDish(x, cam, t, b); } });
     }
     for (const p of PROPS) {
       const [a, b] = HS.wa(cam, p.X, p.Y);
-      if (a < -200 || a > 1480 || b < -40 || b > 1100) continue;
+      if (a < HS.AX0 - 200 || a > HS.AX1 + 200 || b < HS.AY0 - 40 || b > HS.AY1 + 380) continue;
       const e = { y: p.Y, draw: (x) => drawProp(x, p, a, b, t, count) };
       if (p.s === 'watertower' || p.s === 'container') e.tall = [a - 48, b - 190, 140, 190];
       list.push(e);
@@ -616,9 +617,12 @@
       for (let j = i + 1; j < list.length; j++) {
         const o = list[j].tall;
         if (!(o && gx1 > o[0] && gx0 < o[0] + o[2] && gy1 > o[1] && gy0 < o[1] + o[3])) continue;
-        GHOST[1].globalCompositeOperation = 'source-over'; GHOST[1].clearRect(0, 0, 1280, 720); d.draw(GHOST[1]);
-        GHOST[1].globalCompositeOperation = 'source-in'; GHOST[1].globalAlpha = 1; GHOST[1].fillStyle = '#bfe6ff'; GHOST[1].fillRect(0, 0, 1280, 720);
-        x.globalAlpha = .55; x.drawImage(GHOST[0], 0, 0); x.globalAlpha = 1;
+        const [gc, gx] = GHOST;
+        if (gc.width !== HS.AW || gc.height !== HS.AH) { gc.width = HS.AW; gc.height = HS.AH; }
+        gx.setTransform(1, 0, 0, 1, HS.AOX, HS.AOY); gx.imageSmoothingEnabled = false;
+        gx.globalCompositeOperation = 'source-over'; gx.clearRect(HS.AX0, HS.AY0, HS.AW, HS.AH); d.draw(gx);
+        gx.globalCompositeOperation = 'source-in'; gx.globalAlpha = 1; gx.fillStyle = '#bfe6ff'; gx.fillRect(HS.AX0, HS.AY0, HS.AW, HS.AH);
+        x.globalAlpha = .55; x.drawImage(gc, HS.AX0, HS.AY0); x.globalAlpha = 1;
         break;
       }
     }

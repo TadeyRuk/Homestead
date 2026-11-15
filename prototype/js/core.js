@@ -46,7 +46,7 @@
   const box = HS.box = (x, y, w, h, edge, r = 5, fill = 'rgba(8,14,26,.9)') => { rr(x, y, w, h, r); g.fillStyle = fill; g.fill(); if (edge) { g.strokeStyle = edge; g.lineWidth = 1.5; g.stroke(); } };
   HS.tag = (s, x, y, col, size = 8) => {
     g.font = `600 ${size}px ${MONO}`; const w = g.measureText(s).width;
-    x = clamp(x, w / 2 + 8, 640 - w / 2 - 8);
+    x = clamp(x, HS.X0 + w / 2 + 8, HS.X1 - w / 2 - 8);
     box(x - w / 2 - 5, y - size + 1, w + 10, size + 7, col, 3); T(s, x, y + 1.5, size, col, { w: 600, a: 'center', b: 'middle' });
   };
   HS.bar = (x, y, w, h, f, col, back = '#1e2838') => { g.fillStyle = back; g.fillRect(x, y, w, h); g.fillStyle = col; g.fillRect(x, y, w * clamp(f, 0, 1), h); };
@@ -56,11 +56,12 @@
     if (extra) T(extra, x + w1 + 14, y + 9, 8, C.white, { b: 'middle' });
   };
   HS.prompt = (s, cx, cy, col) => {
-    const w = HS.tw(s, 8.5, { w: 600 }); cx = clamp(cx, w / 2 + 12, 640 - w / 2 - 12);
+    const w = HS.tw(s, 8.5, { w: 600 }); cx = clamp(cx, HS.X0 + w / 2 + 12, HS.X1 - w / 2 - 12);
     box(cx - w / 2 - 8, cy - 9, w + 16, 18, col, 4); T(s, cx, cy + .5, 8.5, col, { w: 600, a: 'center', b: 'middle' });
   };
   HS.topBox = (a, b, col = C.white, cx = 320) => {
-    box(cx - 78, -4, 156, 34, C.cyan, 5); T(a, cx, 9, 9.5, col, { w: 600, a: 'center', b: 'middle' }); T(b, cx, 21, 7.5, C.muted, { a: 'center', b: 'middle' });
+    const y0 = HS.Y0;   // pinned to the top of the screen
+    box(cx - 78, y0 - 4, 156, 34, C.cyan, 5); T(a, cx, y0 + 9, 9.5, col, { w: 600, a: 'center', b: 'middle' }); T(b, cx, y0 + 21, 7.5, C.muted, { a: 'center', b: 'middle' });
   };
   HS.wrap = (s, maxW, size, o = {}) => {
     g.font = `${o.w || 500} ${size}px ${o.f || MONO}`;
@@ -72,8 +73,10 @@
   // ---------- starfield
   const stars = (() => { const r = R(17); return Array.from({ length: 200 }, () => ({ x: r() * 640, y: r() * 360, s: r() < .1 ? 2 : 1, v: 2 + r() * 10, b: 90 + r() * 150 })); })();
   HS.starfield = (t, sp = 1) => {
-    g.fillStyle = '#060b16'; g.fillRect(0, 0, 640, 360);
-    for (const s of stars) { const y = (s.y + t * s.v * sp) % 360; const tw = .75 + .25 * Math.sin(t * 2 + s.x); g.fillStyle = `rgb(${s.b * tw | 0},${s.b * tw | 0},${Math.min(255, s.b * tw + 30) | 0})`; g.fillRect(s.x, y, s.s, s.s); }
+    HS.fillStage('#060b16');
+    // the 640 x 360 star pattern, spread over the whole stage
+    const kx = HS.SW / 640, ky = HS.SH / 360;
+    for (const s0 of stars) { const s = { x: HS.X0 + s0.x * kx, s: s0.s, b: s0.b }, y = HS.Y0 + ((s0.y + t * s0.v * sp) % 360) * ky; const tw = .75 + .25 * Math.sin(t * 2 + s.x); g.fillStyle = `rgb(${s.b * tw | 0},${s.b * tw | 0},${Math.min(255, s.b * tw + 30) | 0})`; g.fillRect(s.x, y, s.s, s.s); }
   };
 
   // ---------- particles (work in any context / coordinate space)
@@ -98,7 +101,8 @@
   });
   window.addEventListener('keyup', (e) => In.down.delete(e.code));
   window.addEventListener('blur', () => { In.down.clear(); In.mdown = false; });
-  const mpos = (e) => { const r = cv.getBoundingClientRect(); In.mx = (e.clientX - r.left) / r.width * 640; In.my = (e.clientY - r.top) / r.height * 360; };
+  // pointer -> HUD units, measured from the safe box's top left like everything else
+  const mpos = (e) => { const r = cv.getBoundingClientRect(), k = HS.scale || 2; In.mx = (e.clientX - r.left) * cv.width / r.width / k - (HS.OX || 0); In.my = (e.clientY - r.top) * cv.height / r.height / k - (HS.OY || 0); };
   cv.addEventListener('pointerdown', (e) => { mpos(e); In.mdown = true; In.click = true; In.any = true; HS.audioUnlock(); cv.focus(); });
   cv.addEventListener('pointermove', mpos);
   window.addEventListener('pointerup', () => { In.mdown = false; });
@@ -194,7 +198,9 @@
     s.connect(gn).connect(AC.destination); s.start(); music = s;
   };
 
-  HS.hint = (s) => { const w = HS.tw(s, 6.5); g.fillStyle = 'rgba(8,14,26,.7)'; g.fillRect(0, 349, w + 16, 11); T(s, 8, 355, 6.5, '#aab6c2', { b: 'middle' }); };
+  HS.hint = (s) => { const w = HS.tw(s, 6.5); g.fillStyle = 'rgba(8,14,26,.7)'; g.fillRect(HS.X0, HS.Y1 - 11, w + 16, 11); T(s, HS.X0 + 8, HS.Y1 - 5, 6.5, '#aab6c2', { b: 'middle' }); };
+  // fill the whole stage (the window), margins included
+  HS.fillStage = (col) => { g.fillStyle = col; g.fillRect(HS.X0 - 10, HS.Y0 - 10, HS.SW + 20, HS.SH + 20); };
   const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;   // no shake, softer flashes
   HS.shakeAmt = 0; HS.shake = (a) => { if (!calm) HS.shakeAmt = Math.max(HS.shakeAmt, a); };
   HS.flashA = 0; HS.flashCol = '255,60,60'; HS.flash = (col = '255,60,60', a = .3) => { HS.flashCol = col; HS.flashA = calm ? Math.min(a, .15) : a; };

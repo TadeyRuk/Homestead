@@ -265,36 +265,39 @@
     draw() {
       const S = HS.S, role = ST[F.st], t = F.t;
       this[role]();
-      if (F.blackout > 0) { g.fillStyle = 'rgba(2,3,8,.72)'; g.fillRect(0, 0, 640, 360); if (Math.floor(t * 6) % 2) T('BREAKER TRIPPED', 320, 180, 22, C.red, { w: 700, a: 'center', b: 'middle', f: PIX }); T('resets in ' + Math.ceil(F.blackout) + ' s', 320, 204, 9, C.muted, { a: 'center', b: 'middle' }); }
+      if (F.blackout > 0) { HS.fillStage('rgba(2,3,8,.72)'); if (Math.floor(t * 6) % 2) T('BREAKER TRIPPED', 320, 180, 22, C.red, { w: 700, a: 'center', b: 'middle', f: PIX }); T('resets in ' + Math.ceil(F.blackout) + ' s', 320, 204, 9, C.muted, { a: 'center', b: 'middle' }); }
       // station tabs, with alerts from the other stations
-      HS.chip(role, 8, 6, SUB[role]);
+      // the shared HUD is pinned to the top edge and corners of the screen (js/art.js)
+      const Y0 = HS.Y0;
+      HS.chip(role, HS.X0 + 8, Y0 + 6, SUB[role]);
       const al = F.alerts || [null, null, null, null];
       const mine = HS.rolesOf(HS.net.me);
       ST.forEach((r, i) => {
         g.globalAlpha = mine.includes(r) ? 1 : .4;   // a station someone else holds: press it to ask for a swap
         const x = 214 + i * 46, on = i === F.st, a = al[i], blink = a && Math.floor(t * (a.sev === 2 ? 5 : 2)) % 2;
         const edge = a ? (a.sev === 2 ? C.red : C.amber) : on ? C[r] : '#3a4a62';
-        box(x, 4, 42, 22, edge, 4, a && blink ? HS.rgba(a.sev === 2 ? C.red : C.amber, .3) : on ? HS.rgba(C[r], .2) : 'rgba(8,14,26,.9)');
-        T(`[${i + 1}]`, x + 4, 13, 6.5, C.muted, { b: 'middle' }); T(['PILOT', 'ENG', 'COMMS', 'SCI'][i], x + 38, 13, 6.5, on ? C.white : C[r], { w: 600, a: 'right', b: 'middle' });
-        g.fillStyle = a ? edge : C[r]; g.fillRect(x + 4, 20, 34, 2);
+        box(x, Y0 + 4, 42, 22, edge, 4, a && blink ? HS.rgba(a.sev === 2 ? C.red : C.amber, .3) : on ? HS.rgba(C[r], .2) : 'rgba(8,14,26,.9)');
+        T(`[${i + 1}]`, x + 4, Y0 + 13, 6.5, C.muted, { b: 'middle' }); T(['PILOT', 'ENG', 'COMMS', 'SCI'][i], x + 38, Y0 + 13, 6.5, on ? C.white : C[r], { w: 600, a: 'right', b: 'middle' });
+        g.fillStyle = a ? edge : C[r]; g.fillRect(x + 4, Y0 + 20, 34, 2);
         g.globalAlpha = 1;
       });
       const ask = HS.askLine && HS.askLine();
       if (ask) HS.prompt(ask[0], 320, 40, ask[1]);
       const worst = al.map((a, i) => a && Object.assign({ i }, a)).filter(a => a && a.i !== F.st).sort((a, b) => b.sev - a.sev)[0];
-      if (worst) { const col = worst.sev === 2 ? C.red : C.amber; tag(`[${worst.i + 1}] ${HS.NAME[ST[worst.i]]}: ${worst.s}`, 306, 34, col, 7); }
+      if (worst) { const col = worst.sev === 2 ? C.red : C.amber; tag(`[${worst.i + 1}] ${HS.NAME[ST[worst.i]]}: ${worst.s}`, 306, Y0 + 34, col, 7); }
       // transit box
       const m = S.mission, days = Math.round(m.days * clamp(F.prog, 0, 1));
-      box(444, -4, 188, 46, C.cyan, 5);
-      T(`${m.short.toUpperCase()} TRANSIT  ${Math.floor(clamp(F.prog, 0, 1) * 100)}%`, 452, 9, 8.5, C.white, { w: 600, b: 'middle' });
-      T(m.id === 'moon' ? `T+ ${(m.days * clamp(F.prog, 0, 1) * 24).toFixed(0)} hours` : `T+ ${days} days`, 624, 9, 7, C.muted, { a: 'right', b: 'middle' });
-      bar(452, 17, 172, 4, F.prog, F.rate < 1 ? C.amber : C.cyan);
-      T(F.rate < 1 ? 'slow: off the transfer speed' : 'on schedule', 452, 26.5, 6.5, F.rate < 1 ? C.amber : C.muted, { b: 'middle' });
-      [['O2', S.cabinO2], ['HULL', S.hull], ['FUEL', S.fuel]].forEach(([n, v], i) => { T(n, 452 + i * 60, 36.5, 6.5, C.muted, { b: 'middle', w: 600 }); T(Math.round(v) + '%', 452 + i * 60 + (i ? 22 : 13), 36.5, 6.5, v < 30 ? C.red : v < 55 ? C.amber : C.white, { b: 'middle', w: 600 }); });
-      if (F.noteT > 0) { g.globalAlpha = clamp(F.noteT * 2, 0, 1); tag(F.noteS, 306, role === 'pilot' ? 62 : 47, F.noteCol, 7); g.globalAlpha = 1; }
+      const TX = HS.X1 - 196;
+      box(TX, Y0 - 4, 188, 46, C.cyan, 5);
+      T(`${m.short.toUpperCase()} TRANSIT  ${Math.floor(clamp(F.prog, 0, 1) * 100)}%`, TX + 8, Y0 + 9, 8.5, C.white, { w: 600, b: 'middle' });
+      T(m.id === 'moon' ? `T+ ${(m.days * clamp(F.prog, 0, 1) * 24).toFixed(0)} hours` : `T+ ${days} days`, TX + 180, Y0 + 9, 7, C.muted, { a: 'right', b: 'middle' });
+      bar(TX + 8, Y0 + 17, 172, 4, F.prog, F.rate < 1 ? C.amber : C.cyan);
+      T(F.rate < 1 ? 'slow: off the transfer speed' : 'on schedule', TX + 8, Y0 + 26.5, 6.5, F.rate < 1 ? C.amber : C.muted, { b: 'middle' });
+      [['O2', S.cabinO2], ['HULL', S.hull], ['FUEL', S.fuel]].forEach(([n, v], i) => { T(n, TX + 8 + i * 60, Y0 + 36.5, 6.5, C.muted, { b: 'middle', w: 600 }); T(Math.round(v) + '%', TX + 8 + i * 60 + (i ? 22 : 13), Y0 + 36.5, 6.5, v < 30 ? C.red : v < 55 ? C.amber : C.white, { b: 'middle', w: 600 }); });
+      if (F.noteT > 0) { g.globalAlpha = clamp(F.noteT * 2, 0, 1); tag(F.noteS, 306, Y0 + (role === 'pilot' ? 62 : 47), F.noteCol, 7); g.globalAlpha = 1; }
       HS.hint(HS.online() ? (mine.length > 1 ? '[TAB] switch between your stations   [1]-[4] ask for another' : '[1]-[4] ask another player for their station') : '[1] [2] [3] [4] or [TAB] switch station');
       if (F.over) {
-        g.fillStyle = `rgba(4,7,13,${clamp(F.over.t * .6, 0, .8)})`; g.fillRect(0, 0, 640, 360);
+        HS.fillStage(`rgba(4,7,13,${clamp(F.over.t * .6, 0, .8)})`);
         const msg = { hull: ['HULL LOST', 'The ship broke up before it arrived.'], fuel: ['OUT OF FUEL', 'The ship is drifting. Mission Control is sending a tug.'], oxygen: ['NO OXYGEN', 'The cabin ran out of air before arrival.'] }[F.over.reason];
         T(msg[0], 320, 168, 34, C.red, { w: 700, a: 'center', b: 'middle', f: PIX }); T(msg[1], 320, 200, 9, C.white, { a: 'center', b: 'middle' });
       }
@@ -303,14 +306,15 @@
       const S = HS.S, t = F.t, m = F.m, mars = S.mission.id === 'mars';
       const eng = loadOn('engine');
       // space, Earth, the destination, debris and the ship built from the four parts, on the 1280 x 720 art grid (js/flight-art.js)
-      HS.flightArt.pilot(HS.ax, F, { dest: S.mission.id, engine: eng }); HS.blitArt();
+      HS.flightArt.pilot(HS.ax, F, { dest: S.mission.id, engine: eng }); HS.flightArt.bleed(HS.ax, 'pilot', F); HS.blitArt();
       // warnings
       const warned = F.pending.filter(p => p.warned);
       if (warned.length) tag(`DEBRIS IN ${Math.max(0, Math.ceil(Math.min(...warned.map(p => p.at - t))))} s  (link warning)`, 306, 48, C.amber, 7);
       else if (F.link < 60) tag('LINK DOWN: no debris warning', 306, 48, C.red, 7);
       if (!eng) tag('ENGINE IS SWITCHED OFF at the power bus', 320, 150, C.red, 8.5);
       // speed dial
-      const dx = 58, dy = 292, r0 = 40;
+      // pinned to the screen: the dial and fuel to the bottom-left, the hull panel to the right edge
+      const L0 = HS.X0, B0 = HS.Y1 - 360, R0 = HS.X1 - 640, dx = L0 + 58, dy = B0 + 292, r0 = 40;
       box(dx - r0 - 8, dy - r0 - 8, 2 * r0 + 16, 2 * r0 + 16, C.cyan, 48);
       const ang = (v) => (135 + 270 * clamp((v - 6.5) / 3, 0, 1)) * Math.PI / 180;
       g.strokeStyle = HS.rgba(C.green, .9); g.lineWidth = 5; g.beginPath(); g.arc(dx, dy, r0 - 3, ang(F.target - .25), ang(F.target + .25)); g.stroke();
@@ -318,21 +322,21 @@
       const na = ang(F.speed + Math.sin(t * 9) * .008); g.strokeStyle = '#ff7a3c'; g.lineWidth = 3; g.beginPath(); g.moveTo(dx, dy); g.lineTo(dx + Math.cos(na) * (r0 - 11), dy + Math.sin(na) * (r0 - 11)); g.stroke();
       const inBand = Math.abs(F.speed - F.target) <= .25;
       T(F.speed.toFixed(2), dx, dy + 16, 12, inBand ? C.white : C.amber, { w: 600, a: 'center', b: 'middle' }); T('km/s', dx, dy + 27, 6.5, C.muted, { a: 'center', b: 'middle' });
-      box(8, dy - r0 - 26, 100, 14, null, 3, 'rgba(8,14,26,.75)'); T('TRANSFER SPEED ' + F.target.toFixed(1), 13, dy - r0 - 18.5, 7, C.green, { b: 'middle', w: 600 });
+      box(L0 + 8, dy - r0 - 26, 100, 14, null, 3, 'rgba(8,14,26,.75)'); T('TRANSFER SPEED ' + F.target.toFixed(1), L0 + 13, dy - r0 - 18.5, 7, C.green, { b: 'middle', w: 600 });
       // fuel
-      box(116, 322, 316, 28, C.cyan, 5); T('FUEL', 124, 337, 8, C.muted, { w: 600, b: 'middle' }); bar(152, 331, 220, 10, S.fuel / 100, S.fuel < 20 ? C.red : C.pilot); T(Math.round(S.fuel) + '%', 424, 337, 9, C.white, { w: 600, a: 'right', b: 'middle' });
-      box(116, 296, 316, 22, null, 4, 'rgba(8,14,26,.75)'); T('[A][D] steer   [W] speed up   [S] slow down', 124, 313, 6.5, '#c8d2dc'); T(`${m.prop.name}: ${m.prop.flight}`, 124, 304, 6.5, C.pilot);
+      box(L0 + 116, B0 + 322, 316, 28, C.cyan, 5); T('FUEL', L0 + 124, B0 + 337, 8, C.muted, { w: 600, b: 'middle' }); bar(L0 + 152, B0 + 331, 220, 10, S.fuel / 100, S.fuel < 20 ? C.red : C.pilot); T(Math.round(S.fuel) + '%', L0 + 424, B0 + 337, 9, C.white, { w: 600, a: 'right', b: 'middle' });
+      box(L0 + 116, B0 + 296, 316, 22, null, 4, 'rgba(8,14,26,.75)'); T('[A][D] steer   [W] speed up   [S] slow down', L0 + 124, B0 + 313, 6.5, '#c8d2dc'); T(`${m.prop.name}: ${m.prop.flight}`, L0 + 124, B0 + 304, 6.5, C.pilot);
       // hull
-      box(560, 70, 72, 196, C.cyan, 5); T('HULL', 568, 86, 8, C.muted, { w: 600 }); T(Math.round(S.hull) + '%', 624, 86, 9, S.hull < 40 ? C.red : C.white, { w: 600, a: 'right' });
-      F.sections.forEach((v, i) => { const breach = F.breach && F.breach.sec === i; g.fillStyle = breach ? (Math.floor(t * 5) % 2 ? C.red : '#7a2a26') : v >= 100 ? C.green : v >= 60 ? C.amber : C.red; g.fillRect(584, 96 + i * 30, 24, 26); });
-      if (F.breach) T('breach', 596, 258, 7.5, C.red, { w: 600, a: 'center' });
-      if (m.heavy > 0) T(`heavy: ${Math.round(m.massFrac * 100)}% of lift`, 424, 313, 6.5, C.amber, { a: 'right' });
+      box(R0 + 560, 70, 72, 196, C.cyan, 5); T('HULL', R0 + 568, 86, 8, C.muted, { w: 600 }); T(Math.round(S.hull) + '%', R0 + 624, 86, 9, S.hull < 40 ? C.red : C.white, { w: 600, a: 'right' });
+      F.sections.forEach((v, i) => { const breach = F.breach && F.breach.sec === i; g.fillStyle = breach ? (Math.floor(t * 5) % 2 ? C.red : '#7a2a26') : v >= 100 ? C.green : v >= 60 ? C.amber : C.red; g.fillRect(R0 + 584, 96 + i * 30, 24, 26); });
+      if (F.breach) T('breach', R0 + 596, 258, 7.5, C.red, { w: 600, a: 'center' });
+      if (m.heavy > 0) T(`heavy: ${Math.round(m.massFrac * 100)}% of lift`, L0 + 424, B0 + 313, 6.5, C.amber, { a: 'right' });
     },
 
     eng() {
       const S = HS.S, t = F.t, m = F.m;
       // the cabin wall, the breaker panel and the hull plate with its crack and weld bead (js/flight-art.js)
-      HS.flightArt.eng(HS.ax, F); HS.blitArt();
+      HS.flightArt.eng(HS.ax, F); HS.flightArt.bleed(HS.ax, 'eng', F); HS.blitArt();
       // power bus
       T('POWER BUS', 24, 62, 9, C.eng, { w: 600 }); T(`${m.power.name}  ${Math.round(F.sup)} W`, 310, 62, 7, F.sup < m.supply * .98 ? C.amber : C.muted, { a: 'right' });
       const L = F.frac;
@@ -374,7 +378,7 @@
       // beam geometry stays in the old 160 x 90 space (x 8 on the art grid): Earth at (36, 28), the dish at (96, 78)
       const ex = 36, ey = 28, pxv = 96, pyv = 78, tgt = Math.atan2(ey - pyv, ex - pxv), act = tgt + F.e * Math.PI / 180, half = m.comms.beam * .4 * Math.PI / 180 + .05;
       const on = loadOn('comms'), bc = !on ? '#555c68' : F.link >= 95 ? '#78ffdc' : F.link > 60 ? '#ffd27a' : '#ff5a50';
-      HS.flightArt.comms(HS.ax, F, { tgt, act, half, bc, on, link: F.link }); HS.blitArt();
+      HS.flightArt.comms(HS.ax, F, { tgt, act, half, bc, on, link: F.link }); HS.flightArt.bleed(HS.ax, 'comms', F); HS.blitArt();
       tag('EARTH', ex * 4, ey * 4 - 30, C.cyan, 7.5);
       const L = F.link, locked = F.lockT > 2;
       box(440, 62, 186, 124, C.comms, 5);
@@ -396,7 +400,7 @@
       const S = HS.S, t = F.t, m = F.m;
       const tp = F.temp, pumpOn = loadOn('pump');
       // the reactor column, coolant loop, valve, gauge and the oxygen converter (js/flight-art.js)
-      HS.flightArt.sci(HS.ax, F, { pumpOn, o2: S.cabinO2 }); HS.blitArt();
+      HS.flightArt.sci(HS.ax, F, { pumpOn, o2: S.cabinO2 }); HS.flightArt.bleed(HS.ax, 'sci', F); HS.blitArt();
       // core
       T('ENERGY CORE', 24, 62, 9, C.sci, { w: 600 });
       const band = tp > 75 ? ['too hot: the instrument is losing accuracy', C.red] : tp < 35 ? ['too cold: the ship loses 20% power', C.comms] : ['in the safe band', C.muted];
