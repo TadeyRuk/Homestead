@@ -155,8 +155,8 @@
         keysRow(f.rep.keys, f.rep.i, 320 - (n * 30 - 6) / 2, Y + 24);
         bar(X + 10, Y + 60, W - 20, 4, 1 - clamp(f.rep.t / REPAIR_S, 0, 1), C.amber);
       }
-      if (f.on) tag(home ? (f.rep ? 'Repairing the relay...' : 'LANDER RELAY DOWN: [R] or [E] repair it') : 'LANDER RELAY DOWN: no recharge or uplink until someone repairs it', 320, 90, C.amber, 8);
-      if (st.meteors.some(m => !m.hit && Math.hypot(U.p.x - m.x, U.p.y - m.y) < METEOR_R + 4)) tag('MICROMETEORITE: step out of the ring!', 320, 106, C.red, 8.5);
+      if (f.on) tag(home ? (f.rep ? 'Repairing the relay...' : 'LANDER RELAY DOWN: [R] or [E] repair it') : 'LANDER RELAY DOWN: no recharge or uplink until someone repairs it', 320, (HS.Y0 || 0) + 90, C.amber, 8);
+      if (st.meteors.some(m => !m.hit && Math.hypot(U.p.x - m.x, U.p.y - m.y) < METEOR_R + 4)) tag('MICROMETEORITE: step out of the ring!', 320, (HS.Y0 || 0) + 106, C.red, 8.5);
     },
 
     hint(U) {
