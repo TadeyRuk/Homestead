@@ -180,5 +180,7 @@ The full record, area by area, is in [`docs/ai-use.md`](docs/ai-use.md).
 ## Credits and licences
 
 - [PeerJS](https://peerjs.com/) (MIT), and its free public signalling server for pairing players by code.
+- [Pixelify Sans](https://github.com/eifetx/Pixelify-Sans), © 2021 The Pixelify Sans Project Authors, [SIL Open Font License 1.1](src/ui/fonts/OFL-PixelifySans.txt). Used for titles.
+- [IBM Plex Mono](https://github.com/IBM/plex), © 2017 IBM Corp., [SIL Open Font License 1.1](src/ui/fonts/OFL-IBMPlexMono.txt). Used for the HUD, brief and report text.
 
-_Still to add: fonts, sounds and other outside resources._
+_Still to add: sounds and any other outside resources._
