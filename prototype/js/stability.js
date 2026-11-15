@@ -2,7 +2,7 @@
 //   Suit malfunction (per player, away from the lander): every SUIT_GAP seconds or so a quick-time event: press the
 //     three keys shown, in order, within QTE_S seconds. A miss costs SUIT_COST oxygen.
 //   Lander relay fault (once a run): the lander stops recharging suits and sending data until someone standing at
-//     it clears a five-key repair sequence ([R] to start). A miss just starts the sequence again.
+//     it clears a five-key repair sequence ([R], or [E] / the Work button, to start). A miss just starts the sequence again.
 //   Micrometeorites (both planets): rings mark where small rocks will land STRIKE_WARN seconds later. Anyone inside
 //     a ring when it lands loses METEOR_COST oxygen; a fresh crater stays behind.
 // Everything is seeded (HS.R) and kept as plain data in U.stab and the per-player keys qte / qteAt / qteN, so every
@@ -23,8 +23,10 @@
   const between = (a, b, v) => a + (b - a) * v;
   const idHash = (id) => { let h = 7; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
   const sequence = (seed, n, len) => { const r = HS.R(seed * 131 + n * 17 + len); return Array.from({ length: len }, () => KEYS[(r() * 4) | 0]); };
-  // a key press this turn: the first of W/A/S/D pressed, or null
-  const pressed = () => KEYS.find(k => HS.hit(k)) || null;
+  // a key press this turn: the first of W/A/S/D that went down since the last turn, or null. Read from held keys, so the
+  // touch joystick (which only holds W/A/S/D) works as well as a keyboard; st.held remembers last turn's keys
+  const held = () => KEYS.filter(k => HS.key(k));
+  const pressed = (st) => { const now = held(), k = now.find(c => !st.held.includes(c)) || null; st.held = now; return k; };
 
   HS.stability = {
     start(S) {
@@ -36,6 +38,7 @@
     tick(U, dt, atLander) {
       const st = U.stab; if (!st) return;
       const S = HS.S, f = st.fault;
+      if (f.rep && (!U.ps[f.rep.who] || U.ps[f.rep.who].down)) f.rep = null;
       if (!f.on && !f.fixed && U.t >= f.at) { f.on = true; HS.sfx.trip(); HS.log('lander_fault', { left: Math.round(U.left) }); }
       // a shower: one ring near each standing player who is out on the surface
       if (U.t >= st.next) {
@@ -73,20 +76,20 @@
       // the repair sequence at the lander
       if (f.rep && f.rep.who === U.me) {
         if (!home) { f.rep = null; return false; }
-        const k = pressed();
+        const k = pressed(f.rep);
         f.rep.t += dt;
         if (k && k === f.rep.keys[f.rep.i]) { f.rep.i++; HS.sfx.weld(); }
-        else if (k || f.rep.t > REPAIR_S) { f.tries++; f.rep = null; HS.sfx.jam(); note('Repair slipped. [R] to try again.', C.red); return true; }
+        else if (k || f.rep.t > REPAIR_S) { f.tries++; f.rep = null; HS.sfx.jam(); note('Repair slipped. [R] or [E] to try again.', C.red); return true; }
         if (f.rep && f.rep.i >= f.rep.keys.length) { f.on = false; f.fixed = true; f.rep = null; HS.sfx.jingle(); HS.log('lander_fixed', { tries: f.tries + 1 }); note('Lander relay repaired: recharging and uplink are back.', C.green, 4); }
         return true;
       }
-      if (f.on && !f.rep && home && !U.game && !U.lng && HS.hit('KeyR')) {
-        f.rep = { who: U.me, keys: sequence(st.seed, 50 + f.tries, REPAIR_KEYS), i: 0, t: 0 };
+      if (f.on && !f.rep && home && !U.game && !U.lng && HS.hit('KeyR', 'KeyE', 'Space')) {
+        f.rep = { who: U.me, keys: sequence(st.seed, 50 + f.tries, REPAIR_KEYS), i: 0, t: 0, held: held() };
         HS.sfx.ok(); return true;
       }
       // the suit malfunction: only out on the surface, never inside another panel
       if (U.qte) {
-        const q = U.qte, k = pressed(); q.t += dt;
+        const q = U.qte, k = pressed(q); q.t += dt;
         if (k && k === q.keys[q.i]) { q.i++; HS.sfx.blip(); }
         else if (k || q.t > QTE_S) {
           U.o2 = Math.max(0, U.o2 - SUIT_COST); U.qte = null; HS.sfx.sad(); HS.shake(3); HS.flash('255,60,60', .25);
@@ -102,7 +105,7 @@
       if (U.qteAt == null) U.qteAt = U.t + between(SUIT_GAP[0], SUIT_GAP[1], rnd(st.seed + idHash(U.me), 200));
       if (!home && !U.game && !U.lng && U.t >= U.qteAt) {
         U.qteN = (U.qteN || 0) + 1;
-        U.qte = { keys: sequence(st.seed + idHash(U.me), U.qteN, 3), i: 0, t: 0 };
+        U.qte = { keys: sequence(st.seed + idHash(U.me), U.qteN, 3), i: 0, t: 0, held: held() };
         HS.sfx.warn(); return true;
       }
       return false;
@@ -123,7 +126,7 @@
         if (m.hit) continue;
         const [ax, ay] = HS.wa(cam, m.x, m.y), k = clamp(m.t / STRIKE_WARN, 0, 1), rr = METEOR_R * HS.U, blink = calm() || Math.floor(t * (6 + k * 10)) % 2 === 0;
         // the warning ring, dashed in 2-pixel blocks like the shelter rings
-        for (let a = 0; a < Math.PI * 2; a += Math.PI / 18) if (blink) R(Math.round(ax + Math.cos(a) * rr) - 1, Math.round(ay + Math.sin(a) * rr * .5) - 1, 2, 2, k > .6 ? '#ff5a50' : '#ffb43c');
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 18) if (blink) R(Math.round(ax + Math.cos(a) * rr) - 1, Math.round(ay + Math.sin(a) * rr) - 1, 2, 2, k > .6 ? '#ff5a50' : '#ffb43c');
         // the rock coming in, falling from above the ring as the warning runs out
         const fy = ay - (1 - k) * 160;
         R(ax - 2, fy - 2, 4, 4, '#ffe6b0'); R(ax - 1, fy - 8, 2, 6, HS.rgba('#ffb43c', .6));
@@ -152,13 +155,12 @@
         keysRow(f.rep.keys, f.rep.i, 320 - (n * 30 - 6) / 2, Y + 24);
         bar(X + 10, Y + 60, W - 20, 4, 1 - clamp(f.rep.t / REPAIR_S, 0, 1), C.amber);
       }
-      if (f.on) tag(home ? (f.rep ? 'Repairing the relay...' : 'LANDER RELAY DOWN: [R] repair it') : 'LANDER RELAY DOWN: no recharge or uplink until someone repairs it', 320, 90, C.amber, 8);
+      if (f.on) tag(home ? (f.rep ? 'Repairing the relay...' : 'LANDER RELAY DOWN: [R] or [E] repair it') : 'LANDER RELAY DOWN: no recharge or uplink until someone repairs it', 320, 90, C.amber, 8);
       if (st.meteors.some(m => !m.hit && Math.hypot(U.p.x - m.x, U.p.y - m.y) < METEOR_R + 4)) tag('MICROMETEORITE: step out of the ring!', 320, 106, C.red, 8.5);
     },
 
     hint(U) {
-      if (U.qte) return 'press the keys in order: W A S D';
-      if (U.stab && U.stab.fault.rep && U.stab.fault.rep.who === U.me) return 'press the keys in order: W A S D';
+      if (U.qte || (U.stab && U.stab.fault.rep && U.stab.fault.rep.who === U.me)) return 'press the keys in order: W A S D, or push the joystick that way';
       return null;
     }
   };
