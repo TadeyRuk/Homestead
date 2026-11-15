@@ -103,8 +103,10 @@
       // ----- world, on the 1280 x 720 art grid (js/campus.js, js/art.js)
       const x = HS.ax, dyn = [];
       dyn.push({ y: 150, draw: (x) => HS.drawBays(x, cam, S.slots, t) });
-      for (const q of B.parts) dyn.push({ y: q.y + 2, draw: (x) => HS.drawPart(x, cam, q.x, q.y, q.id, t) });
-      dyn.push({ y: p.y + 4, draw: (x) => {
+      for (const q of B.parts) { const [qa, qb] = HS.wa(cam, q.x, q.y); dyn.push({ y: q.y + 2, ghost: [qa - 18, qb - 34, qa + 18, qb + 6], draw: (x) => HS.drawPart(x, cam, q.x, q.y, q.id, t) }); }
+      const [pa, pb] = HS.wa(cam, p.x, p.y + 4);
+      // who: the van and the crew react to the player; ghost: shown as a silhouette when a building hides it
+      dyn.push({ y: p.y + 4, who: { X: p.x, Y: p.y }, ghost: [pa - 19, pb - 80, pa + 19, pb], draw: (x) => {
         const [hx, hy] = HS.drawCrew(x, cam, p.x, p.y, S.suit, { walk: p.walk, flip: p.flip, face: p.face, carry: !!p.carry, t });
         if (p.carry) x.drawImage(HS.partIcon(p.carry), hx - 17, hy - 30 + Math.round(Math.sin(p.walk * 16)));
       } });

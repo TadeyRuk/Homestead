@@ -16,6 +16,8 @@
     let dt = Math.min(.05, (now - last) / 1000) || 0; last = now;
     for (let i = 0; i < HS.speed; i++) { step(dt); if (i === 0 && HS.speed > 1) HS.endFrame(); }   // key presses count once per frame
     draw();
+    // spend a few spare milliseconds a frame building the launch campus ahead of time (js/campus.js)
+    if (HS.campusPrewarm && HS.sceneName !== 'build') HS.campusPrewarm(5);
     HS.endFrame();
     requestAnimationFrame(frame);
   }

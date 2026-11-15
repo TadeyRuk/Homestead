@@ -57,7 +57,9 @@
   const bld = (x, X, Y, w, h, roof, face) => { px(x, X, Y, w, h, roof); px(x, X, Y + h, w, face, shade(roof, .68)); px(x, X, Y + h, w, 1, shade(roof, 1.35)); };
   const PAD = HS.PAD = { x: 545, y: 92, mx: 545, my: 156 };       // mx,my: where the crew stands to mount
   HS.KIOSK = { x: 410, y: 172, sx: 410, sy: 196 };
-  HS.CAMPUS_SOLID = [[300, 100, 72, 90], [168, 66, 88, 42], [48, 150, 124, 51], [196, 280, 156, 63], [400, 166, 20, 20], [533, 44, 24, 60]];
+  HS.CAMPUS_SOLID = [[300, 100, 72, 90], [168, 66, 88, 42], [48, 150, 124, 51], [196, 280, 156, 63], [400, 166, 20, 20], [533, 44, 24, 60],
+    // the campus's newer pieces (js/campus.js): water tower, weather mast, containers, parked vans, hedges
+    [65, 98, 14, 6], [110, 57, 4, 4], [16, 295, 22, 5], [16, 307, 22, 5], [40, 321, 22, 5], [490, 233, 22, 5], [397, 24, 6, 8], [419, 24, 6, 8], [452, 24, 6, 8], [197, 345, 59, 4], [284, 345, 60, 4]];
   HS.CAMPUS_LABELS = [[336, 96, 'ASSEMBLY BUILDING'], [212, 62, 'TRACKING STATION'], [110, 146, 'HANGAR'], [274, 276, 'CREW QUARTERS'], [451, 228, 'PARTS YARD'], [110, 296, 'STORAGE YARD'], [548, 284, 'FUEL FARM']];
   // places a part can spawn (seeded each run)
   HS.CAMPUS_SPAWNS = [[85, 218], [150, 242], [498, 338], [566, 298], [180, 124], [444, 250], [330, 368], [40, 372], [618, 206], [276, 252], [30, 60], [130, 36], [286, 60], [600, 150], [470, 372],
