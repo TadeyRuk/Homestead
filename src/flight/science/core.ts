@@ -13,6 +13,8 @@ export const COOLING_HEADROOM = 1.5;
 export const VALVE_PER_SECOND = 0.8;
 /** instrument health lost each second the core runs over the band */
 export const DAMAGE_PER_SECOND = 0.05;
+/** share of its supply the power bus keeps while the core runs under the band (S5-07) */
+export const COLD_SUPPLY = 0.75;
 
 /** what heats the core; S5-06 builds this from the payload and power parts in parts.json */
 export interface HeatSource {

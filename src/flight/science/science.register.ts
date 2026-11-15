@@ -4,10 +4,11 @@ import { enterPhase, onEnterPhase } from "../../core/phases";
 import type { DeepReadonly } from "../../core/scene";
 import { registerRule } from "../../core/step";
 import { begin } from "../../ui/kit";
+import { powered, type Bus } from "../engineer/bus";
 import type { Welder } from "../engineer/weld";
 import { registerStation, stationInput, stationPace } from "../stations";
 import { createConverter, LOST_OXYGEN, stepConverter, type Converter, type Emit } from "./converter";
-import { createCore, stepCore, type Core } from "./core";
+import { COLD_SUPPLY, createCore, SAFE_LOW, stepCore, type Core } from "./core";
 import { drawConverter, drawCore, type Area } from "./draw";
 import { heatFor } from "./heat";
 import { scienceTrouble } from "./trouble";
@@ -33,7 +34,12 @@ registerRule("flight", (state, inputs, now, dt) => {
   const keys = stationInput(state, inputs, "science");
   const pace = stationPace(state, "science");
   stepConverter(converter, state.ship, { ...keys, dy: 0 }, dt, emit, pace);
+  // S5-07: a payload off the bus (shed, or the breaker tripped) stops heating the core
+  const bus = state.flight.bus as Bus | undefined;
+  core.heat = heatFor(state.ship.slots, !bus || powered(bus, "payload")).heat;
   stepCore(core, state.ship, { ...keys, dx: 0, interact: false }, dt, emit, pace);
+  // and a core run cold starves the bus, on top of whatever a solar flare is doing to its supply
+  if (bus) bus.supplyScale = state.ship.coreTemp < SAFE_LOW ? COLD_SUPPLY : 1;
   const trouble = scienceTrouble(converter, state.ship);
   if (trouble) state.trouble.science = trouble;
   else delete state.trouble.science;

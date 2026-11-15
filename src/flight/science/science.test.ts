@@ -6,7 +6,8 @@ import { createState, type Player, type Role } from "../../core/state";
 import { step } from "../../core/step";
 import { openBreach, type Welder } from "../engineer/weld";
 import { LOST_OXYGEN, LOW_OXYGEN, type Converter } from "./converter";
-import type { Core } from "./core";
+import { COLD_SUPPLY, SAFE_LOW, type Core } from "./core";
+import type { Bus } from "../engineer/bus";
 
 const still: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
 const crew = (id: string, roles: Role[]): Player => ({
@@ -110,5 +111,53 @@ describe("science station in flight", () => {
     s.ship.hull = 0;
     step(s, {}, 100, 1);
     expect(s.log.filter((e) => e.kind === "ship_lost")).toHaveLength(1);
+  });
+
+  it("cuts the bus supply while the core runs cold, and gives it back once warm", () => {
+    const s = flight("camera", crew("sci", ["science"]));
+    const bus = s.flight.bus as Bus;
+    s.ship.coreTemp = SAFE_LOW - 0.1;
+    step(s, {}, 100, 0.016);
+    expect(bus.supplyScale).toBe(COLD_SUPPLY);
+    s.ship.coreTemp = 0.5;
+    step(s, {}, 200, 0.016);
+    expect(bus.supplyScale).toBe(1);
+  });
+
+  it("stops the payload heating the core while the engineer has it shed", () => {
+    const s = flight("radar", crew("sci", ["science"]));
+    const bus = s.flight.bus as Bus;
+    bus.loads.find((l) => l.slot === "payload")!.on = false;
+    step(s, {}, 100, 0.016);
+    expect(coreOf(s).heat).toBe(0);
+  });
+
+  it("runs an RTG build's core hotter than a solar build's", () => {
+    const rtg = flight("camera", crew("sci", ["science"]));
+    rtg.ship.slots.power = "rtg";
+    enterPhase(rtg, "flight", 0);
+    const solar = flight("camera", crew("sci", ["science"]));
+    for (let t = 1; t <= 5; t++) {
+      step(rtg, {}, t * 1_000, 1);
+      step(solar, {}, t * 1_000, 1);
+    }
+    expect(rtg.ship.coreTemp).toBeGreaterThan(solar.ship.coreTemp);
+  });
+
+  it("trips the breaker sooner when the core is left to go cold", () => {
+    // a build that runs close to a small array's limit, with nobody at either station
+    const firstTrip = (coreTemp: number) => {
+      const s = flight("spectrometer", crew("pilot", ["pilot"]));
+      s.ship.slots.comms = "high-gain";
+      enterPhase(s, "flight", 0);
+      for (let t = 1; t <= 300 && s.phase === "flight"; t++) {
+        s.ship.coreTemp = coreTemp;
+        step(s, {}, t * 100, 0.1);
+        const trip = s.log.find((e) => e.kind === "breaker_tripped");
+        if (trip) return trip.t;
+      }
+      return Infinity;
+    };
+    expect(firstTrip(SAFE_LOW - 0.1)).toBeLessThan(firstTrip(0.5));
   });
 });
