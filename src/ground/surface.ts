@@ -1,7 +1,7 @@
 import type { Point } from "../core/map";
 import type { MissionId } from "../core/state";
 import type { Rect } from "./geom";
-import { edgeWalls, type SurfaceGround } from "./world";
+import { edgeWalls, type SurfaceGround, type Wall } from "./world";
 
 // As big as the campus. One layout for the Moon and Mars, drawn in different palettes.
 // The lander sits in the middle: poor sites close by, rich sites out near the corners,
@@ -82,7 +82,12 @@ export type SurfaceMap = SurfaceGround & {
 export const SURFACE: SurfaceMap = {
   width: W,
   height: H,
-  walls: [...edgeWalls(W, H, 24), ...rim(), ...ridge(), ...ROCKS],
+  walls: [
+    ...edgeWalls(W, H, 24),
+    ...rim().map((r): Wall => ({ ...r, kind: "rim" })),
+    ...ridge().map((r): Wall => ({ ...r, kind: "ridge" })),
+    ...ROCKS.map((r): Wall => ({ ...r, kind: "rock" })),
+  ],
   floors: [],
   pits: [CRATER],
   labels: [

@@ -130,6 +130,8 @@ describe("pad slots", () => {
     press(s); // starts the countdown
     const r = recordingCtx();
     groundScene("campus").draw(r.ctx, s, { playerId: "a", now: clock });
-    expect(r.texts()).toEqual(expect.arrayContaining(["power", "rtg", "empty", "Launch in 5"]));
+    expect(r.texts()).toEqual(expect.arrayContaining(["power", "empty", "Launch in 5"]));
+    // the rtg fills the power slot, so only the other three say empty
+    expect(r.texts().filter((t) => t === "empty")).toHaveLength(3);
   });
 });

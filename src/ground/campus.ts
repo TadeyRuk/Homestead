@@ -1,6 +1,6 @@
 import type { Point } from "../core/map";
 import type { Rect } from "./geom";
-import { edgeWalls, type CampusMap } from "./world";
+import { edgeWalls, type CampusMap, type Wall } from "./world";
 
 // 3.2 screens each way, so one 960 x 540 screen shows about a tenth of the campus.
 // Laid out after the proposal's campus mock (proposal/refs/p1-map.png): runway and training
@@ -46,7 +46,16 @@ export const CAMPUS_KIOSK: Point = { x: 2035, y: 820 };
 export const CAMPUS: CampusMap = {
   width: W,
   height: H,
-  walls: [...edgeWalls(W, H, 24), ...Object.values(buildings), ...crates, ...dishes, ...trees],
+  walls: [
+    ...edgeWalls(W, H, 24),
+    ...Object.entries(buildings).map(([name, r]): Wall => ({
+      ...r,
+      kind: name === "kioskBooth" ? "booth" : name === "rocket" ? "rocket" : "building",
+    })),
+    ...crates.map((r): Wall => ({ ...r, kind: "crate" })),
+    ...dishes.map((r): Wall => ({ ...r, kind: "dish" })),
+    ...trees.map((r): Wall => ({ ...r, kind: "tree" })),
+  ],
   floors: [
     { kind: "runway", x: 80, y: 110, w: 1560, h: 110 },
     { kind: "yard", x: 180, y: 860, w: 1000, h: 110 },

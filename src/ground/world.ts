@@ -9,6 +9,13 @@ export interface Floor extends Rect {
   kind: string;
 }
 
+/** what a wall is, so the art can draw a tree as a tree; collision treats every kind the same */
+export type WallKind = "edge" | "building" | "booth" | "rocket" | "crate" | "dish" | "tree" | "rock" | "rim" | "ridge";
+
+export interface Wall extends Rect {
+  kind?: WallKind;
+}
+
 export interface Label extends Point {
   text: string;
 }
@@ -18,7 +25,7 @@ export interface GroundBase {
   width: number;
   height: number;
   /** solid: buildings, rocks and the map's edge; players slide along them */
-  walls: Rect[];
+  walls: Wall[];
   /** where the crew stands when the phase starts, one per player */
   starts: Point[];
   floors: Floor[];
@@ -38,12 +45,12 @@ type Grounds = { campus: CampusMap; surface: SurfaceGround };
 const EDGE = 16;
 
 /** four walls round a map, so nobody walks off it */
-export function edgeWalls(width: number, height: number, thick = EDGE): Rect[] {
+export function edgeWalls(width: number, height: number, thick = EDGE): Wall[] {
   return [
-    { x: 0, y: 0, w: width, h: thick },
-    { x: 0, y: height - thick, w: width, h: thick },
-    { x: 0, y: 0, w: thick, h: height },
-    { x: width - thick, y: 0, w: thick, h: height },
+    { kind: "edge", x: 0, y: 0, w: width, h: thick },
+    { kind: "edge", x: 0, y: height - thick, w: width, h: thick },
+    { kind: "edge", x: 0, y: 0, w: thick, h: height },
+    { kind: "edge", x: width - thick, y: 0, w: thick, h: height },
   ];
 }
 

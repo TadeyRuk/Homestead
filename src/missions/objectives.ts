@@ -30,7 +30,7 @@ export function startSurface(state: GameState): void {
   };
   state.objectives = Object.fromEntries(OBJECTIVES.map((id) => [id, false]));
   const lander = SURFACE.lander;
-  placePart(state, missionList(state.mission).instrument, { x: lander.x + 40, y: lander.y - 30 }, "o");
+  placePart(state, missionList(state.mission).instrument, { x: lander.x + 60, y: lander.y - 48 }, "o"); // clear of the lander art, inside its ring
 }
 
 export function bonusSpot(state: { readonly surface: { readonly bonusSpot: number } }): Point {

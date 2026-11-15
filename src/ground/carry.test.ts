@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { placePart } from "../core/parts";
+import { partName } from "../data/data";
 import { enterPhase } from "../core/phases";
 import { createState } from "../core/state";
 import { step } from "../core/step";
@@ -148,7 +149,7 @@ describe("carrying", () => {
     const s = campus(OPEN, { carrying: "rtg" });
     const r = recordingCtx();
     groundScene("campus").draw(r.ctx, s, { playerId: "a", now: 0 });
-    expect(r.texts()).toContain("rtg");
+    expect(r.texts()).toContain(partName("rtg"));
   });
 
   it("draws loose parts on the map", () => {
@@ -156,6 +157,6 @@ describe("carrying", () => {
     s.parts.push({ id: "lp1", part: "rtg", x: OPEN.x + 50, y: OPEN.y });
     const r = recordingCtx();
     groundScene("campus").draw(r.ctx, s, { playerId: "a", now: 0 });
-    expect(r.texts()).toContain("rtg");
+    expect(r.texts()).toContain(partName("rtg"));
   });
 });

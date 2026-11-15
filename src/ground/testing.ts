@@ -65,6 +65,8 @@ export function recordingCtx(width = 960, height = 540) {
     get(t, key) {
       if (key in t) return t[key as string];
       if (key === "measureText") return (text: string) => ({ width: text.length * 7 });
+      // seat 3's pixel sprites snap to the current transform; tests draw unscaled
+      if (key === "getTransform") return () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 });
       return (...args: unknown[]) => {
         calls.push({ name: String(key), args });
       };
