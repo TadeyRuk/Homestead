@@ -21,7 +21,7 @@
   }
   function step(dt) {
     HS.time += dt;
-    if (HS.hit('KeyM')) { HS.muted = !HS.muted; }
+    if (HS.hit('KeyM') && !HS.typing) { HS.muted = !HS.muted; }
     if (HS.hit('Escape') && PLAY.includes(HS.sceneName) && !next) { HS.paused = !HS.paused; HS.sfx.blip(); }
     if (HS.paused) {
       if (HS.hit('KeyT')) { HS.paused = false; HS.go('title'); }

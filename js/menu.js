@@ -11,7 +11,7 @@
   const LO = HS.liftoff, CREW = '#78ffdc', INK = '#080e1a', EDGE = '#2a3a52';
   const title = { t: 0, mission: 'mars', seed: 48213, film: null, last: 0, hits: [], frost: null };
   const reroll = () => { title.seed = 10000 + Math.floor(Math.random() * 89999); };
-  const cycleSuit = () => { const i = HS.SUITS.indexOf(HS.S.suit); HS.S.suit = HS.SUITS[(i + 1) % HS.SUITS.length]; };
+  const cycleSuit = () => { const i = HS.SUITS.indexOf(HS.S.suit); HS.S.suit = HS.SUITS[(i + 1) % HS.SUITS.length]; if (HS.saveCrew) HS.saveCrew(); };
   const film = () => (title.film ??= new LO.Liftoff(LO.calm()));
   // the main game's title shows a film you can scrub from a test script; same hook here
   window.__hsTitle = { seek(t) { const f = film(); f.setDest(title.mission); f.replay(); f.time = t; }, get time() { return title.film ? title.film.time : 0; } };
@@ -82,7 +82,7 @@
     y += 26; g.font = font(15); const wr = Math.ceil(g.measureText('[R] New seed').width) + 42;
     field(L0, y, PW - wr - 8); text(String(title.seed), L0 + 13, y + 22.5, 15, HS.C.white, { w: 500 });
     btn('seed', '[R] New seed', L0 + PW - wr, y, 'plain', wr);
-    y += 64; btn('start', '[Enter] Start mission', L0, y, 'primary');
+    y += 64; btn('start', '[Enter] Suit up', L0, y, 'primary');
     y += 52; text('Solo run: all four roles. About 10 min.', L0, y + 10.5, 14, HS.C.muted, { w: 500 });
     if (best) text('Best score ' + best, L0, y + 39.5, 14, HS.C.amber, { w: 600 });
     g.restore();
@@ -99,7 +99,7 @@
     title.hits.push({ id: 'replay', x, y, w, h });
   }
   HS.scenes.title = {
-    enter() { title.t = 0; title.last = performance.now(); title.hits = []; if (!HS.S) HS.S = { suit: C.pilot }; if (title.film) title.film.replay(); },
+    enter() { title.t = 0; title.last = performance.now(); title.hits = []; if (!HS.S) HS.S = HS.loadCrew(); if (title.film) title.film.replay(); },
     // nothing of the film runs outside this scene: it has no loop or listeners of its own, and draws offscreen
     exit() { if (title.film) { title.film.env.fx.clear(); title.film.tx.clear(); } title.hits = []; },
     update(dt) {
@@ -110,14 +110,15 @@
       if (HS.hit('Enter', 'Space')) act('start');
       if (HS.In.click) { const mx = HS.In.mx * 2, my = HS.In.my * 2, h = title.hits.find(b => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h); if (h) act(h.id); }
     },
-    start() { const suit = HS.S.suit; HS.newRun(title.mission, title.seed); HS.S.suit = suit; HS.sfx.ok(); HS.go('brief'); },
+    // a new run keeps the crew's suit, visor and callsign; the crew page comes before the brief
+    start() { HS.newRun(title.mission, title.seed); HS.sfx.ok(); HS.go('crew'); },
     draw() {
       const now = performance.now(), dt = Math.min(0.1, (now - title.last) / 1000);
       title.last = now;
       const f = film(), si = HS.SUITS.indexOf(HS.S.suit);
       // what the setup says: the mission picks the world, and the suit colour dresses the first astronaut to board
       f.setDest(title.mission);
-      f.env.lead = { name: '', role: si >= 0 && si < 4 ? si : 0, suit: si >= 0 && si < 4 ? '' : HS.S.suit };
+      f.env.lead = { name: HS.S.name || '', role: si >= 0 && si < 4 ? si : 0, suit: si >= 0 && si < 4 ? '' : HS.S.suit };
       f.prepare(4);
       const t = f.tick(dt);
       f.draw(t, dt);

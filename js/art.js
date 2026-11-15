@@ -25,14 +25,16 @@
   const OUT = '#0a0f1c', WHITE = '#e8ecf2', WSH = '#b4bcca', WSH2 = '#8a93a3', WHI = '#ffffff';
   const G1 = '#6a7282', G2 = '#4a5262', G3 = '#3a4252', G4 = '#2a3040';
   const M0 = '#f2f4f8', M1 = '#c8ccd4', M2 = '#8a92a2', M3 = '#4a5262', M4 = '#2a3040';
-  const VIS0 = '#3a2a14', VIS1 = '#8a5f1c', VIS2 = '#d8a040', VIS3 = '#ffe0a0';
+  // visor tints the crew page offers: [frame, glass, sheen, glint]
+  const VISORS = HS.VISORS = { gold: ['#3a2a14', '#8a5f1c', '#d8a040', '#ffe0a0'], silver: ['#1e2430', '#5a6474', '#a8b4c4', '#f0f6ff'], blue: ['#0e1a34', '#1e4a8a', '#4a8ad8', '#bfe0ff'], rose: ['#2e1424', '#8a2a5a', '#d8609a', '#ffd0e8'] };
   HS.ART_OUT = OUT;
   const css = (c) => `rgb(${c.map(v => v | 0).join(',')})`;
   const lift = (c, k) => css(mix(hex(c), [255, 255, 255], k));
 
   // ---------- the astronaut, 36 x 48 (38 x 50 with the outline); feet on the bottom row
   // views: front, back, side (facing right; flip for left). frames: 0 idle, 1 breathe, 2 and 3 walk
-  function body(x, c, view, frame, carry) {
+  function body(x, c, view, frame, carry, visor) {
+    const [VIS0, VIS1, VIS2, VIS3] = VISORS[visor] || VISORS.gold;
     const dk = shade(c, .62), hi = lift(c, .35);
     const b = frame === 1 ? 1 : 0;                       // breathe: the top half sinks a pixel
     const st = frame === 2 ? 1 : frame === 3 ? -1 : 0;   // stride
@@ -106,15 +108,16 @@
     else { const sw = 2 * st; R(x, 16, 19 + b, 4, 6, WHITE); R(x, 16 + sw, 24 + b, 4, 6, WHITE); R(x, 19 + sw, 24 + b, 1, 6, WSH); R(x, 16 + sw, 30 + b, 4, 3, c); }
   }
   const crewCache = new Map();
-  HS.crewSprite = (c, view = 'front', frame = 0, carry = false) => {
-    const k = `${c}|${view}|${frame}|${carry ? 1 : 0}`;
+  const visorNow = () => (HS.S && HS.S.visor) || 'gold';
+  HS.crewSprite = (c, view = 'front', frame = 0, carry = false, visor = visorNow()) => {
+    const k = `${c}|${view}|${frame}|${carry ? 1 : 0}|${visor}`;
     let s = crewCache.get(k);
-    if (!s) { s = sprite(36, 48, (x) => body(x, c, view, frame, carry), OUT); crewCache.set(k, s); }
+    if (!s) { s = sprite(36, 48, (x) => body(x, c, view, frame, carry, visor), OUT); crewCache.set(k, s); }
     return s;
   };
   // the suit-empty pose: the idle front sprite laid on its back (a quarter turn keeps pixels square)
   HS.crewDown = (c) => {
-    const k = `${c}|down`;
+    const k = `${c}|down|${visorNow()}`;
     let s = crewCache.get(k);
     if (!s) { const f = HS.crewSprite(c); const [d, dx] = make(f.height, f.width); dx.translate(f.height, 0); dx.rotate(Math.PI / 2); dx.drawImage(f, 0, 0); s = d; crewCache.set(k, s); }
     return s;

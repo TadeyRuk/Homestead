@@ -5,7 +5,7 @@
   HS.newRun = (missionId, seed) => {
     const m = HS.MISSIONS[missionId];
     HS.S = {
-      seed, mission: m, suit: (HS.S && HS.S.suit) || HS.C.pilot,
+      seed, mission: m, suit: (HS.S && HS.S.suit) || HS.C.pilot, visor: (HS.S && HS.S.visor) || 'gold', name: (HS.S && HS.S.name) || '',
       credits: m.credits, creditsStart: m.credits,
       slots: { prop: null, power: null, comms: null, payload: null },
       salvaged: [], kioskBuys: 0, buildLeft: 0, emptyAtTimeout: [],
