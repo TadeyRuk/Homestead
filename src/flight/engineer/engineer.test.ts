@@ -68,4 +68,14 @@ describe("engineer station in flight", () => {
     expect(busOf(s).source).toBe("rtg");
     expect(busOf(s).strain).toBe(0);
   });
+
+  it("writes the engineer's trouble for the crew strip, and clears it when fixed", () => {
+    const s = flight(crew("eng", ["engineer"]));
+    openBreach(weldOf(s), 0.2, "debris");
+    step(s, {}, 100, 0.016);
+    expect(s.trouble.engineer).toBe("Hull breach");
+    weldOf(s).jobs = [];
+    step(s, {}, 200, 0.016);
+    expect(s.trouble.engineer).toBeUndefined();
+  });
 });

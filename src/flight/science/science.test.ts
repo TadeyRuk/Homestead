@@ -4,7 +4,8 @@ import type { Input } from "../../core/input";
 import { enterPhase } from "../../core/phases";
 import { createState, type Player, type Role } from "../../core/state";
 import { step } from "../../core/step";
-import type { Converter } from "./converter";
+import { openBreach, type Welder } from "../engineer/weld";
+import { LOW_OXYGEN, type Converter } from "./converter";
 import type { Core } from "./core";
 
 const still: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
@@ -58,5 +59,23 @@ describe("science station in flight", () => {
     step(watched, {}, 1_000, 1);
     step(solo, {}, 1_000, 1);
     expect(solo.ship.coreTemp).toBeLessThan(watched.ship.coreTemp);
+  });
+
+  it("writes the science officer's trouble for the crew strip, and clears it when fixed", () => {
+    const s = flight("camera", crew("sci", ["science"]));
+    s.ship.coreTemp = 0.95;
+    step(s, {}, 100, 0.016);
+    expect(s.trouble.science).toBe("Core hot");
+    s.ship.coreTemp = 0.5;
+    step(s, {}, 200, 0.016);
+    expect(s.trouble.science).toBeUndefined();
+  });
+
+  it("names the breach behind a leak when the cabin drops low", () => {
+    const s = flight("camera", crew("sci", ["science"]), crew("eng", ["engineer"]));
+    openBreach(s.flight.weld as Welder, 0.2, "large-solar");
+    s.ship.cabinOxygen = LOW_OXYGEN + 0.001;
+    step(s, {}, 100, 1);
+    expect(s.log).toContainEqual(expect.objectContaining({ kind: "oxygen_low", part: "large-solar" }));
   });
 });
