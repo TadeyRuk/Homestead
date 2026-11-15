@@ -41,7 +41,15 @@ export function applySandbox(state: GameState, sandbox: Sandbox, now: number): v
   for (const p of state.players) if (p.roles.includes(sandbox.station)) p.station = sandbox.station;
 }
 
-/** a brief rule that drops the run into flight on its first tick */
-export function sandboxRule(sandbox: Sandbox): Rule {
-  return (state, _inputs, now) => applySandbox(state, sandbox, now);
+/**
+ * A brief rule that drops the run into flight on its first tick. It reads the URL then, not at startup,
+ * so every seat's parts are registered by the time it looks them up.
+ */
+export function sandboxRule(search: string): Rule {
+  return (state, _inputs, now) => {
+    const sandbox = parseSandbox(search);
+    if (!sandbox) return;
+    console.info(`sandbox: ${sandbox.station} station with ${JSON.stringify(sandbox.slots)}`);
+    applySandbox(state, sandbox, now);
+  };
 }

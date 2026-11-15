@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import "../../data/data.register";
+import { registerParts } from "../../core/catalog";
+import { PARTS } from "../../data/data";
 import type { Input } from "../../core/input";
 import { enterPhase } from "../../core/phases";
 import { createState, type Player, type Role } from "../../core/state";
@@ -9,6 +11,7 @@ const crew = (id: string, roles: Role[]): Player => ({
   id, name: id, roles, station: null, x: 0, y: 0, carrying: null, oxygen: 1, power: 1, down: false,
 });
 const ALL: Role[] = ["pilot", "engineer", "comms", "science"];
+const still: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
 
 function briefing() {
   const s = createState(3, "mars");
@@ -73,9 +76,23 @@ describe("station sandbox URL", () => {
 
   it("jumps from the brief on the first tick as a rule", () => {
     const s = briefing();
-    const still: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
-    sandboxRule({ station: "comms", slots: { comms: "laser" } })(s, { solo: still }, 100, 0.016);
+    sandboxRule("?station=comms&parts=laser")(s, { solo: still }, 100, 0.016);
     expect(s.phase).toBe("flight");
     expect(s.ship.slots.comms).toBe("laser");
+  });
+
+  it("reads the URL when the brief starts, so parts registered after startup still count", () => {
+    const rule = sandboxRule("?station=science&parts=cryo-cam");
+    registerParts([...PARTS, { id: "cryo-cam", slot: "payload", mass: 20, power: -30, heat: 0.005 }]);
+    const s = briefing();
+    rule(s, { solo: still }, 100, 0.016);
+    expect(s.ship.slots.payload).toBe("cryo-cam");
+    registerParts([...PARTS]);
+  });
+
+  it("leaves a run without a sandbox station alone", () => {
+    const s = briefing();
+    sandboxRule("?parts=rtg")(s, { solo: still }, 100, 0.016);
+    expect(s.phase).toBe("brief");
   });
 });
