@@ -1,9 +1,12 @@
 import type { DeepReadonly } from "../../core/scene";
 import type { Ship } from "../../core/state";
+import { partName } from "../../data/data";
+import { alpha, bar, box, text } from "../../ui/kit";
+import { C, ROLE_COLOUR } from "../../ui/tokens";
 import { LOW_OXYGEN, TRAY_SIZE, type Converter, type Item } from "./converter";
 import { SAFE_HIGH, SAFE_LOW, type Core } from "./core";
 
-/** where on the canvas a station draws; the flight shell (S4-01) decides */
+/** a panel on seat 3's 640 x 360 grid; the station's draw calls begin() first */
 export interface Area {
   x: number;
   y: number;
@@ -11,97 +14,84 @@ export interface Area {
   h: number;
 }
 
-const DIM = "#8a93a6";
-const TEXT = "#e6e9ef";
-const OK = "#5fbf7f";
-const WARN = "#e8b04b";
-const BAD = "#e0605a";
+const EDGE = ROLE_COLOUR.science;
+const COLD = C.blue;
 
-const ITEM_LOOK: Record<Item, { label: string; color: string }> = {
-  ice: { label: "Ice", color: "#7fc8e8" },
-  co2: { label: "CO2", color: "#b7a6e8" },
-  food: { label: "Food", color: "#c9a26b" },
-  wrench: { label: "Wrench", color: "#9aa3b2" },
+const ITEM_LOOK: Record<Item, { label: string; colour: string }> = {
+  ice: { label: "ICE", colour: "#7fc8e8" },
+  co2: { label: "CO2", colour: "#b7a6e8" },
+  food: { label: "FOOD", colour: "#c9a26b" },
+  wrench: { label: "WRENCH", colour: "#9aa3b2" },
 };
 
 export function drawConverter(
   ctx: CanvasRenderingContext2D,
   c: DeepReadonly<Converter>,
   ship: DeepReadonly<Pick<Ship, "cabinOxygen">>,
-  area: Area,
+  a: Area,
 ): void {
-  const { x, y, w } = area;
+  const x = a.x + 10;
+  const w = a.w - 20;
   const oxygen = ship.cabinOxygen;
+  box(ctx, a.x, a.y, a.w, a.h, EDGE);
+  text(ctx, "OXYGEN CONVERTER", x, a.y + 16, 9, EDGE, { weight: 600 });
 
-  ctx.font = "16px sans-serif";
-  ctx.fillStyle = TEXT;
-  ctx.fillText("Oxygen converter", x, y + 20);
-
-  ctx.font = "14px sans-serif";
-  const barY = y + 36;
-  ctx.fillStyle = "#1c2230";
-  ctx.fillRect(x, barY, w, 18);
-  ctx.fillStyle = oxygen < LOW_OXYGEN ? BAD : oxygen < 0.5 ? WARN : OK;
-  ctx.fillRect(x, barY, w * oxygen, 18);
-  ctx.fillStyle = TEXT;
-  ctx.fillText(`Cabin oxygen ${Math.round(oxygen * 100)}%`, x + 6, barY + 14);
-
-  ctx.fillStyle = c.jammed > 0 ? BAD : DIM;
-  ctx.fillText(c.jammed > 0 ? `Intake jammed, clears in ${Math.ceil(c.jammed)} s` : "Intake running", x, barY + 40);
+  bar(ctx, x, a.y + 26, w, 9, oxygen, oxygen < LOW_OXYGEN ? C.red : oxygen < 0.5 ? C.amber : C.green);
+  text(ctx, `cabin oxygen ${Math.round(oxygen * 100)}%`, x, a.y + 47, 7, oxygen < LOW_OXYGEN ? C.red : C.white, {
+    weight: oxygen < LOW_OXYGEN ? 600 : 500,
+  });
+  text(ctx, c.jammed > 0 ? `INTAKE JAMMED  clears in ${Math.ceil(c.jammed)} s` : "intake running", x + w, a.y + 47, 7, c.jammed > 0 ? C.red : C.dim, {
+    align: "right",
+    weight: c.jammed > 0 ? 600 : 500,
+  });
 
   // the tray, oldest on the left, sliding toward the intake as new items arrive
   const slot = w / TRAY_SIZE;
-  const trayY = barY + 64;
+  const trayY = a.y + 62;
   c.tray.forEach((item, i) => {
     const sx = x + i * slot;
     if (i === c.cursor) {
-      ctx.fillStyle = "#1c2230";
-      ctx.fillRect(sx, trayY - 6, slot - 6, 64);
+      ctx.fillStyle = alpha(EDGE, 0.14);
+      ctx.fillRect(sx, trayY - 4, slot - 4, 44);
     }
-    ctx.fillStyle = ITEM_LOOK[item].color;
-    ctx.fillRect(sx + 10, trayY, slot - 26, 30);
-    ctx.fillStyle = TEXT;
-    ctx.fillText(ITEM_LOOK[item].label, sx + 10, trayY + 50);
+    ctx.fillStyle = ITEM_LOOK[item].colour;
+    ctx.fillRect(sx + 6, trayY, slot - 16, 20);
+    text(ctx, ITEM_LOOK[item].label, sx + (slot - 4) / 2, trayY + 34, 7, C.white, { align: "center", weight: 600 });
   });
 
-  ctx.fillStyle = DIM;
-  ctx.fillText("A/D select, E feed", x, trayY + 90);
+  text(ctx, "ice and CO2 help most, food a little, a wrench jams it", x, a.y + a.h - 20, 7, C.dim);
+  text(ctx, "A/D pick   E feed", x, a.y + a.h - 8, 7, C.dim);
 }
 
 export function drawCore(
   ctx: CanvasRenderingContext2D,
   core: DeepReadonly<Core>,
   ship: DeepReadonly<Pick<Ship, "coreTemp" | "instrumentHealth">>,
-  area: Area,
+  a: Area,
 ): void {
-  const { x, y, w } = area;
+  const x = a.x + 10;
+  const w = a.w - 20;
   const temp = ship.coreTemp;
-
-  ctx.font = "16px sans-serif";
-  ctx.fillStyle = TEXT;
-  ctx.fillText("Energy core", x, y + 20);
-  ctx.font = "14px sans-serif";
-  ctx.fillStyle = DIM;
-  ctx.fillText(`Heated by ${core.part}`, x, y + 42);
+  const tone = temp > SAFE_HIGH ? C.red : temp < SAFE_LOW ? COLD : C.green;
+  box(ctx, a.x, a.y, a.w, a.h, EDGE);
+  text(ctx, "ENERGY CORE", x, a.y + 16, 9, EDGE, { weight: 600 });
+  text(ctx, core.heat > 0 ? `heated by the ${partName(core.part).toLowerCase()}` : "nothing on board heats it", x, a.y + 29, 7, C.muted);
 
   // the temperature bar, cold on the left, with the safe band marked behind it
-  const barY = y + 56;
-  ctx.fillStyle = "#1c2230";
-  ctx.fillRect(x, barY, w, 18);
-  ctx.fillStyle = "#24402f";
-  ctx.fillRect(x + w * SAFE_LOW, barY, w * (SAFE_HIGH - SAFE_LOW), 18);
-  ctx.fillStyle = temp > SAFE_HIGH ? BAD : temp < SAFE_LOW ? "#7fc8e8" : OK;
-  ctx.fillRect(x + w * temp - 3, barY - 4, 6, 26);
+  const barY = a.y + 38;
+  ctx.fillStyle = C.line;
+  ctx.fillRect(x, barY, w, 12);
+  ctx.fillStyle = alpha(C.green, 0.25);
+  ctx.fillRect(x + w * SAFE_LOW, barY, w * (SAFE_HIGH - SAFE_LOW), 12);
+  ctx.fillStyle = tone;
+  ctx.fillRect(x + w * temp - 2, barY - 3, 4, 18);
+  const status = temp > SAFE_HIGH ? "TOO HOT  the instrument is taking damage" : temp < SAFE_LOW ? "TOO COLD" : "in the safe band";
+  text(ctx, status, x, barY + 28, 7, tone, { weight: temp > SAFE_HIGH || temp < SAFE_LOW ? 600 : 500 });
 
-  ctx.fillStyle = temp > SAFE_HIGH ? BAD : temp < SAFE_LOW ? "#7fc8e8" : DIM;
-  const status = temp > SAFE_HIGH ? "Too hot: the instrument is taking damage" : temp < SAFE_LOW ? "Too cold" : "In the safe band";
-  ctx.fillText(status, x, barY + 40);
+  text(ctx, "coolant valve", x, barY + 48, 7, C.muted);
+  bar(ctx, x + 70, barY + 42, w - 70, 7, core.valve, C.blue);
+  text(ctx, "instrument", x, barY + 64, 7, C.muted);
+  bar(ctx, x + 70, barY + 58, w - 70, 7, ship.instrumentHealth, ship.instrumentHealth < 0.5 ? C.amber : C.green);
 
-  ctx.fillStyle = TEXT;
-  ctx.fillText(`Coolant valve ${Math.round(core.valve * 100)}% open`, x, barY + 66);
-  ctx.fillStyle = ship.instrumentHealth < 0.5 ? WARN : TEXT;
-  ctx.fillText(`Instrument health ${Math.round(ship.instrumentHealth * 100)}%`, x, barY + 88);
-
-  ctx.fillStyle = DIM;
-  ctx.fillText("W open valve, S close valve", x, barY + 120);
+  text(ctx, "W open valve   S close valve", x, a.y + a.h - 8, 7, C.dim);
 }

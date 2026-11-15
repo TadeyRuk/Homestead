@@ -154,4 +154,10 @@ describe("oxygen converter", () => {
     }
     expect(ship.cabinOxygen).toBeGreaterThan(0.5);
   });
+
+  it("drains the cabin more slowly while nobody is at the station", () => {
+    const ship = cabin(0.5);
+    stepConverter(createConverter(1), ship, still, 10, () => {}, 0.4);
+    expect(ship.cabinOxygen).toBeCloseTo(0.5 - DRAIN_PER_SECOND * 10 * 0.4);
+  });
 });
