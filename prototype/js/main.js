@@ -59,11 +59,14 @@
   function step(dt) {
     HS.time += dt;
     if (HS.hit('KeyM') && !HS.typing) { HS.muted = !HS.muted; HS.musicFor(HS.sceneName); }
+    // a tutorial card (js/tutorial.js): solo, the game holds still until it is read
+    if (HS.guide && !HS.paused && !next && fadeDir === 0 && PLAY.includes(HS.sceneName) && HS.guide.step(dt)) return;
     // no pause online: it would freeze the whole crew
     if (HS.hit('Escape') && PLAY.includes(HS.sceneName) && !next && !(HS.online && HS.online()) && !HS.typing) { HS.paused = !HS.paused; HS.sfx.blip(); }
     if (HS.paused) {
       if (HS.hit('KeyT')) { HS.paused = false; HS.go('title'); }
       else if (HS.hit('KeyR')) { const S = HS.S; HS.paused = false; HS.newRun(S.mission.id, S.seed); HS.S.suit = S.suit; HS.go('brief'); }
+      else if (HS.hit('KeyH') && HS.guide) { HS.paused = false; HS.guide.again(); }
       else if (HS.hit('Enter', 'Space')) HS.paused = false;
       return;
     }
@@ -84,6 +87,7 @@
     HS.fillStage('#04070d');
     if (cur) { g.save(); cur.draw(); g.restore(); }
     if (HS.netDraw) { g.save(); HS.netDraw(); g.restore(); }
+    if (HS.guide && PLAY.includes(HS.sceneName)) { g.save(); HS.guide.draw(); g.restore(); }
     if (HS.flashA > 0) HS.fillStage(`rgba(${HS.flashCol},${HS.flashA})`);
     // watermark required by the Space Apps AI rules, plus the sound state
     // on the title the film has its own words along the bottom, so the watermark moves to the top edge there
@@ -93,9 +97,9 @@
     HS.T(HS.muted ? '[M] off' : '[M] snd', ex - w - 41, wy + 6, 6.5, HS.muted ? HS.C.red : '#6f7d8c', { b: 'middle' });
     if (HS.paused) {
       HS.fillStage('rgba(4,7,13,.78)');
-      HS.box(210, 112, 220, 136, HS.C.cyan, 6);
+      HS.box(210, 112, 220, 150, HS.C.cyan, 6);
       HS.T('PAUSED', 320, 140, 22, HS.C.white, { w: 700, a: 'center', b: 'middle', f: HS.PIX });
-      [['[ESC] or [ENTER]', 'resume'], ['[R]', 'restart this seed'], ['[T]', 'quit to title'], ['[M]', HS.muted ? 'sound is off' : 'sound is on']].forEach(([k, v], i) => { HS.T(k, 306, 170 + i * 17, 8, HS.C.amber, { w: 600, a: 'right' }); HS.T(v, 316, 170 + i * 17, 8, HS.C.white); });
+      [['[ESC] or [ENTER]', 'resume'], ['[R]', 'restart this seed'], ['[T]', 'quit to title'], ['[H]', 'how to play'], ['[M]', HS.muted ? 'sound is off' : 'sound is on']].forEach(([k, v], i) => { HS.T(k, 306, 170 + i * 17, 8, HS.C.amber, { w: 600, a: 'right' }); HS.T(v, 316, 170 + i * 17, 8, HS.C.white); });
     } else if (PLAY.includes(HS.sceneName) && !(HS.online && HS.online())) HS.T('[ESC] pause', ex - w - 50, wy + 6, 6.5, '#6f7d8c', { a: 'right', b: 'middle' });
     if (fade > 0) HS.fillStage(`rgba(${fadeCol},${fade})`);
   }
