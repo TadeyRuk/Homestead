@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createRoomClient, createRoomHost, type RawInput } from "./room";
-import type { Conn } from "./session";
+import { DROP_MS, type Conn } from "./session";
 
 // two ends of one in-memory connection
 function pair(): [Conn, Conn] {
@@ -82,17 +82,19 @@ describe("room", () => {
     expect(host.inputs().p2).toBeUndefined();
   });
 
-  it("ends for everyone when a joiner goes quiet", () => {
+  it("ends a started run for everyone when a joiner goes quiet", () => {
     const { host, join, ended, clock } = setup();
     join("Ben");
-    clock.now = 10_001;
+    host.lock();
+    clock.now = DROP_MS + 1;
     host.check();
     expect(ended).toEqual(["Ben: Ben left", "host: Ben left"]);
   });
 
-  it("ends when a joiner closes the connection", () => {
-    const { join, ended } = setup();
+  it("ends a started run when a joiner closes the connection", () => {
+    const { host, join, ended } = setup();
     const { clientSide } = join("Ben");
+    host.lock();
     clientSide.close();
     expect(ended).toContain("host: Ben left");
   });
@@ -100,7 +102,7 @@ describe("room", () => {
   it("sends the joiner back when the host goes quiet", () => {
     const { join, ended, clock } = setup();
     const { client } = join("Ben");
-    clock.now = 10_001;
+    clock.now = DROP_MS + 1;
     client.check();
     expect(ended[0]).toBe("Ben: Host left");
   });
@@ -111,7 +113,7 @@ describe("room", () => {
     let reason = "";
     clientSide.onData((raw) => { reason = (raw as { reason: string }).reason; });
     host.addConnection(hostSide);
-    clock.now = 10_001;
+    clock.now = DROP_MS + 1;
     host.check();
     expect(reason).toBe("Took too long to join");
     expect(ended).toEqual([]);
@@ -125,5 +127,105 @@ describe("room", () => {
     clock.now = 15_000;
     host.check();
     expect(ended).toEqual([]);
+  });
+
+  it("tells the rest of the crew when one joiner drops", () => {
+    const { host, join, ended, clock } = setup();
+    join("Ben");
+    clock.now = 5_000;
+    const { client: cy } = join("Cy");
+    host.lock();
+    clock.now = DROP_MS + 1;
+    cy.ping();
+    host.check();
+    expect(ended).toContain("Cy: Ben left");
+    expect(ended).toContain("host: Ben left");
+  });
+
+  it("passes the host's own reason when it ends the game", () => {
+    const { host, join, ended } = setup();
+    join("Ben");
+    host.end("The host hit an error");
+    expect(ended).toContain("Ben: The host hit an error");
+  });
+
+  it("keeps a click until the host has used it", () => {
+    const { host, join } = setup();
+    const { client } = join("Ben");
+    client.sendInput(key({ click: true }));
+    client.sendInput(key());
+    expect(host.inputs().p2.click).toBe(true);
+    host.clearPresses();
+    expect(host.inputs().p2.click).toBe(false);
+  });
+
+  it("caps merged presses", () => {
+    const { host, join } = setup();
+    const { client } = join("Ben");
+    for (let i = 0; i < 5; i++) client.sendInput(key({ hit: Array.from({ length: 20 }, (_, k) => `K${i}-${k}`) }));
+    expect(host.inputs().p2.hit.length).toBeLessThanOrEqual(24);
+  });
+
+  it("keeps the last good input when a bad one arrives", () => {
+    const { host, join } = setup();
+    const { client, clientSide } = join("Ben");
+    client.sendInput(key({ down: ["KeyD"] }));
+    clientSide.send({ t: "input", input: { down: 3 } });
+    expect(host.inputs().p2.down).toEqual(["KeyD"]);
+  });
+
+  it("does not seat a connection refused for taking too long", () => {
+    const { host, clock } = setup();
+    const [hostSide, clientSide] = pair();
+    const late: ((raw: unknown) => void)[] = [];
+    host.addConnection({ ...hostSide, onData: (cb) => { late.push(cb); hostSide.onData(cb); } });
+    clock.now = DROP_MS + 1;
+    host.check();
+    late.forEach((cb) => cb({ t: "hello", name: "Late", suit: "#ffffff" }));
+    expect(host.members()).toHaveLength(1);
+    void clientSide;
+  });
+
+  it("refuses a bad profile with a reason and tidies names", () => {
+    const { host, join, ended } = setup();
+    const [hostSide, clientSide] = pair();
+    let reason = "";
+    clientSide.onData((raw) => { reason = (raw as { reason: string }).reason; });
+    host.addConnection(hostSide);
+    clientSide.send({ t: "hello", name: "X", suit: "orange" });
+    expect(reason).toBe("Bad crew profile");
+    join("   ");
+    join("A name far too long for the lobby");
+    expect(host.members().slice(1).map((m) => m.name)).toEqual(["Crew", "A name far too"]);
+    expect(ended).toEqual([]);
+  });
+
+  it("lets a joiner leave the lobby without ending the room", () => {
+    const { host, join, ended } = setup();
+    const { client: ben } = join("Ben");
+    const { client: cy } = join("Cy");
+    ben.leave();
+    expect(ended).toEqual([]);
+    expect(host.members().map((m) => m.name)).toEqual(["Ana", "Cy"]);
+    expect(cy.members().map((m) => m.name)).toEqual(["Ana", "Cy"]);
+  });
+
+  it("ends with a reason when the snapshot handler throws", () => {
+    const ended: string[] = [];
+    const host = createRoomHost({ name: "Ana", suit: "#f08c32" }, () => {});
+    const [hostSide, clientSide] = pair();
+    host.addConnection(hostSide);
+    createRoomClient(clientSide, { name: "Ben", suit: "#46d2e6" }, (r) => ended.push(r), undefined, () => { throw new Error("bad scene"); });
+    host.send({ scene: "nowhere" }, 1);
+    expect(ended).toEqual(["Lost sync with the host"]);
+  });
+
+  it("ignores a second welcome and a malformed roster", () => {
+    const { join } = setup();
+    const { client, hostSide } = join("Ben");
+    hostSide.send({ t: "welcome", id: "host" });
+    hostSide.send({ t: "crew", members: [{ id: 1, name: 2 }] });
+    expect(client.id()).toBe("p2");
+    expect(client.members().map((m) => m.id)).toEqual(["host", "p2"]);
   });
 });

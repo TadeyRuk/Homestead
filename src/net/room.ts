@@ -1,10 +1,9 @@
 import { DROP_MS, HOST_ID, type Conn } from "./session";
 
-/**
- * A host/join room that knows nothing about the game it carries: the prototype (plain JS) runs its
- * own simulation on the host and hands the room an opaque snapshot to send. Joiners send raw keys
- * and the pointer, which the host feeds into the prototype as that player's input.
- */
+// A host/join room that knows nothing about the game it carries: the prototype (plain JS) runs its
+// own simulation on the host and hands the room an opaque snapshot to send. Joiners send raw keys
+// and the pointer, which the host feeds into the prototype as that player's input.
+
 export interface RawInput {
   down: string[];
   hit: string[];
@@ -36,13 +35,25 @@ export function parseInput(v: unknown): RawInput | null {
   return { down: v.down, hit: v.hit, mx: v.mx, my: v.my, mdown: v.mdown, click: v.click };
 }
 
+const NAME_MAX = 14;
 function parseProfile(v: Record<string, unknown>): Profile | null {
   if (typeof v.name !== "string" || typeof v.suit !== "string" || !/^#[0-9a-f]{6}$/i.test(v.suit)) return null;
-  return { name: v.name.trim().slice(0, 14) || "Crew", suit: v.suit };
+  return { name: Array.from(v.name.trim()).slice(0, NAME_MAX).join("") || "Crew", suit: v.suit };
+}
+
+function parseMembers(v: unknown): Member[] | null {
+  if (!Array.isArray(v) || v.length > MAX_CREW) return null;
+  const out: Member[] = [];
+  for (const m of v) {
+    const profile = isObj(m) && typeof m.id === "string" ? parseProfile(m) : null;
+    if (!profile || !isObj(m)) return null;
+    out.push({ id: String(m.id), ...profile });
+  }
+  return out;
 }
 
 export function createRoomHost(me: Profile, onEnd: (reason: string) => void, clock: Clock = realClock) {
-  const members: Member[] = [{ id: HOST_ID, ...me }];
+  const members: Member[] = [{ id: HOST_ID, ...(parseProfile({ ...me }) ?? { name: "Crew", suit: "#f08c32" }) }];
   const crew = new Map<string, Conn>();
   const inputs: Record<string, RawInput> = {};
   const heard: Record<string, number> = {};
@@ -76,10 +87,15 @@ export function createRoomHost(me: Profile, onEnd: (reason: string) => void, clo
     const conn = crew.get(id);
     if (!conn) return;
     crew.delete(id);
+    delete inputs[id];
     const reason = `${members.find((m) => m.id === id)?.name ?? "A crew member"} left`;
     // a joiner that went quiet may still be listening; tell it before closing its side
     refuse(conn, reason);
-    end(reason);
+    // before the run starts, leaving the lobby only frees the seat; once it starts, the run needs everyone
+    if (!locked) {
+      members.splice(members.findIndex((m) => m.id === id), 1);
+      roster();
+    } else end(reason);
   }
 
   function addConnection(conn: Conn) {
@@ -90,8 +106,11 @@ export function createRoomHost(me: Profile, onEnd: (reason: string) => void, clo
       if (id !== null) heard[id] = clock();
       if (raw.t === "hello" && id === null) {
         const profile = parseProfile(raw);
-        if (!profile) return;
         pending.delete(conn);
+        if (!profile) {
+          console.warn("refused a hello with a bad profile", raw);
+          return refuse(conn, "Bad crew profile");
+        }
         if (locked) return refuse(conn, "Run already started");
         if (members.length >= MAX_CREW) return refuse(conn, "Crew is full");
         id = `p${nextId++}`;
@@ -105,7 +124,7 @@ export function createRoomHost(me: Profile, onEnd: (reason: string) => void, clo
         if (!input) return;
         // or-in presses so one sent just before a newer input still reaches the next tick
         const prev = inputs[id];
-        inputs[id] = prev ? { ...input, hit: [...new Set([...prev.hit, ...input.hit])], click: input.click || prev.click } : input;
+        inputs[id] = prev ? { ...input, hit: [...new Set([...prev.hit, ...input.hit])].slice(-MAX_KEYS), click: input.click || prev.click } : input;
       }
     });
     conn.onClose(() => {
@@ -133,7 +152,7 @@ export function createRoomHost(me: Profile, onEnd: (reason: string) => void, clo
       hostNow = now;
       if (!ended) broadcast({ t: "snap", data: snapshot, hostNow: now });
     },
-    /** call every tick: drops joiners that went quiet and connections that never said hello */
+    /** call every tick: a joiner that goes quiet leaves (ending a started run); a connection that never said hello is refused */
     check: () => {
       if (ended) return;
       for (const id of crew.keys()) if (clock() - heard[id] > DROP_MS) return left(id);
@@ -171,13 +190,22 @@ export function createRoomClient(
   conn.onData((raw) => {
     if (!isObj(raw)) return;
     heard = clock();
-    if (raw.t === "welcome" && typeof raw.id === "string") id = raw.id;
-    else if (raw.t === "crew" && Array.isArray(raw.members)) members = raw.members as Member[];
+    if (raw.t === "welcome" && typeof raw.id === "string" && id === null) {
+      id = raw.id;
+      if (num(raw.hostNow)) offset = raw.hostNow - clock();
+    } else if (raw.t === "crew") members = parseMembers(raw.members) ?? members;
     else if (raw.t === "snap" && num(raw.hostNow)) {
       offset = raw.hostNow - clock();
-      onSnapshot?.(raw.data, raw.hostNow);
+      try {
+        onSnapshot?.(raw.data, raw.hostNow);
+      } catch (e) {
+        // the host is still talking, so the silence check would never fire: end here instead of freezing
+        console.error("could not apply a snapshot", e);
+        finish("Lost sync with the host");
+        conn.close();
+      }
     } else if (raw.t === "end") {
-      finish(typeof raw.reason === "string" ? raw.reason : "Host left");
+      finish(typeof raw.reason === "string" ? raw.reason.slice(0, 80) : "Host left");
       conn.close();
     }
   });
