@@ -144,4 +144,15 @@ describe("energy core", () => {
     stepCore(createCore(radar), s, still, 2, () => {}, 0.4);
     expect(s.coreTemp).toBeCloseTo(0.4 + radar.heat * 2 * 0.4);
   });
+
+  it("cools more gently too while nobody is at the station, so an open valve left alone can't overcool", () => {
+    const watched = ship(0.5);
+    const unwatched = ship(0.5);
+    const a = createCore(radar);
+    const b = createCore(radar);
+    a.valve = b.valve = 1;
+    stepCore(a, watched, still, 1, () => {});
+    stepCore(b, unwatched, still, 1, () => {}, 0.4);
+    expect(0.5 - unwatched.coreTemp).toBeCloseTo((0.5 - watched.coreTemp) * 0.4);
+  });
 });

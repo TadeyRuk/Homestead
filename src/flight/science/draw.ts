@@ -75,7 +75,7 @@ export function drawCore(
   const tone = temp > SAFE_HIGH ? C.red : temp < SAFE_LOW ? COLD : C.green;
   box(ctx, a.x, a.y, a.w, a.h, EDGE);
   text(ctx, "ENERGY CORE", x, a.y + 16, 9, EDGE, { weight: 600 });
-  text(ctx, `heated by the ${partName(core.part).toLowerCase()}`, x, a.y + 29, 7, C.muted);
+  text(ctx, core.heat > 0 ? `heated by the ${partName(core.part).toLowerCase()}` : "nothing on board heats it", x, a.y + 29, 7, C.muted);
 
   // the temperature bar, cold on the left, with the safe band marked behind it
   const barY = a.y + 38;
