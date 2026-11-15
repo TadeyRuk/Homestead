@@ -4,7 +4,7 @@ import type { Input } from "../../core/input";
 import { createState, type GameState, type Player } from "../../core/state";
 import type { FlightEvent } from "../events/director";
 import { createWelder, type Welder } from "../engineer/weld";
-import { FUEL_LOW, heaviness, type Pilot, pilotRule, shipHalf, SPEED_LOW } from "./pilot";
+import { FUEL_LOW, heaviness, type Pilot, pilotRule, SHIP_Y, shipHalf, SPEED_LOW } from "./pilot";
 
 const still: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
 
@@ -73,14 +73,38 @@ describe("pilot station (S4-02, S4-03)", () => {
     expect(shipHalf(flight({ power: "large-solar" }))).toBeGreaterThan(shipHalf(flight()));
   });
 
-  it("takes debris hits in a field, logging the hit and a breach the engineer can weld", () => {
+  it("takes debris hits in a field", () => {
     const s = flight({}, [field()]);
-    s.flight.weld = createWelder(1);
     run(s, still, 20);
     expect(s.ship.hull).toBeLessThan(1);
-    const kinds = s.log.map((e) => e.kind);
-    expect(kinds).toContain("debris_hit");
-    if (kinds.includes("hull_breach")) expect((s.flight.weld as Welder).jobs.length).toBeGreaterThan(0);
+    expect(s.log.map((e) => e.kind)).toContain("debris_hit");
+  });
+
+  /** one big rock just above the ship's line, dead ahead */
+  function rockAhead(s: GameState): void {
+    pilotRule(s, { a: still }, 0, 0);
+    pilot(s).rocks.push({ id: 999, x: pilot(s).x, y: SHIP_Y - 0.05, r: 0.1, s: 1 });
+  }
+
+  it("opens a breach the engineer can weld when a big rock hits", () => {
+    const s = flight();
+    s.flight.weld = createWelder(1);
+    rockAhead(s);
+    run(s, still, 0.5);
+    expect(s.log.map((e) => e.kind)).toEqual(expect.arrayContaining(["debris_hit", "hull_breach"]));
+    expect((s.flight.weld as Welder).jobs.length).toBe(1);
+    expect(pilot(s).hits).toBe(1);
+  });
+
+  it("softens hits while nobody watches the pilot station, so a solo crew can cope", () => {
+    const watched = flight();
+    rockAhead(watched);
+    run(watched, still, 0.5);
+    const away = flight();
+    away.players[0].station = "comms";
+    rockAhead(away);
+    run(away, still, 0.5);
+    expect(1 - away.ship.hull).toBeCloseTo((1 - watched.ship.hull) * 0.4, 5);
   });
 
   it("blames a large array for hits, since it made the ship a bigger target", () => {

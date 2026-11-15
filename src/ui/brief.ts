@@ -27,10 +27,11 @@ export function resetReady(): void {
  * card with one press; a crew waits for everyone, or for the timer.
  */
 export function briefRule(state: GameState, inputs: Record<string, Input>, now: number): void {
+  // a moment's grace: presses in the first second don't count, so a key held from the lobby can't skip the card
+  if (elapsed(state, now) <= 1) return;
   for (const p of state.players) if (inputs[p.id]?.interact) ready.add(p.id);
   const all = state.players.length > 0 && state.players.every((p) => ready.has(p.id));
-  // a moment's grace, so a key still held from the lobby can't skip the card unread
-  if (all && elapsed(state, now) > 1 && state.phaseEndsAt !== null) state.phaseEndsAt = Math.min(state.phaseEndsAt, now);
+  if (all && state.phaseEndsAt !== null) state.phaseEndsAt = Math.min(state.phaseEndsAt, now);
 }
 
 let typedChars = 0;
