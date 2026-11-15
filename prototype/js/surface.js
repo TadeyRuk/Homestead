@@ -17,13 +17,13 @@
   const sheltered = (p) => atLander(p) || U.rocks.some(([X, Y]) => Math.hypot(p.x - (X + 5), p.y - (Y + 6)) < 13);
 
   function goDown() {
-    const S = HS.S; U.down = true; S.lostDown += U.carried; U.carried = 0; U.carry = null;
+    const S = HS.S; U.down = true; U.lng = null; S.lostDown += U.carried; U.carried = 0; U.carry = null;
     // the run only ends early when nobody is left standing
     if (Object.keys(U.ps).every(id => id === U.me || U.ps[id].down)) { S.crewStanding = 0; S.ended = { phase: 'surface', reason: 'suit', hazard: U.inHazard }; }
     HS.log('down', { lost: S.lostDown, hazard: U.inHazard, left: Math.round(U.left) });
     HS.sfx.sad(); HS.shake(5); HS.flash('255,60,60', .4); U.downT = 0;
   }
-  function extraction() { if (U.ext) return; keep(U.me); HS.S.carried = Object.values(U.ps).reduce((a, o) => a + o.carried, 0); U.ext = { t: 0 }; HS.S.surfaceLeft = Math.max(0, U.left); HS.log('extract', { uplinked: Math.floor(HS.S.uplinked), buffer: HS.S.buffer, carried: HS.S.carried }); HS.sfx.launch(); }
+  function extraction() { if (U.ext) return; for (const id in U.ps) U.ps[id].lng = null; U.lng = null; keep(U.me); HS.S.carried = Object.values(U.ps).reduce((a, o) => a + o.carried, 0); U.ext = { t: 0 }; HS.S.surfaceLeft = Math.max(0, U.left); HS.log('extract', { uplinked: Math.floor(HS.S.uplinked), buffer: HS.S.buffer, carried: HS.S.carried }); HS.sfx.launch(); }
 
   HS.scenes.surface = {
     enter() {
@@ -246,7 +246,7 @@
       if (U.photoT > 0) { g.fillStyle = `rgba(255,255,255,${U.photoT * 2})`; g.fillRect(0, 0, 640, 360); }
       if (!U.ext && HS.lounge) HS.lounge.draw(U, atLander(p));
       if (!U.ext && HS.stability) HS.stability.drawHud(U, atLander(p));
-      HS.hint(HS.stability && HS.stability.hint(U) ? HS.stability.hint(U) : U.lng && HS.lounge ? HS.lounge.hint(U) : U.game ? (HS.surfaceGames[U.game.kind] || {}).keys + '   [Q] step away   [TAB] hold for map' : '[E] hold to work   [F] photo   [Q] mission / suit   [TAB] hold for map');
+      HS.hint(!U.down && !U.ext && HS.stability && HS.stability.hint(U) ? HS.stability.hint(U) : U.lng && HS.lounge && !U.down && !U.ext ? HS.lounge.hint(U) : U.game ? (HS.surfaceGames[U.game.kind] || {}).keys + '   [Q] step away   [TAB] hold for map' : '[E] hold to work   [F] photo   [Q] mission / suit   [TAB] hold for map');
       if (HS.local.down.has('Tab')) this.map(cam);   // each screen holds its own map
       if (U.down && !U.ext) { g.fillStyle = 'rgba(4,7,13,.45)'; g.fillRect(0, 0, 640, 360); HS.prompt(S.lostDown ? `suit empty: ${S.lostDown} carried units lost` : 'suit empty', 320, 180, C.red); }
       if (U.ext) {

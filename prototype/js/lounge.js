@@ -46,7 +46,8 @@
     step(U, dt, home) {
       const L = U.lounge; if (!L) return false;
       if (!home || U.down || !this.ready(HS.S)) { U.lng = null; delete L.votes[U.me]; return false; }
-      if (HS.hit('KeyV') && L.callT == null) {
+      // [V], or [E] (the Work button on touch screens) from the lounge bar; never a V typed into Wordle
+      if (L.callT == null && (U.lng !== 'wordle' && HS.hit('KeyV') || !U.lng && HS.hit('KeyE'))) {
         if (L.votes[U.me]) delete L.votes[U.me]; else L.votes[U.me] = true;
         HS.sfx.blip();
       }
@@ -112,13 +113,13 @@
         box(X, Y, W, H, C.green, 5);
         T('MISSION DONE', X + 8, Y + 11, 7.5, C.green, { w: 700 });
         T('the ship is on its way. While you wait:', X + 8, Y + 21, 6.5, C.muted);
-        const v = L.callT != null ? 'ship called' : L.votes[U.me] ? `voted ${votes}/${standing.length}  [V] undo` : `[V] call the ship now  ${votes}/${standing.length}`;
+        const v = L.callT != null ? 'ship called' : L.votes[U.me] ? `voted ${votes}/${standing.length}  [V] undo` : `[V] or [E] call the ship  ${votes}/${standing.length}`;
         T(v, X + W - 8, Y + 11, 7.5, L.votes[U.me] || L.callT != null ? C.green : C.white, { a: 'right', w: 600 });
         T('[1] trivia   [2] wordle', X + W - 8, Y + 21, 7, C.cyan, { a: 'right', w: 600 });
         return;
       }
       const X = 160, Y = 66, W = 320, H = 226;
-      g.fillStyle = 'rgba(4,7,13,.55)'; g.fillRect(0, 0, 640, 360);
+      if (HS.fillStage) HS.fillStage('rgba(4,7,13,.55)'); else { g.fillStyle = 'rgba(4,7,13,.55)'; g.fillRect(0, 0, 640, 360); }
       box(X, Y, W, H, C.cyan, 6);
       if (U.lng === 'trivia') this.drawTrivia(L, U, X, Y, W, H, playingCount(U));
       else this.drawWordle(L.wd, X, Y, W, H);
