@@ -14,6 +14,14 @@
       "Uplink 25 data units"
     ],
     "bonus": "Photograph Earth from the surface",
+    "pool": [
+      "scan",
+      "sample",
+      "deploy",
+      "ice-drill",
+      "relay-align",
+      { "id": "panel-clean", "solarOnly": true }
+    ],
     "list": {
       "scans": 2,
       "sample": "regolith",
@@ -38,6 +46,14 @@
       "Uplink 40 data units"
     ],
     "bonus": "Photograph a dust devil",
+    "pool": [
+      "scan",
+      "sample",
+      "deploy",
+      "ice-drill",
+      "relay-align",
+      { "id": "panel-clean", "solarOnly": true }
+    ],
     "list": {
       "scans": 3,
       "sample": "core-sample",

@@ -1,7 +1,7 @@
 import type { PartInfo } from "../core/catalog";
 import type { MissionInfo } from "../core/missions";
 import type { MissionId } from "../core/state";
-import type { MissionList, ScanStats } from "../missions/stats";
+import type { MissionList, PoolEntry, ScanStats } from "../missions/stats";
 import missionsJson from "./missions.json";
 import partsJson from "./parts.json";
 
@@ -21,6 +21,8 @@ export interface PartData extends PartInfo {
   solar?: boolean;
   /** power parts: how much wider the ship is to debris, 1 = normal */
   target?: number;
+  /** power parts: drill torque on the surface ice drill (S2-20), the width of its safe pressure band, 0..1 */
+  torque?: number;
   /** what the part does in flight, in a few words, from proposal section 04 */
   flight: string;
   /** what the part does on the surface, in a few words */
@@ -40,6 +42,8 @@ export interface MissionData extends MissionInfo {
   hazard: string;
   objectives: string[];
   bonus: string;
+  /** what the run's objectives are drawn from (seat 2, S2-18) */
+  pool: PoolEntry[];
   list: Omit<MissionList, "bonusLabel"> & { bonusLabel: string };
 }
 

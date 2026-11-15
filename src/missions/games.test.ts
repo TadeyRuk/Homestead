@@ -11,6 +11,7 @@ import { player, recordingCtx, STILL } from "../ground/testing";
 import { gameLines } from "../report/analyze";
 import { inSurfaceGame, registerSurfaceGame, unregisterSurfaceGame, type GameResult } from "./games";
 import { objectiveLines } from "./objectives";
+import { objectivePool, registerObjectivePool, type PoolEntry } from "./stats";
 
 // a stand-in minigame: hold W for a second to finish, E fails the attempt
 interface Stub {
@@ -19,8 +20,14 @@ interface Stub {
 const KIND = "stub-game";
 const SPOT = { x: 1700, y: 600 };
 let built = 0;
+const pools = { mars: [] as readonly PoolEntry[], moon: [] as readonly PoolEntry[] };
 
 beforeAll(() => {
+  // the stub is always drawn: it is in every pool with only the fixed objectives
+  for (const m of ["mars", "moon"] as const) {
+    pools[m] = objectivePool(m);
+    registerObjectivePool(m, ["scan", KIND, "sample"]);
+  }
   SURFACE.gameSpots[KIND] = { mars: SPOT, moon: SPOT };
   registerSurfaceGame<Stub>(KIND, {
     name: "Stub game",
@@ -44,6 +51,7 @@ beforeAll(() => {
   });
 });
 afterAll(() => {
+  for (const m of ["mars", "moon"] as const) registerObjectivePool(m, [...pools[m]]);
   unregisterSurfaceGame(KIND);
   delete SURFACE.gameSpots[KIND];
 });

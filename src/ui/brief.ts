@@ -4,6 +4,7 @@ import type { DeepReadonly, Scene } from "../core/scene";
 import type { GameState } from "../core/state";
 import { timeLeft } from "../core/timer";
 import { MISSIONS } from "../data/data";
+import { briefObjectives } from "../missions/objectives";
 import { alpha, begin, box, easeInOut, hint, seg, starfield, text, textWidth, typed, wrap } from "./kit";
 import { sfx } from "./sfx";
 import { C, ROLE_COLOUR } from "./tokens";
@@ -88,7 +89,9 @@ export const briefScene: Scene = {
     if (objAt > 0) {
       text(ctx, "OBJECTIVES", 66, 222, 7.5, C.muted, { weight: 600 });
       let y = 222;
-      const lines = [...m.objectives.map((o) => `› ${o}`), `★ Bonus: ${m.bonus}`];
+      // this seed's draw from the mission's pool (seat 2, S2-18), so the crew knows what to build for
+      const drawn = briefObjectives(state.seed, state.mission, state.data.target || m.dataTarget);
+      const lines = [...drawn.map((o) => `› ${o}`), `★ Bonus: ${m.bonus}`];
       lines.forEach((line, i) => {
         const at = objAt - i * 0.3;
         if (at < 0) return;
@@ -102,8 +105,10 @@ export const briefScene: Scene = {
       const hazardAt = objAt - lines.length * 0.3;
       if (hazardAt > 0) {
         ctx.globalAlpha = k * seg(hazardAt, 0, 0.4);
-        text(ctx, "HAZARD", 66, 300, 7.5, C.red, { weight: 600 });
-        wrap(ctx, m.hazard, 210, 8).forEach((line, i) => text(ctx, line, 150, 300 + i * 11, 8, C.white));
+        // pushed down if the drawn objectives wrap onto more lines than usual
+        const hy = Math.max(300, y + 8);
+        text(ctx, "HAZARD", 66, hy, 7.5, C.red, { weight: 600 });
+        wrap(ctx, m.hazard, 210, 8).forEach((line, i) => text(ctx, line, 150, hy + i * 11, 8, C.white));
         ctx.globalAlpha = k;
       }
     }
