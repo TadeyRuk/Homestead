@@ -5,7 +5,7 @@
   const L = HS.LANDER, A = HS.surfaceArt;   // the art is in js/surface-art.js
   let U = null;
   // what each crew member has of their own on the surface; use() swaps one of them into U, keep() saves it back
-  const PK = ['p', 'carry', 'carried', 'o2', 'pw', 'hold', 'tab', 'down', 'downT', 'inHazard', 'game', 'lng'];
+  const PK = ['p', 'carry', 'carried', 'o2', 'pw', 'hold', 'tab', 'down', 'downT', 'inHazard', 'game', 'lng', 'qte', 'qteAt', 'qteN'];
   const use = (id) => { const o = U.ps[id]; for (const k of PK) U[k] = o[k]; U.me = id; };
   const keep = (id) => { const o = U.ps[id]; for (const k of PK) o[k] = U[k]; };
 
@@ -34,10 +34,11 @@
         sites: rich.map(([x, y]) => ({ x, y, kind: 'rich', done: false })).concat(poor.map(([x, y]) => ({ x, y, kind: 'poor', done: false }))),
         sample: { x: D.sample[(r() * 2) | 0][0], y: 0, done: false }, deploy: { x: 0, y: 0, done: false, prog: 0 },
         hold: null, tab: 'MISSION', noteS: '', noteT: 0, noteCol: C.cyan, down: false, downT: 0, ext: null, done: false, inHazard: false, map: false, photoT: 0, lowBeep: 0,
-        storms: [], flares: [], rocks: D.rocks, devil: { x: 0, y: 0 }, overlook: null, upT: 0, ps: {}, me: 'host', lng: null,
+        storms: [], flares: [], rocks: D.rocks, devil: { x: 0, y: 0 }, overlook: null, upT: 0, ps: {}, me: 'host', lng: null, qte: null, qteAt: null, qteN: 0,
+        stab: HS.stability ? HS.stability.start(S) : null,   // suit faults, the lander fault, micrometeorites (js/stability.js)
         lounge: HS.lounge ? HS.lounge.start(S) : null   // the wait at the lander once the list is done (js/lounge.js)
       };
-      HS.ids().forEach((id, i) => { U.ps[id] = { p: { x: L.x + 4 + i * 10, y: L.y + 16, walk: 0, flip: false, face: 'down' }, carry: null, carried: 0, o2: 100, pw: 100, hold: null, tab: 'MISSION', down: false, downT: 0, inHazard: false, game: null, lng: null }; });
+      HS.ids().forEach((id, i) => { U.ps[id] = { p: { x: L.x + 4 + i * 10, y: L.y + 16, walk: 0, flip: false, face: 'down' }, carry: null, carried: 0, o2: 100, pw: 100, hold: null, tab: 'MISSION', down: false, downT: 0, inHazard: false, game: null, lng: null, qte: null, qteAt: null, qteN: 0 }; });
       use(U.ps[HS.net.me] ? HS.net.me : HS.ids()[0]);
       const si = D.sample.find(s => s[0] === U.sample.x); U.sample.y = si[1];
       const di = D.deploy[(r() * 2) | 0]; U.deploy.x = di[0]; U.deploy.y = di[1];
@@ -75,12 +76,13 @@
       }
       if (U.mars) { const k = U.t * .11 + U.devilSeed; U.devil.x = 320 + Math.sin(k) * 250 + Math.sin(k * 2.7) * 30; U.devil.y = 200 + Math.cos(k * 1.3) * 150; }
 
+      if (U.stab) HS.stability.tick(U, dt, atLander);
       HS.each((id) => { if (!U.ps[id] || U.ext) return; use(id); this.walk(dt); keep(id); });
       use(U.ps[HS.net.me] ? HS.net.me : ids[0]);
       if (U.lounge && HS.lounge.tick(U, dt) === 'call') { extraction(); return; }
 
       // the lander uplinks whatever the crew has handed in
-      if (S.buffer > 0) { const d = Math.min(S.buffer, m.comms.rate * dt); S.buffer -= d; S.uplinked += d; U.upT += dt; if (U.upT > .25) { U.upT = 0; U.fx.add(L.x + A.ANT.x, L.y + A.ANT.y, (Math.random() - .5) * 4, -30, 1.1, '#78ffdc', 1); } }
+      if (S.buffer > 0 && !(U.stab && HS.stability.faulty(U))) { const d = Math.min(S.buffer, m.comms.rate * dt); S.buffer -= d; S.uplinked += d; U.upT += dt; if (U.upT > .25) { U.upT = 0; U.fx.add(L.x + A.ANT.x, L.y + A.ANT.y, (Math.random() - .5) * 4, -30, 1.1, '#78ffdc', 1); } }
     },
 
     // one crew member's turn, with their suit swapped into U by use()
@@ -89,7 +91,8 @@
       if (U.down) return;
       // an open minigame: this player stands still and their keys belong to it; the clock, the suit and the hazards run on
       const lounging = !U.game && !!U.lounge && HS.lounge.step(U, dt, atLander(p));
-      const busy = !!U.game || lounging;
+      const shaken = !U.game && !lounging && !!U.stab && HS.stability.step(U, dt, atLander(p), note);
+      const busy = !!U.game || lounging || shaken;
       if (U.game) { const n = HS.gameFrame.step(U, dt); if (n) note(n[0], n[1]); }
       if (!busy && HS.hit('KeyQ')) { U.tab = U.tab === 'MISSION' ? 'SUIT' : 'MISSION'; HS.sfx.blip(); }
       if (!busy && HS.In.click && HS.over(8, this.panelY() + 2, 204, 20)) { U.tab = HS.In.mx < 100 ? 'MISSION' : 'SUIT'; HS.sfx.blip(); }
@@ -128,7 +131,8 @@
       if (home) {
         if (U.carried > 0) { S.buffer += U.carried; note(`${U.carried} data units handed to the lander`, C.cyan); U.carried = 0; HS.sfx.good(); }
         if (U.carry === 'sample') { U.carry = null; S.sampleDone = true; note(mi.objectives.sample + ': done', C.green); HS.sfx.jingle(); HS.log('sample'); }
-        const rc = m.power.recharge * (m.power.solar && U.mars ? .43 : 1) * dt; U.o2 = Math.min(100, U.o2 + rc); U.pw = Math.min(100, U.pw + rc);
+        // a lander with its relay down does not recharge suits (js/stability.js)
+        if (!(U.stab && HS.stability.faulty(U))) { const rc = m.power.recharge * (m.power.solar && U.mars ? .43 : 1) * dt; U.o2 = Math.min(100, U.o2 + rc); U.pw = Math.min(100, U.pw + rc); }
       } else {
         const k = storm ? 4 : flare ? 6 : 1; U.o2 -= .7 * k * dt; U.pw -= .32 * k * dt;
       }
@@ -143,7 +147,7 @@
     mine(d) { return d && d.ps && d.ps[HS.net.me] ? d.ps[HS.net.me].p : null; },
     me() { return U && U.ps[HS.net.me] ? U.p : null; },
     predict(q, dt) {
-      if (!this.me() || U.done || U.ext || U.down || U.game || U.lng) return false;
+      if (!this.me() || U.done || U.ext || U.down || U.game || U.lng || U.qte) return false;
       const a = HS.axis(), len = Math.hypot(a.x, a.y);
       if (!len) { q.walk = 0; return false; }
       const storm = U.mars && stormAt(q.x) && !atLander(q);
@@ -196,6 +200,7 @@
         list.push({ y: q.y + 4, draw: () => A.crew(x, cam, q, HS.member(id).suit, { walk: q.walk, flip: q.flip, face: q.face, carry: !!held, down: o.down, t }, held, t) });
       }
       list.sort((a, b) => a.y - b.y);
+      if (HS.stability) HS.stability.drawWorld(x, cam, U, t);
       for (const d of list) d.draw();
       HS.drawFx(x, cam, U.fx);
       if (U.ext) A.ship(x, cam, U.ext, t);
@@ -229,7 +234,7 @@
       HS.topBox(U.ext ? 'EXTRACTION' : 'EXTRACTION IN ' + fmt(U.left), `data uplinked ${Math.floor(S.uplinked)} / ${mi.target}`, low && Math.floor(t * 4) % 2 ? C.red : low ? C.amber : C.white);
       this.panel(8, this.panelY());
       if (!U.down && !U.ext) {
-        const tg = U.game || U.lng ? null : this.target();
+        const tg = U.game || U.lng || U.qte ? null : this.target();
         if (U.game) HS.gameFrame.panel(U);
         if (tg) { const k = U.hold && U.hold.id === tg.id ? U.hold.prog : 0; HS.prompt(k > 0 ? `${tg.label}  ${Math.round(k * 100)}%` : tg.label, 430, 318, tg.col === '#e6e8ec' ? C.cyan : tg.col); if (k > 0) bar(360, 330, 140, 4, k, C.cyan); }
         else if (!U.game && (U.o2 < 35 || U.pw < 35)) HS.prompt(`${U.o2 < U.pw ? 'oxygen' : 'suit power'} ${Math.round(Math.min(U.o2, U.pw))}%  get to the lander`, 430, 318, C.red);
@@ -240,7 +245,8 @@
       if (U.noteT > 0) { g.globalAlpha = clamp(U.noteT * 2, 0, 1); tag(U.noteS, 320, 72, U.noteCol, 8); g.globalAlpha = 1; }
       if (U.photoT > 0) { g.fillStyle = `rgba(255,255,255,${U.photoT * 2})`; g.fillRect(0, 0, 640, 360); }
       if (!U.ext && HS.lounge) HS.lounge.draw(U, atLander(p));
-      HS.hint(U.lng && HS.lounge ? HS.lounge.hint(U) : U.game ? (HS.surfaceGames[U.game.kind] || {}).keys + '   [Q] step away   [TAB] hold for map' : '[E] hold to work   [F] photo   [Q] mission / suit   [TAB] hold for map');
+      if (!U.ext && HS.stability) HS.stability.drawHud(U, atLander(p));
+      HS.hint(HS.stability && HS.stability.hint(U) ? HS.stability.hint(U) : U.lng && HS.lounge ? HS.lounge.hint(U) : U.game ? (HS.surfaceGames[U.game.kind] || {}).keys + '   [Q] step away   [TAB] hold for map' : '[E] hold to work   [F] photo   [Q] mission / suit   [TAB] hold for map');
       if (HS.local.down.has('Tab')) this.map(cam);   // each screen holds its own map
       if (U.down && !U.ext) { g.fillStyle = 'rgba(4,7,13,.45)'; g.fillRect(0, 0, 640, 360); HS.prompt(S.lostDown ? `suit empty: ${S.lostDown} carried units lost` : 'suit empty', 320, 180, C.red); }
       if (U.ext) {
