@@ -52,4 +52,20 @@ describe("engine-off handshake", () => {
     expect(() => step(s, { pilot: { ...still, interact: true } }, 100, 0.016)).not.toThrow();
     expect(engineOffPending(s)).toBe(false);
   });
+
+  it("lets a solo player answer after Tabbing from the Engineer station to Pilot", () => {
+    const s = createState(1, "mars");
+    s.players.push(crew("solo", ["pilot", "engineer", "comms", "science"]));
+    enterPhase(s, "flight", 0);
+    const bus = createBus(1, { id: "rtg", watts: 450 }, [{ id: "chemical-engine", slot: "propulsion", watts: 30 }]);
+    bus.engineOffAsked = true;
+    s.flight.bus = bus;
+    s.players[0].station = "engineer";
+    step(s, { solo: { ...still, interact: true } }, 100, 0.016); // E at the Engineer station is not an answer
+    expect(engineOffPending(s)).toBe(true);
+    s.players[0].station = "pilot";
+    step(s, { solo: { ...still, interact: true } }, 200, 0.016);
+    expect(engineOffPending(s)).toBe(false);
+    expect(engineOn(s)).toBe(false);
+  });
 });
