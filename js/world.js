@@ -62,38 +62,7 @@
   // places a part can spawn (seeded each run)
   HS.CAMPUS_SPAWNS = [[85, 218], [150, 242], [498, 338], [566, 298], [180, 124], [444, 250], [330, 368], [40, 372], [618, 206], [276, 252], [30, 60], [130, 36], [286, 60], [600, 150], [470, 372],
     [104, 322], [238, 380], [600, 372], [436, 120], [52, 268], [362, 240], [452, 60], [250, 150], [150, 100]];
-  HS.campusBg = (() => {
-    const [c, x] = off(640, 400); const r = R(5);
-    px(x, 0, 0, 640, 400, '#2c584c');
-    for (let i = 0; i < 300; i++) { const s = 5 + r() * 13; ell(x, r() * 640, r() * 400, s, s * .6, ['#285046', '#326252', '#264c48'][i % 3]); }
-    px(x, 16, 22, 316, 22, '#484e5a'); for (let X = 26; X < 320; X += 16) px(x, X, 33, 7, 1, '#dee2e8');
-    x.strokeStyle = '#707884'; x.lineWidth = 9; x.lineCap = 'square';
-    [[332, 33, 380, 62], [380, 62, 380, 380], [40, 210, 630, 210], [180, 118, 380, 118], [380, 270, 560, 296], [222, 210, 222, 270], [120, 210, 120, 380], [470, 210, 470, 140]]
-      .forEach(([a, b, cc, d]) => { x.beginPath(); x.moveTo(a, b); x.lineTo(cc, d); x.stroke(); });
-    ell(x, 380, 210, 40, 22, '#707884'); ell(x, 380, 210, 24, 13, '#346454');
-    x.strokeStyle = '#969ca6'; x.lineWidth = 7; x.beginPath(); x.moveTo(380, 140); x.lineTo(506, 110); x.stroke();
-    const hexp = (R0, sy) => { x.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i; x.lineTo(PAD.x + R0 * Math.cos(a), PAD.y + R0 * sy * Math.sin(a)); } x.closePath(); x.fill(); };
-    x.fillStyle = '#9298a2'; hexp(46, .75); x.fillStyle = '#7c828c'; hexp(28, .75); px(x, 541, 98, 8, 46, '#343840');
-    px(x, 500, 144, 90, 26, '#5c626e'); px(x, 500, 144, 90, 1, '#8a909c');
-    bld(x, 300, 100, 72, 76, '#525a6a', 14); for (let i = 0; i < 6; i++) px(x, 306 + i * 11, 106, 7, 14, '#68728a'); px(x, 326, 176, 20, 14, '#282c36');
-    bld(x, 168, 66, 88, 32, '#606878', 10); for (let X = 174; X < 252; X += 10) px(x, X, 101, 4, 3, '#d2dc96');
-    px(x, 236, 52, 2, 14, '#9aa0aa'); ell(x, 237, 50, 7, 4, '#d8dce4'); ell(x, 237, 50, 3, 2, '#9aa0aa');
-    bld(x, 48, 150, 124, 42, '#606876', 9); for (let X = 50; X < 172; X += 4) px(x, X, 150, 1, 42, '#767e8c');
-    bld(x, 196, 280, 156, 54, '#586070', 9); px(x, 236, 292, 76, 30, '#346454');
-    [[420, 232, 62, 40], [66, 300, 88, 46]].forEach(([X, Y, w, h]) => {
-      x.strokeStyle = '#a0a6b0'; x.lineWidth = 1; x.strokeRect(X + .5, Y + .5, w, h);
-      for (let i = 0; i < 9; i++) { const cx = X + 3 + r() * (w - 12), cy = Y + 3 + r() * (h - 12); px(x, cx, cy, 6, 5, '#966e46'); px(x, cx, cy, 6, 1, '#be9664'); }
-    });
-    px(x, 400, 168, 20, 9, '#d640a4'); px(x, 400, 177, 20, 9, '#54285e'); px(x, 403, 179, 14, 1, '#ff96e1');
-    [[490, 300], [548, 322], [604, 288], [520, 362], [600, 340]].forEach(([X, Y]) => { ell(x, X, Y, 11, 7, '#828892'); ell(x, X, Y - 4, 7, 6, '#e1e4ea'); ell(x, X, Y - 4, 3, 2, '#bac0ca'); });
-    const zones = [[256, 300, 44, 90], [20, 110, 60, 140], [400, 470, 20, 70], [600, 636, 20, 130], [176, 200, 130, 200], [380, 470, 310, 390], [250, 296, 200, 270], [10, 60, 220, 290], [590, 636, 230, 270], [150, 210, 350, 395], [460, 520, 176, 200]];
-    for (let i = 0; i < 90; i++) {
-      const z = zones[(r() * zones.length) | 0], X = z[0] + r() * (z[1] - z[0]), Y = z[2] + r() * (z[3] - z[2]), s = 3 + r() * 3, pink = r() < .5;
-      ell(x, X, Y, s, s, pink ? '#c43e80' : '#1e403a'); ell(x, X - 1, Y - 1, s * .55, s * .55, pink ? '#ec60a6' : '#2c5a4a');
-    }
-    noise(x, 640, 400, r, 7, .45);
-    return c;
-  })();
+  // the campus art is in js/campus.js (1280 x 720 art grid); positions and collision stay here
 
   // ---------- Mars and the Moon
   HS.LANDER = { x: 320, y: 205 };
@@ -145,8 +114,7 @@
     return c;
   })();
 
-  // shared camera: keep the player centred, clamp to the map
-  HS.camera = (p) => ({ x: HS.clamp(p.x - HS.VW / 2, 0, 640 - HS.VW), y: HS.clamp(p.y - HS.VH / 2, 0, 400 - HS.VH) });
+  // the shared camera (HS.camera) is in js/art.js: it centres the player and snaps to the art grid
   HS.toScreen = (cam, X, Y) => ({ x: (X - cam.x) * 3, y: (Y - cam.y) * 3 });
   // arrow at the screen edge pointing to an off-screen world point
   // Arrows are spread out so two targets in the same direction do not print on top of each other.

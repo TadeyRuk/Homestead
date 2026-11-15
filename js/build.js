@@ -2,7 +2,6 @@
 (() => {
   const HS = window.HS, g = HS.g;
   const { T, box, bar, tag, C, CAT, PIX, clamp, px, fmt } = HS;
-  const [world, wx] = HS.off(640, 400);
   const SPEED = 58, PAD = HS.PAD, KIOSK = HS.KIOSK;
   let B = null;
 
@@ -54,7 +53,7 @@
       const picked = HS.SLOTS.map(s => bySlot[s][(r() * 3) | 0]);
       const rest = HS.shuffle(HS.REAL_PARTS.filter(id => !picked.includes(id)), r).slice(0, 5);
       B = {
-        t: 0, left: HS.BUILD_TIME, p: { x: 520, y: 188, walk: 0, flip: false, carry: null }, done: false,
+        t: 0, left: HS.BUILD_TIME, p: { x: 520, y: 188, walk: 0, flip: false, face: 'down', carry: null }, done: false,
         parts: picked.concat(rest).map((id, i) => ({ id, x: spots[i][0], y: spots[i][1], seen: false })),
         kr: HS.R(S.seed * 13 + 101), roll: null, count: null, fx: new HS.Parts(), toast: '', toastT: 0, toastCol: C.cyan, mountFlash: 0, lastTick: 0, map: false
       };
@@ -74,6 +73,7 @@
         const sp = SPEED * (p.carry ? .92 : 1) * dt, nx = clamp(p.x + a.x / len * sp, 6, 634), ny = clamp(p.y + a.y / len * sp, 10, 394);
         if (!inSolid(nx, p.y)) p.x = nx; if (!inSolid(p.x, ny)) p.y = ny;
         p.walk += dt; if (a.x) p.flip = a.x < 0;
+        p.face = a.x && Math.abs(a.x) >= Math.abs(a.y) ? 'side' : a.y < 0 ? 'up' : 'down';
         if (Math.random() < .25) B.fx.add(p.x, p.y + 3, (Math.random() - .5) * 8, -4, .35, 'rgba(210,230,220,.5)', 1);
       } else p.walk = 0;
       // kiosk roll
@@ -100,21 +100,17 @@
     },
     draw() {
       const S = HS.S, p = B.p, t = B.t, cam = HS.camera(p);
-      // ----- world
-      wx.drawImage(HS.campusBg, 0, 0);
-      HS.rocket(wx, PAD.x, PAD.y + 8, 1.3, 0);
-      if (B.count != null) for (let i = 0; i < 3; i++) HS.ell(wx, PAD.x + Math.sin(t * 9 + i * 2) * 8, PAD.y + 12 + i * 2, 5 + (5 - B.count), 3, 'rgba(230,230,235,.5)');
-      HS.SLOTS.forEach((slot, i) => {
-        const X = 518 + i * 18, Y = 158;
-        px(wx, X - 6, Y - 6, 13, 13, '#141e26');
-        if (S.slots[slot]) { px(wx, X - 3, Y - 3, 7, 7, CAT[slot]); wx.strokeStyle = C.cyan; wx.lineWidth = 1; wx.strokeRect(X - 6.5, Y - 6.5, 13, 13); }
-        else if (Math.floor(t * 2 + i) % 2) for (let k = -6; k <= 6; k += 2) { px(wx, X + k, Y - 6, 1, 1, C.amber); px(wx, X + k, Y + 6, 1, 1, C.amber); px(wx, X - 6, Y + k, 1, 1, C.amber); px(wx, X + 6, Y + k, 1, 1, C.amber); }
-      });
-      px(wx, 403, 179, 14, 1, Math.floor(t * 3) % 2 ? '#ff96e1' : '#ffffff');
-      for (const q of B.parts) HS.pickup(wx, q.x, q.y, CAT[HS.PARTS[q.id].slot], t);
-      B.fx.draw(wx);
-      HS.astro(wx, p.x, p.y, S.suit, { walk: p.walk, flip: p.flip, carry: p.carry ? CAT[HS.PARTS[p.carry].slot] : null });
-      g.imageSmoothingEnabled = false; g.drawImage(world, cam.x, cam.y, HS.VW, HS.VH, 0, 0, 640, 360);
+      // ----- world, on the 1280 x 720 art grid (js/campus.js, js/art.js)
+      const x = HS.ax, dyn = [];
+      dyn.push({ y: 150, draw: (x) => HS.drawBays(x, cam, S.slots, t) });
+      for (const q of B.parts) dyn.push({ y: q.y + 2, draw: (x) => HS.drawPart(x, cam, q.x, q.y, q.id, t) });
+      dyn.push({ y: p.y + 4, draw: (x) => {
+        const [hx, hy] = HS.drawCrew(x, cam, p.x, p.y, S.suit, { walk: p.walk, flip: p.flip, face: p.face, carry: !!p.carry, t });
+        if (p.carry) x.drawImage(HS.partIcon(p.carry), hx - 17, hy - 30 + Math.round(Math.sin(p.walk * 16)));
+      } });
+      HS.drawCampus(x, cam, t, dyn, B.count);
+      HS.drawFx(x, cam, B.fx);
+      HS.blitArt();
 
       // ----- labels in the world
       for (const [X, Y, s] of HS.CAMPUS_LABELS) { const q = HS.toScreen(cam, X, Y); if (q.x > 30 && q.x < 610 && q.y > 44 && q.y < 330) T(s, q.x, q.y, 7, 'rgba(235,240,245,.55)', { w: 600, a: 'center' }); }
@@ -214,7 +210,7 @@
       g.fillStyle = 'rgba(4,7,13,.72)'; g.fillRect(0, 0, 640, 360);
       box(x0 - 8, y0 - 22, 456, 312, C.cyan, 6);
       T('CAMPUS MAP', x0, y0 - 8, 8.5, C.cyan, { w: 600 }); T('parts appear once you have seen them', x0 + 440, y0 - 8, 7, C.muted, { a: 'right' });
-      g.imageSmoothingEnabled = true; g.drawImage(HS.campusBg, x0, y0, 440, 275); g.imageSmoothingEnabled = false;
+      g.imageSmoothingEnabled = true; g.drawImage(HS.campusMap(), x0, y0, 440, 275); g.imageSmoothingEnabled = false;
       g.fillStyle = 'rgba(4,7,13,.25)'; g.fillRect(x0, y0, 440, 275);
       for (const q of B.parts) if (q.seen) { const part = HS.PARTS[q.id]; g.fillStyle = CAT[part.slot]; g.fillRect(x0 + q.x * k - 3, y0 + q.y * k - 3, 6, 6); g.strokeStyle = '#04070d'; g.lineWidth = 1; g.strokeRect(x0 + q.x * k - 3.5, y0 + q.y * k - 3.5, 7, 7); T(part.name, x0 + q.x * k, y0 + q.y * k - 6, 6.5, C.white, { a: 'center' }); }
       g.strokeStyle = C.white; g.lineWidth = 1; g.strokeRect(x0 + cam.x * k, y0 + cam.y * k, HS.VW * k, HS.VH * k);
