@@ -52,7 +52,7 @@
       const spots = HS.shuffle(HS.CAMPUS_SPAWNS.filter(([x, y]) => !inSolid(x, y)), r);
       // one part for each slot is always out there; five more are random
       const bySlot = {}; HS.REAL_PARTS.forEach(id => (bySlot[HS.PARTS[id].slot] = bySlot[HS.PARTS[id].slot] || []).push(id));
-      const picked = HS.SLOTS.map(s => bySlot[s][(r() * 3) | 0]);
+      const picked = HS.SLOTS.map(s => bySlot[s][(r() * bySlot[s].length) | 0]);
       const rest = HS.shuffle(HS.REAL_PARTS.filter(id => !picked.includes(id)), r).slice(0, 5);
       B = {
         t: 0, left: HS.BUILD_TIME, p: null, ps: {}, me: 'host', done: false,

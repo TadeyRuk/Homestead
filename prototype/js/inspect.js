@@ -127,6 +127,7 @@
     }
   }
   function specimen(id, t, col) {
+    id = HS.look(id);   // new parts borrow an existing part's art (S4-12)
     const x = sx, W = sc.width, H = sc.height;
     IY = FIRES.has(id) ? 34 : 70;
     x.clearRect(0, 0, W, H);

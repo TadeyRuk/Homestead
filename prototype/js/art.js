@@ -286,7 +286,7 @@
     }
   };
   const partCache = {};
-  HS.partIcon = (id) => (partCache[id] ??= sprite(32, 32, PARTS_ART[id] || PARTS_ART.sal_payload, OUT));
+  HS.partIcon = (id) => (partCache[id] ??= sprite(32, 32, PARTS_ART[HS.look(id)] || PARTS_ART.sal_payload, OUT));
   // a part lying in the world: a shadow, a pulsing pickup ring, and the part bobbing a pixel
   HS.drawPart = (x, cam, X, Y, id, t) => {
     const [cx, cy] = HS.wa(cam, X, Y), s = HS.partIcon(id), bob = Math.round(Math.sin(t * 3 + X) * 1.2);

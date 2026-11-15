@@ -49,6 +49,7 @@
   }
   // where each slot's part sits on the ship sprite (art pixels, outline included)
   function anchors(ids) {
+    ids = HS.lookSlots(ids);
     const { CX, BL, BR } = HS.flightArt.SHIP_GEOM, P = HS.PARTS;
     const pw = ids.power, cm = ids.comms;
     return {
