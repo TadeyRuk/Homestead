@@ -1,5 +1,5 @@
 // Homestead world art: sprites and the three maps, drawn in pixel space (640x400 world, 3x zoom).
-// Placeholder pixel art adapted from the team's proposal walkthrough. AI-assisted, not final art.
+// Pixel art adapted from the team's proposal walkthrough.
 (() => {
   const HS = window.HS;
   const { R, px, ell, shade, off, noise, C } = HS;

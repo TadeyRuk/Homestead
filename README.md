@@ -187,7 +187,7 @@ Homestead was made with AI assistance. The concept and design are the team's own
 - **Reviews:** a GitHub Action runs Claude on each pull request to point out bugs and missing tests (`.github/workflows/claude-review.yml`).
 - **Research and docs:** Claude helped find and check the NASA sources above and drafted parts of this README.
 - **Music:** the five background tracks were generated with the ElevenLabs sound-effects model from text prompts (theme, tempo, instruments). A script cut each into a whole-bar loop, built an intro that rises into it, added hi-hats to the Moon loop and mixed in the NASA recordings.
-- **Art:** drawn in code and labelled as made with AI. The game will show a "Made with AI assistance" label in a corner of the screen.
+- **Art:** drawn in code and labelled as made with AI. The title screen shows "Art made with AI assistance" in its top corner, the watermark rule 5 asks for.
 - **No NASA branding:** no AI-made content uses NASA logos, flags or mission identifiers.
 
 The full record is in [`docs/ai-use.md`](docs/ai-use.md).
