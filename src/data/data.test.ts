@@ -46,7 +46,8 @@ describe("parts and mission data (S3-01)", () => {
     expect(s.credits).toBe(MISSIONS.mars.credits);
     expect(s.data.target).toBe(40);
     startRun(s, "moon", 0);
-    expect(s.credits).toBeLessThan(MISSIONS.mars.credits);
+    expect(s.credits).toBe(MISSIONS.moon.credits);
+    expect(MISSIONS.moon.credits).toBeLessThan(MISSIONS.mars.credits);
     expect(s.data.target).toBe(25);
   });
 
