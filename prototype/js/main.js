@@ -69,6 +69,7 @@
     g.globalAlpha = 1; g.imageSmoothingEnabled = false;
     g.fillStyle = '#04070d'; g.fillRect(-10, -10, 660, 380);
     if (cur) { g.save(); cur.draw(); g.restore(); }
+    if (HS.netDraw) { g.save(); HS.netDraw(); g.restore(); }
     if (HS.flashA > 0) { g.fillStyle = `rgba(${HS.flashCol},${HS.flashA})`; g.fillRect(-10, -10, 660, 380); }
     // watermark required by the Space Apps AI rules, plus the sound state
     // on the title the film has its own words along the bottom, so the watermark moves to the top edge there
