@@ -4,7 +4,7 @@ import { enterPhase } from "../core/phases";
 import { createState, type Player, type Role } from "../core/state";
 import { step } from "../core/step";
 import { createBus, type Bus } from "./engineer/bus";
-import { engineOffPending } from "./handshake";
+import { engineOffPending, engineOffPrompt } from "./handshake";
 
 const still = { dx: 0, dy: 0, interact: false, panel: false, switch: false };
 const crew = (id: string, roles: Role[]): Player => ({
@@ -67,5 +67,26 @@ describe("engine-off handshake", () => {
     step(s, { solo: { ...still, interact: true } }, 200, 0.016);
     expect(engineOffPending(s)).toBe(false);
     expect(engineOn(s)).toBe(false);
+  });
+
+  it("waits while a two-role pilot is at another station, even if they press E there", () => {
+    const s = flightWithRequest();
+    s.players[0].roles = ["pilot", "comms"];
+    s.players[0].station = "comms";
+    step(s, { pilot: { ...still, interact: true } }, 100, 0.016);
+    expect(engineOffPending(s)).toBe(true);
+    expect(engineOn(s)).toBe(true);
+  });
+
+  it("tells whoever holds Pilot what to do: answer at the Pilot station, or Tab there from elsewhere", () => {
+    const s = flightWithRequest();
+    s.players[0].roles = ["pilot", "comms"];
+    s.players[0].station = "comms";
+    expect(engineOffPrompt(s, "pilot")).toBe("tab");
+    s.players[0].station = "pilot";
+    expect(engineOffPrompt(s, "pilot")).toBe("answer");
+    expect(engineOffPrompt(s, "eng")).toBeNull();
+    step(s, { pilot: { ...still, panel: true } }, 100, 0.016);
+    expect(engineOffPrompt(s, "pilot")).toBeNull();
   });
 });
