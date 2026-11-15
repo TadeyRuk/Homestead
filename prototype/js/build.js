@@ -162,21 +162,22 @@
       HS.nameTags(cam, B.ps);
 
       // ----- labels in the world
-      for (const [X, Y, s] of HS.CAMPUS_LABELS) { const q = HS.toScreen(cam, X, Y); if (q.x > 30 && q.x < 610 && q.y > 44 && q.y < 330) T(s, q.x, q.y, 7, 'rgba(235,240,245,.55)', { w: 600, a: 'center' }); }
+      for (const [X, Y, s] of HS.CAMPUS_LABELS) { const q = HS.toScreen(cam, X, Y); if (q.x > HS.X0 + 30 && q.x < HS.X1 - 30 && q.y > HS.Y0 + 44 && q.y < HS.Y1 - 30) T(s, q.x, q.y, 7, 'rgba(235,240,245,.55)', { w: 600, a: 'center' }); }
       let nearest = null, nd = 40;
       for (const q of B.parts) {
         const s = HS.toScreen(cam, q.x, q.y), part = HS.PARTS[q.id];
-        if (s.x > 30 && s.x < 610 && s.y > 50 && s.y < 310 && !(s.x < 300 && s.y > 196)) tag(part.name, s.x, s.y + 20, part.slot === 'comms' ? C.cyan : CAT[part.slot]);
+        if (s.x > HS.X0 + 30 && s.x < HS.X1 - 30 && s.y > HS.Y0 + 50 && s.y < HS.Y1 - 50 && !(s.x < HS.X0 + 300 && s.y > HS.Y1 - 164)) tag(part.name, s.x, s.y + 20, part.slot === 'comms' ? C.cyan : CAT[part.slot]);
         const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < nd) { nd = d; nearest = q; }
       }
-      const ks = HS.toScreen(cam, KIOSK.x + 10, KIOSK.y - 6); if (ks.x > 40 && ks.x < 600 && ks.y > 50 && ks.y < 330) tag(`PARTS KIOSK  ${HS.KIOSK_COST} CR`, ks.x, ks.y - 8, C.pink);
-      const ps = HS.toScreen(cam, PAD.x, PAD.y - 46); if (ps.x > 40 && ps.x < 600 && ps.y > 36 && ps.y < 330) tag('LAUNCH PAD', ps.x, ps.y, C.cyan);
+      const ks = HS.toScreen(cam, KIOSK.x + 10, KIOSK.y - 6); if (ks.x > HS.X0 + 40 && ks.x < HS.X1 - 40 && ks.y > HS.Y0 + 50 && ks.y < HS.Y1 - 30) tag(`PARTS KIOSK  ${HS.KIOSK_COST} CR`, ks.x, ks.y - 8, C.pink);
+      const ps = HS.toScreen(cam, PAD.x, PAD.y - 46); if (ps.x > HS.X0 + 40 && ps.x < HS.X1 - 40 && ps.y > HS.Y0 + 36 && ps.y < HS.Y1 - 30) tag('LAUNCH PAD', ps.x, ps.y, C.cyan);
       HS.arrowReset(); HS.edgeArrow(cam, PAD.mx, PAD.my, C.cyan, 'PAD');
       if (S.credits >= HS.KIOSK_COST) HS.edgeArrow(cam, KIOSK.sx, KIOSK.sy, C.pink, 'KIOSK');
 
       // ----- HUD
       const carry = p.carry ? HS.PARTS[p.carry] : null;
-      HS.chip('crew', 8, 30, carry ? 'carrying ' + carry.name : 'hands empty');
+      // the HUD is pinned to the screen's corners and edges (HS.X0..X1, Y0..Y1; js/art.js)
+      HS.chip('crew', HS.X0 + 8, HS.Y0 + 30, carry ? 'carrying ' + carry.name : 'hands empty');
       const low = B.left < 30;
       HS.topBox('BUILD TIME  ' + fmt(B.left), `slots ${HS.model().mounted} of 4`, low && Math.floor(t * 4) % 2 ? C.red : low ? C.amber : C.white, 320);
       // the rocket as it stands (or would, with the part in your hands or at your feet), as a blueprint
@@ -193,13 +194,13 @@
       else if (nearest && nd < 15) pr = carry ? `[E] drop ${carry.name}, take ${HS.PARTS[nearest.id].name}` : `[E] pick up ${HS.PARTS[nearest.id].name}  ${HS.PARTS[nearest.id].mass} kg`;
       else if (atKiosk) { pr = S.credits >= HS.KIOSK_COST ? `[E] buy a random part  ${HS.KIOSK_COST} CR` : 'kiosk: not enough credits'; pc = C.pink; }
       else if (atPad && B.count == null) { const n = 4 - HS.model().mounted; pr = n ? `[L] launch now (${n} empty slot${n > 1 ? 's' : ''} will get salvage parts)` : '[L] start the launch countdown'; pc = C.amber; }
-      if (pr) HS.prompt(pr, 320, 300, pc);
+      if (pr) HS.prompt(pr, 320, HS.Y1 - 60, pc);
       if (atPad && B.count == null) {
         const m = HS.model();
-        if (m.overweight) tag(`TOO HEAVY: ${m.mass} kg on a ${m.lift} kg engine. It will not reach orbit.`, 285, 60, C.red, 8.5);
-        else if (m.supply && m.draw > m.supply) tag(`POWER SHORT: ${m.draw} W needed, ${m.supply} W supplied. Breakers will trip.`, 285, 60, C.amber, 8.5);
+        if (m.overweight) tag(`TOO HEAVY: ${m.mass} kg on a ${m.lift} kg engine. It will not reach orbit.`, Math.min(320, HS.X1 - 350), HS.Y0 + 60, C.red, 8.5);
+        else if (m.supply && m.draw > m.supply) tag(`POWER SHORT: ${m.draw} W needed, ${m.supply} W supplied. Breakers will trip.`, Math.min(320, HS.X1 - 350), HS.Y0 + 60, C.amber, 8.5);
       }
-      if (B.toastT > 0) { g.globalAlpha = clamp(B.toastT * 2, 0, 1); tag(B.toast, 320, 322, B.toastCol, 8.5); g.globalAlpha = 1; }
+      if (B.toastT > 0) { g.globalAlpha = clamp(B.toastT * 2, 0, 1); tag(B.toast, 320, HS.Y1 - 38, B.toastCol, 8.5); g.globalAlpha = 1; }
       HS.hint('[E] use   [Q] drop   [L] launch   [I] inspect   [B] blueprint   [TAB] map');
 
       // kiosk roll
@@ -218,17 +219,17 @@
       if (p.inspect && !mapHeld) HS.inspect.panel(p.inspect.id, p.inspect.t, { action: pr || (p.carry === p.inspect.id ? 'carry it to the pad to mount it   [Q] drop it' : ''), left: B.left });
       if (mapHeld) this.map(cam);
       if (B.count != null) {
-        g.fillStyle = 'rgba(4,7,13,.5)'; g.fillRect(0, 0, 640, 360);
+        HS.fillStage('rgba(4,7,13,.5)');
         const n = Math.ceil(B.count), pop = 1 + (B.count % 1) * .25;
         T('LAUNCH IN ' + n, 320, 170, 34 * pop, C.amber, { w: 700, a: 'center', b: 'middle', f: PIX });
         T('[L] cancel', 320, 204, 9, C.muted, { a: 'center', b: 'middle' });
       }
-      if (B.mountFlash > 0) { g.fillStyle = `rgba(120,255,220,${B.mountFlash * .25})`; g.fillRect(0, 0, 640, 360); }
+      if (B.mountFlash > 0) HS.fillStage(`rgba(120,255,220,${B.mountFlash * .25})`);
     },
 
     // the part you hold or stand by: the part itself, big, with its numbers as chips (the full specs are on [B])
     card(id, head) {
-      const part = HS.PARTS[id], x = 8, y = 220, w = 236, h = 68, col = part.slot === 'comms' ? C.cyan : CAT[part.slot];
+      const part = HS.PARTS[id], x = HS.X0 + 8, y = HS.Y1 - 140, w = 236, h = 68, col = part.slot === 'comms' ? C.cyan : CAT[part.slot];
       box(x, y, w, h, col, 5);
       g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(x + 6, y + 6, 44, 44);
       g.fillStyle = col; g.fillRect(x + 6, y + 48, 44, 2);
@@ -246,7 +247,7 @@
 
     map(cam) {
       const x0 = 100, y0 = 44, k = 440 / 640;
-      g.fillStyle = 'rgba(4,7,13,.72)'; g.fillRect(0, 0, 640, 360);
+      HS.fillStage('rgba(4,7,13,.72)');
       box(x0 - 8, y0 - 22, 456, 312, C.cyan, 6);
       T('CAMPUS MAP', x0, y0 - 8, 8.5, C.cyan, { w: 600 }); T('parts appear once you have seen them', x0 + 440, y0 - 8, 7, C.muted, { a: 'right' });
       g.imageSmoothingEnabled = true; g.drawImage(HS.campusMap(), x0, y0, 440, 275); g.imageSmoothingEnabled = false;

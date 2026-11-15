@@ -55,7 +55,8 @@
   function drawPreview(t) {
     const x = HS.ax, S = HS.S;
     bay ??= buildBay();
-    x.imageSmoothingEnabled = false; x.drawImage(bay, 0, 0);
+    // the bay fills the window: its walls and floor mirror out into the margins (js/art.js)
+    x.imageSmoothingEnabled = false; x.drawImage(bay, 0, 0); HS.bleedFrom(bay);
     // the pedestal and its light
     const cx = 430, fy = 640;
     x.globalAlpha = .08; for (let k = 0; k < 6; k++) { const w = 70 + k * 22; x.fillStyle = '#c8fff0'; x.beginPath(); x.moveTo(cx - 30 - k * 4, 0); x.lineTo(cx + 30 + k * 4, 0); x.lineTo(cx + w, fy); x.lineTo(cx - w, fy); x.fill(); } x.globalAlpha = 1;
@@ -78,7 +79,7 @@
   function text(s, x, y, size, col, o = {}) { g.font = font(size, o.w, o.f); g.fillStyle = col; g.textAlign = o.a || 'left'; g.textBaseline = 'middle'; if ('letterSpacing' in g) g.letterSpacing = o.ls ? o.ls + 'px' : '0px'; g.fillText(s, x, y); }
   function drawPanel(t) {
     const S = HS.S, hits = K.hits = [], mx = HS.In.mx * 2, my = HS.In.my * 2, over = (x, y, w, h) => mx >= x && mx <= x + w && my >= y && my <= y + h;
-    const X = 790, Y = 92, W = 440, H = 536, L0 = X + 25, PW = W - 50;
+    const W = 440, H = 536, X = HS.AX1 - 50 - W, Y = 92, L0 = X + 25, PW = W - 50;   // pinned to the right edge
     g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 40 * K.S; g.shadowOffsetY = 18 * K.S; rrect(X, Y, W, H, 6); g.fillStyle = 'rgba(10,16,30,.86)'; g.fill(); g.restore();
     g.lineWidth = 1; g.strokeStyle = 'rgba(255,255,255,.16)'; rrect(X + .5, Y + .5, W - 1, H - 1, 6); g.stroke(); g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(X + 6, Y + 1, W - 12, 1);
     const label = (s, y, hint) => { text(s, L0, y + 9, 12, C.muted, { ls: .96 }); if (hint) text(hint, L0 + PW, y + 9, 12, '#6f7d8c', { w: 500, a: 'right' }); };
@@ -163,8 +164,8 @@
     draw() {
       const t = K.t;
       drawPreview(t);
-      K.S = HS.cv.width / 1280;
-      g.setTransform(K.S, 0, 0, K.S, 0, 0);
+      K.S = HS.scale / 2;
+      g.setTransform(K.S, 0, 0, K.S, HS.OX * HS.scale, HS.OY * HS.scale);
       drawPanel(t);
     }
   };
