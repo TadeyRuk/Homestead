@@ -5,7 +5,7 @@
   const L = HS.LANDER, A = HS.surfaceArt;   // the art is in js/surface-art.js
   let U = null;
   // what each crew member has of their own on the surface; use() swaps one of them into U, keep() saves it back
-  const PK = ['p', 'carry', 'carried', 'o2', 'pw', 'hold', 'tab', 'down', 'downT', 'inHazard', 'game'];
+  const PK = ['p', 'carry', 'carried', 'o2', 'pw', 'hold', 'tab', 'down', 'downT', 'inHazard', 'game', 'lng'];
   const use = (id) => { const o = U.ps[id]; for (const k of PK) U[k] = o[k]; U.me = id; };
   const keep = (id) => { const o = U.ps[id]; for (const k of PK) o[k] = U[k]; };
 
@@ -34,9 +34,10 @@
         sites: rich.map(([x, y]) => ({ x, y, kind: 'rich', done: false })).concat(poor.map(([x, y]) => ({ x, y, kind: 'poor', done: false }))),
         sample: { x: D.sample[(r() * 2) | 0][0], y: 0, done: false }, deploy: { x: 0, y: 0, done: false, prog: 0 },
         hold: null, tab: 'MISSION', noteS: '', noteT: 0, noteCol: C.cyan, down: false, downT: 0, ext: null, done: false, inHazard: false, map: false, photoT: 0, lowBeep: 0,
-        storms: [], flares: [], rocks: D.rocks, devil: { x: 0, y: 0 }, overlook: null, upT: 0, ps: {}, me: 'host'
+        storms: [], flares: [], rocks: D.rocks, devil: { x: 0, y: 0 }, overlook: null, upT: 0, ps: {}, me: 'host', lng: null,
+        lounge: HS.lounge ? HS.lounge.start(S) : null   // the wait at the lander once the list is done (js/lounge.js)
       };
-      HS.ids().forEach((id, i) => { U.ps[id] = { p: { x: L.x + 4 + i * 10, y: L.y + 16, walk: 0, flip: false, face: 'down' }, carry: null, carried: 0, o2: 100, pw: 100, hold: null, tab: 'MISSION', down: false, downT: 0, inHazard: false, game: null }; });
+      HS.ids().forEach((id, i) => { U.ps[id] = { p: { x: L.x + 4 + i * 10, y: L.y + 16, walk: 0, flip: false, face: 'down' }, carry: null, carried: 0, o2: 100, pw: 100, hold: null, tab: 'MISSION', down: false, downT: 0, inHazard: false, game: null, lng: null }; });
       use(U.ps[HS.net.me] ? HS.net.me : HS.ids()[0]);
       const si = D.sample.find(s => s[0] === U.sample.x); U.sample.y = si[1];
       const di = D.deploy[(r() * 2) | 0]; U.deploy.x = di[0]; U.deploy.y = di[1];
@@ -76,6 +77,7 @@
 
       HS.each((id) => { if (!U.ps[id] || U.ext) return; use(id); this.walk(dt); keep(id); });
       use(U.ps[HS.net.me] ? HS.net.me : ids[0]);
+      if (U.lounge && HS.lounge.tick(U, dt) === 'call') { extraction(); return; }
 
       // the lander uplinks whatever the crew has handed in
       if (S.buffer > 0) { const d = Math.min(S.buffer, m.comms.rate * dt); S.buffer -= d; S.uplinked += d; U.upT += dt; if (U.upT > .25) { U.upT = 0; U.fx.add(L.x + A.ANT.x, L.y + A.ANT.y, (Math.random() - .5) * 4, -30, 1.1, '#78ffdc', 1); } }
@@ -86,8 +88,9 @@
       const S = HS.S, m = U.m, p = U.p, mi = S.mission;
       if (U.down) return;
       // an open minigame: this player stands still and their keys belong to it; the clock, the suit and the hazards run on
-      const busy = !!U.game;
-      if (busy) { const n = HS.gameFrame.step(U, dt); if (n) note(n[0], n[1]); }
+      const lounging = !U.game && !!U.lounge && HS.lounge.step(U, dt, atLander(p));
+      const busy = !!U.game || lounging;
+      if (U.game) { const n = HS.gameFrame.step(U, dt); if (n) note(n[0], n[1]); }
       if (!busy && HS.hit('KeyQ')) { U.tab = U.tab === 'MISSION' ? 'SUIT' : 'MISSION'; HS.sfx.blip(); }
       if (!busy && HS.In.click && HS.over(8, this.panelY() + 2, 204, 20)) { U.tab = HS.In.mx < 100 ? 'MISSION' : 'SUIT'; HS.sfx.blip(); }
       const home = atLander(p), storm = U.mars && stormAt(p.x) && !home, flare = !U.mars && flareOn() && !sheltered(p);
@@ -140,7 +143,7 @@
     mine(d) { return d && d.ps && d.ps[HS.net.me] ? d.ps[HS.net.me].p : null; },
     me() { return U && U.ps[HS.net.me] ? U.p : null; },
     predict(q, dt) {
-      if (!this.me() || U.done || U.ext || U.down || U.game) return false;
+      if (!this.me() || U.done || U.ext || U.down || U.game || U.lng) return false;
       const a = HS.axis(), len = Math.hypot(a.x, a.y);
       if (!len) { q.walk = 0; return false; }
       const storm = U.mars && stormAt(q.x) && !atLander(q);
@@ -226,7 +229,7 @@
       HS.topBox(U.ext ? 'EXTRACTION' : 'EXTRACTION IN ' + fmt(U.left), `data uplinked ${Math.floor(S.uplinked)} / ${mi.target}`, low && Math.floor(t * 4) % 2 ? C.red : low ? C.amber : C.white);
       this.panel(8, this.panelY());
       if (!U.down && !U.ext) {
-        const tg = U.game ? null : this.target();
+        const tg = U.game || U.lng ? null : this.target();
         if (U.game) HS.gameFrame.panel(U);
         if (tg) { const k = U.hold && U.hold.id === tg.id ? U.hold.prog : 0; HS.prompt(k > 0 ? `${tg.label}  ${Math.round(k * 100)}%` : tg.label, 430, 318, tg.col === '#e6e8ec' ? C.cyan : tg.col); if (k > 0) bar(360, 330, 140, 4, k, C.cyan); }
         else if (!U.game && (U.o2 < 35 || U.pw < 35)) HS.prompt(`${U.o2 < U.pw ? 'oxygen' : 'suit power'} ${Math.round(Math.min(U.o2, U.pw))}%  get to the lander`, 430, 318, C.red);
@@ -236,7 +239,8 @@
       }
       if (U.noteT > 0) { g.globalAlpha = clamp(U.noteT * 2, 0, 1); tag(U.noteS, 320, 72, U.noteCol, 8); g.globalAlpha = 1; }
       if (U.photoT > 0) { g.fillStyle = `rgba(255,255,255,${U.photoT * 2})`; g.fillRect(0, 0, 640, 360); }
-      HS.hint(U.game ? (HS.surfaceGames[U.game.kind] || {}).keys + '   [Q] step away   [TAB] hold for map' : '[E] hold to work   [F] photo   [Q] mission / suit   [TAB] hold for map');
+      if (!U.ext && HS.lounge) HS.lounge.draw(U, atLander(p));
+      HS.hint(U.lng && HS.lounge ? HS.lounge.hint(U) : U.game ? (HS.surfaceGames[U.game.kind] || {}).keys + '   [Q] step away   [TAB] hold for map' : '[E] hold to work   [F] photo   [Q] mission / suit   [TAB] hold for map');
       if (HS.local.down.has('Tab')) this.map(cam);   // each screen holds its own map
       if (U.down && !U.ext) { g.fillStyle = 'rgba(4,7,13,.45)'; g.fillRect(0, 0, 640, 360); HS.prompt(S.lostDown ? `suit empty: ${S.lostDown} carried units lost` : 'suit empty', 320, 180, C.red); }
       if (U.ext) {
