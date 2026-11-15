@@ -239,4 +239,35 @@ describe("room", () => {
     clientSide.close();
     expect(sentAfterClose).toBe(0);
   });
+
+  it("skips a backed-up joiner, then catches it up with a full snapshot", () => {
+    const { host, join, snaps } = setup();
+    const { hostSide } = join("Ben");
+    let backlog = 0;
+    hostSide.backlog = () => backlog;
+    host.send({ full: 1 }, 1, () => ({ full: 1 }));
+    host.send({ delta: 2 }, 2, () => ({ full: 2 }));
+    backlog = 1_000_000;
+    host.send({ delta: 3 }, 3, () => ({ full: 3 }));
+    backlog = 0;
+    host.send({ delta: 4 }, 4, () => ({ full: 4 }));
+    host.send({ delta: 5 }, 5, () => ({ full: 5 }));
+    expect(snaps.Ben).toEqual([{ full: 1 }, { delta: 2 }, { full: 4 }, { delta: 5 }]);
+  });
+
+  it("gives a new joiner a full snapshot first", () => {
+    const { host, join, snaps } = setup();
+    join("Ben");
+    host.send({ delta: 1 }, 1, () => ({ full: 1 }));
+    expect(snaps.Ben).toEqual([{ full: 1 }]);
+  });
+
+  it("answers a ping so the joiner can time the round trip", () => {
+    const { join, clock } = setup();
+    const { client } = join("Ben");
+    expect(client.rtt()).toBeNull();
+    clock.now = 100;
+    client.ping();
+    expect(client.rtt()).toBe(0);
+  });
 });

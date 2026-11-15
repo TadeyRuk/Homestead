@@ -31,6 +31,24 @@ function wrap(dc: DataConnection): Conn {
       });
     },
     close: () => dc.close({ flush: true }), // let a final "end" reason arrive before the close
+    // bytes the browser has yet to send, plus what PeerJS holds back while the channel is full (by message)
+    // (bufferSize lives on PeerJS's buffered connections, which the json serialization is, but is not typed)
+    backlog: () => (dc.dataChannel ? dc.dataChannel.bufferedAmount : 0) + ((dc as unknown as { bufferSize?: number }).bufferSize ?? 0) * 2048,
+    route: async () => {
+      try {
+        const stats = await dc.peerConnection.getStats();
+        let pairId: string | undefined;
+        stats.forEach((r) => {
+          if (r.type === "transport" && r.selectedCandidatePairId) pairId = r.selectedCandidatePairId;
+        });
+        const pair = pairId ? stats.get(pairId) : undefined;
+        const local = pair ? stats.get(pair.localCandidateId) : undefined;
+        if (!local) return "unknown";
+        return local.candidateType === "relay" ? "relay" : "direct";
+      } catch {
+        return "unknown";
+      }
+    },
   };
 }
 

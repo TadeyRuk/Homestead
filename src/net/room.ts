@@ -20,6 +20,9 @@ export interface Member {
 export type Profile = Omit<Member, "id">;
 
 const MAX_CREW = 4;
+// past this many bytes queued for a joiner, snapshots to it are skipped until it drains: an old snapshot
+// waiting behind other old ones is only delay
+const MAX_BACKLOG = 32 * 1024;
 const MAX_KEYS = 24;
 type Clock = () => number;
 const realClock: Clock = () => performance.now();
@@ -59,6 +62,7 @@ export function createRoomHost(me: Profile, onEnd: (reason: string) => void, clo
   const heard: Record<string, number> = {};
   const pending = new Map<Conn, number>();
   const dropped = new WeakSet<Conn>();
+  const stale = new Set<string>();
   let nextId = 2;
   let locked = false;
   let ended = false;
@@ -88,6 +92,7 @@ export function createRoomHost(me: Profile, onEnd: (reason: string) => void, clo
     if (!conn) return;
     crew.delete(id);
     delete inputs[id];
+    stale.delete(id);
     const reason = `${members.find((m) => m.id === id)?.name ?? "A crew member"} left`;
     // a joiner that went quiet may still be listening; tell it before closing its side
     if (!closed) refuse(conn, reason);
@@ -116,9 +121,12 @@ export function createRoomHost(me: Profile, onEnd: (reason: string) => void, clo
         id = `p${nextId++}`;
         members.push({ id, ...profile });
         crew.set(id, conn);
+        stale.add(id);   // its first snapshot must be a full one
         heard[id] = clock();
         conn.send({ t: "welcome", id, hostNow });
         roster();
+      } else if (raw.t === "ping" && id !== null && num(raw.at)) {
+        conn.send({ t: "pong", at: raw.at });
       } else if (raw.t === "input" && id !== null) {
         const input = parseInput(raw.input);
         if (!input) return;
@@ -148,9 +156,22 @@ export function createRoomHost(me: Profile, onEnd: (reason: string) => void, clo
     lock: () => {
       locked = true;
     },
-    send: (snapshot: unknown, now: number) => {
+    /**
+     * snapshot may be a delta; full() gives the whole state, sent instead to a joiner that is new or that
+     * missed snapshots while its link was backed up
+     */
+    send: (snapshot: unknown, now: number, full?: () => unknown) => {
       hostNow = now;
-      if (!ended) broadcast({ t: "snap", data: snapshot, hostNow: now });
+      if (ended) return;
+      let whole: unknown;
+      for (const [id, conn] of crew) {
+        if (conn.backlog && conn.backlog() > MAX_BACKLOG) { stale.add(id); continue; }
+        if (full && stale.has(id)) {
+          whole ??= full();
+          conn.send({ t: "snap", data: whole, hostNow: now });
+        } else conn.send({ t: "snap", data: snapshot, hostNow: now });
+        stale.delete(id);
+      }
     },
     /** call every tick: a joiner that goes quiet leaves (ending a started run); a connection that never said hello is refused */
     check: () => {
@@ -180,6 +201,7 @@ export function createRoomClient(
   let offset = 0;
   let ended = false;
   let heard = clock();
+  let rtt: number | null = null;
 
   const finish = (reason: string) => {
     if (ended) return;
@@ -193,7 +215,8 @@ export function createRoomClient(
     if (raw.t === "welcome" && typeof raw.id === "string" && id === null) {
       id = raw.id;
       if (num(raw.hostNow)) offset = raw.hostNow - clock();
-    } else if (raw.t === "crew") members = parseMembers(raw.members) ?? members;
+    } else if (raw.t === "pong" && num(raw.at)) rtt = clock() - raw.at;
+    else if (raw.t === "crew") members = parseMembers(raw.members) ?? members;
     else if (raw.t === "snap" && num(raw.hostNow)) {
       offset = raw.hostNow - clock();
       try {
@@ -214,13 +237,16 @@ export function createRoomClient(
 
   return {
     id: () => id,
+    /** the last measured round trip to the host in ms, or null before the first pong */
+    rtt: () => rtt,
+    route: () => (conn.route ? conn.route() : Promise.resolve("unknown")),
     members: () => members,
     hostNow: () => clock() + offset,
     sendInput: (input: RawInput) => {
       if (!ended) conn.send({ t: "input", input });
     },
     ping: () => {
-      if (!ended) conn.send({ t: "ping" });
+      if (!ended) conn.send({ t: "ping", at: clock() });
     },
     check: () => {
       if (!ended && clock() - heard > DROP_MS) {
