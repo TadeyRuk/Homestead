@@ -107,7 +107,7 @@
     draw(U, home) {
       const L = U.lounge, S = HS.S; if (!L || !home || U.down || !this.ready(S)) return;
       const ids = Object.keys(U.ps), standing = ids.filter(id => !U.ps[id].down), votes = standing.filter(id => L.votes[id]).length;
-      if (L.callT != null) tag(`SHIP CALLED: landing in ${Math.max(0, Math.ceil(L.callT))} s`, 320, 54, C.green, 8.5);
+      if (L.callT != null) tag(`SHIP CALLED: landing in ${Math.max(0, Math.ceil(L.callT))} s`, 320, (HS.Y0 || 0) + 54, C.green, 8.5);
       if (!U.lng) {
         const X = 222, Y = 282, W = 410, H = 26;
         box(X, Y, W, H, C.green, 5);

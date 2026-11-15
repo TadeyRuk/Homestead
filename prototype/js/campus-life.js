@@ -246,7 +246,7 @@
       const cm = calm();
       // steam off the fuel tanks, drifting with the wind
       for (const [i, [X, Y]] of [[490, 300], [548, 322], [604, 288], [520, 362], [600, 340]].entries()) {
-        const [a, b] = HS.wa(cam, X, Y + 8); if (a < -80 || a > 1360 || b < -40 || b > 860) continue;
+        const [a, b] = HS.wa(cam, X, Y + 8); if (a < HS.AX0 - 80 || a > HS.AX1 + 80 || b < HS.AY0 - 40 || b > HS.AY1 + 140) continue;
         for (let k = 0; k < 6; k++) { const p = ((cm ? .5 : t * .3) + k / 6 + i * .17) % 1, r = 3 + p * 9; puff(x, a + p * 34 + Math.sin(p * 6 + i) * 3, b - 82 - p * 46, r, .45 * (1 - p)); }
       }
       // the assembly building's roof-corner beacons
@@ -270,7 +270,7 @@
       for (const c of CLOUDS) {
         const X = ((c.x + (cm ? 0 : t * 3.2)) % 980) - 170, Y = ((c.y + (cm ? 0 : t * 1.3)) % 640) - 120;
         const [a, b] = HS.wa(cam, X, Y), s = cloud(c.k);
-        if (a > 1280 || b > 720 || a + s.width * 2 < 0 || b + s.height * 2 < 0) continue;
+        if (a > HS.AX1 || b > HS.AY1 || a + s.width * 2 < HS.AX0 || b + s.height * 2 < HS.AY0) continue;
         x.globalAlpha = .17; x.drawImage(s, a, b, s.width * 2, s.height * 2); x.globalAlpha = 1;
       }
     }
