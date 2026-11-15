@@ -14,6 +14,7 @@
       // surface results
       uplinked: 0, buffer: 0, carried: 0, lostDown: 0, yieldLost: 0, scansRich: 0, scansPoor: 0, sampleDone: false, deployDone: false, bonusDone: false,
       crewStanding: 1, hazardTime: 0, surfaceLeft: 0,
+      goals: [], tasks: {},   // the run's objective list and which surface games are done (js/surface.js)
       ended: null,   // { phase, reason } when a run ends early
       log: []
     };
