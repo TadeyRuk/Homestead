@@ -27,7 +27,7 @@
     label: () => 'Dust off the solar panels',
     brief: () => 'clean the solar panels',
     keys: '[W] [A] [S] [D] sweep the brush',
-    fact: () => 'Wind cleaned the solar panels of Spirit and Opportunity and gave them power back. NASA\'s CubeSat 101 shows the power budget that dust eats.',
+    fact: () => 'Wind cleaned the solar panels of Spirit and Opportunity and gave them power back. NASA\'s CubeSat 101 explains why every watt in a power budget counts.',
     failNote: () => 'The battery ran flat before the panels were clean. Try again.',
     eligible: (m) => !!(m.power && m.power.solar),
 
