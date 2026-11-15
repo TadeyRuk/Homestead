@@ -177,7 +177,9 @@
       .then((b) => AC.decodeAudioData(b)).then((buf) => { clips[file] = buf; if (file === musicFile || file === musicIntro) { musicFile = ''; HS.musicFor(HS.sceneName); } })
       .catch((e) => { clips[file] = false; console.warn('sound not loaded, keeping the blip:', file, e.message); if (file === musicIntro) { musicFile = ''; HS.musicFor(HS.sceneName); } });
   };
-  const loadClips = () => { for (const f of Object.values(HS.SFX_FILES)) loadClip(f); for (const t of Object.values(HS.MUSIC)) { loadClip(t.intro); loadClip(t.loop); } };
+  // effects load at once; music loads per track when its phase starts (musicFor), since all ten parts decoded at
+  // once stall the game for a moment and hold well over 100 MB of audio, too much for a phone
+  const loadClips = () => { for (const f of Object.values(HS.SFX_FILES)) loadClip(f); };
   const playClip = (file, v = .55) => {
     const buf = clips[file];
     if (!buf) return false;
@@ -207,6 +209,9 @@
       music = null;
     }
     musicFile = file; musicIntro = t ? t.intro : '';
+    // free the other tracks' audio (a fading track keeps its own buffers until it stops), then fetch this one
+    for (const other of Object.values(HS.MUSIC)) if (other !== t) for (const f of [other.intro, other.loop]) if (clips[f]) delete clips[f];
+    if (t) { loadClip(t.intro); loadClip(t.loop); }
     const loop = file && clips[file];
     // wait for both parts, so part 1 is never skipped; a part that failed to load is skipped instead
     if (!loop || (t && clips[t.intro] === null)) return;
