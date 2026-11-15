@@ -9,7 +9,11 @@
   // screen canvas's full backing resolution (nearest neighbour), and the film's words and the setup panel are
   // drawn over it at that resolution, so nothing is drawn at 640 x 360 and text stays sharp.
   const LO = HS.liftoff, CREW = '#78ffdc', INK = '#080e1a', EDGE = '#2a3a52';
-  const title = { t: 0, mission: 'mars', seed: 48213, film: null, last: 0, hits: [], frost: null };
+  // hidden: the setup panel folded away so the film can be watched; remembered for this viewer
+  const HIDE_KEY = 'hs.titleHidden';
+  const title = { t: 0, mission: 'mars', seed: 48213, film: null, last: 0, hits: [], frost: null, hidden: false };
+  try { title.hidden = localStorage.getItem(HIDE_KEY) === '1'; } catch (e) { }
+  const toggleHidden = () => { title.hidden = !title.hidden; try { localStorage.setItem(HIDE_KEY, title.hidden ? '1' : '0'); } catch (e) { } };
   const reroll = () => { title.seed = 10000 + Math.floor(Math.random() * 89999); };
   const cycleSuit = () => { const i = HS.SUITS.indexOf(HS.S.suit); HS.S.suit = HS.SUITS[(i + 1) % HS.SUITS.length]; if (HS.saveCrew) HS.saveCrew(); };
   const film = () => (title.film ??= new LO.Liftoff(LO.calm()));
@@ -20,6 +24,7 @@
     else if (id === 'suit') { cycleSuit(); HS.sfx.blip(); }
     else if (id === 'seed') { reroll(); HS.sfx.blip(); }
     else if (id === 'replay') { film().replay(); HS.sfx.blip(); }
+    else if (id === 'hide') { toggleHidden(); HS.sfx.blip(); }
     else if (id === 'start' && title.t > .4) HS.scenes.title.start();
     else if (id === 'online' && title.t > .4 && HS.netAvailable && HS.netAvailable()) { HS.net.want = true; HS.net.msg = ''; HS.scenes.title.start(); }
   };
@@ -84,6 +89,15 @@
     const field = (x, y, w) => { rrect(x + .5, y + .5, w - 1, 43, 4); g.fillStyle = '#050a14'; g.fill(); g.strokeStyle = EDGE; g.stroke(); };
     let y = Y + PAD;
     text('Mission setup', L0, y + 9, 18, CREW, { w: 700, f: LO.PIXEL, ls: 0.72 });
+    {
+      // fold the panel away to watch the film
+      const s = '[H] Hide'; g.font = font(12); if ('letterSpacing' in g) g.letterSpacing = '0px';
+      const w = Math.ceil(g.measureText(s).width) + 20, h = 26, x = L0 + PW - w, by = y + 9 - h / 2, hot = over(x, by, w, h);
+      rrect(x + .5, by + .5, w - 1, h - 1, 4); g.fillStyle = hot ? '#252e40' : 'rgba(27,34,48,.7)'; g.fill();
+      g.strokeStyle = hot ? '#3a4558' : EDGE; g.stroke();
+      text(s, x + w / 2, by + h / 2 + .5, 12, hot ? HS.C.white : HS.C.muted, { a: 'center' });
+      hits.push({ id: 'hide', x, y: by, w, h });
+    }
     y += 38; label('MISSION', y);
     y += 26; const wm = btn('moon', '[1] Moon', L0, y, title.mission === 'moon' ? 'on' : 'toggle'); btn('mars', '[2] Mars', L0 + wm + 8, y, title.mission === 'mars' ? 'on' : 'toggle');
     y += 52; text(title.mission === 'moon' ? 'About 3 days away. Solar flares.' : 'About 7 months away. Dust storms.', L0, y + 10.5, 14, HS.C.muted, { w: 500 });
@@ -103,6 +117,19 @@
     if (HS.net && HS.net.msg && HS.net.mode === 'solo' && !HS.net.want) text(HS.net.msg, L0, Y - 18, 14, HS.C.amber, { w: 600 });
     if (best) text('Best score ' + best, L0, y + 39.5, 14, HS.C.amber, { w: 600 });
     g.restore();
+  }
+  function drawShowPill(S, art, k) {
+    // the folded setup panel: one pill where the panel's top right corner was; tap or [H] brings it back
+    const s = '[H] Mission setup'; g.font = font(13); if ('letterSpacing' in g) g.letterSpacing = '0px';
+    const w = Math.ceil(g.measureText(s).width) + 32, h = 36, x = HS.AX1 - 51 - w, y = HS.AY0 + 24;
+    const mx = HS.In.mx * 2, my = HS.In.my * 2, hot = mx >= x && mx <= x + w && my >= y && my <= y + h;
+    g.save(); g.globalAlpha = k;
+    frost(art, x, y, w, h, 6, 8, S);
+    rrect(x, y, w, h, 6); g.fillStyle = hot ? 'rgba(8,14,26,.85)' : 'rgba(10,16,30,.62)'; g.fill();
+    g.lineWidth = 1; g.strokeStyle = hot ? CREW : 'rgba(255,255,255,.22)'; rrect(x + .5, y + .5, w - 1, h - 1, 6); g.stroke();
+    g.fillStyle = CREW; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(s, x + w / 2, y + h / 2 + .5);
+    g.restore();
+    title.hits.push({ id: 'hide', x, y, w, h });
   }
   function drawReplay(S, art) {
     // the main game's "↻ Replay" pill, bottom centre
@@ -126,6 +153,7 @@
       if (HS.hit('KeyC')) act('suit');
       if (HS.hit('Enter', 'Space')) act('start');
       if (HS.hit('KeyO')) act('online');
+      if (HS.hit('KeyH')) act('hide');
       if (HS.In.click) { const mx = HS.In.mx * 2, my = HS.In.my * 2, h = title.hits.find(b => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h); if (h) act(h.id); }
     },
     // a new run keeps the crew's suit, visor and callsign; the crew page comes before the brief
@@ -148,7 +176,7 @@
       // the setup panel and the replay pill, on the same 1280 x 720 grid, pinned to the screen's edges
       g.setTransform(S, 0, 0, S, ox, oy);
       const k = f.env.calm ? 1 : 1 - Math.pow(1 - seg(title.t, .3, .8), 3);
-      drawSetup(S, HS.art, k);
+      if (title.hidden) { title.hits = []; drawShowPill(S, HS.art, k); } else drawSetup(S, HS.art, k);
       drawReplay(S, HS.art);
     }
   };

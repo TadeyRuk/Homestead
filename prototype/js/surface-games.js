@@ -111,12 +111,12 @@
         // progress resets and the player can go again at once
         HS.log('task_failed', { kind: run.kind, part: run.part, slot: def.slot, tries: run.tries + 1 });
         run.tries++; run.failT = U.t; run.g = def.start(ctxFor(run, S));
-        HS.sfx.jam(); HS.shake(2);
+        HS.sfx.fail(); HS.shake(2);
         return [why || `${def.name} failed. Try again.`, C.red];
       }
       if (res === 'done') {
         U.game = null; S.tasks[run.kind] = true;
-        HS.sfx.jingle(); HS.log(run.kind, { tries: run.tries, part: run.part });
+        HS.sfx.win(); HS.log(run.kind, { tries: run.tries, part: run.part });
         return [`${def.name}: done`, C.green];
       }
       return null;

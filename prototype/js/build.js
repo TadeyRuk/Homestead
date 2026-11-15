@@ -8,25 +8,39 @@
   const inSolid = (x, y) => HS.CAMPUS_SOLID.some(([X, Y, w, h]) => x > X - 3 && x < X + w + 3 && y > Y - 2 && y < Y + h + 4);
   const near = (a, bx, by, d) => Math.hypot(a.x - bx, a.y - by) < d;
   const toast = (s, col = C.cyan) => { B.toast = s; B.toastT = 2.4; B.toastCol = col; };
-  const dropAt = (id, x, y) => { let X = x, Y = y, n = 0; while (inSolid(X, Y) && n++ < 20) Y += 6; B.parts.push({ id, x: clamp(X, 8, 632), y: clamp(Y, 12, 392), seen: true }); };
+  // paid: the part was bought at the kiosk, so mounting it costs nothing more (HS.spent in state.js)
+  const dropAt = (id, x, y, paid) => { let X = x, Y = y, n = 0; while (inSolid(X, Y) && n++ < 20) Y += 6; B.parts.push({ id, x: clamp(X, 8, 632), y: clamp(Y, 12, 392), seen: true, paid: !!paid }); };
 
   function finishBuild(timeout) {
     const S = HS.S; S.buildLeft = timeout ? 0 : Math.floor(B.left);
     for (const slot of HS.SLOTS) if (!S.slots[slot]) { S.emptyAtTimeout.push(slot); S.salvaged.push(slot); S.slots[slot] = HS.SALVAGE[slot]; }
+    HS.spend();
+    if (S.spent > S.cap) HS.log('over_budget', { spent: S.spent, cap: S.cap });
     HS.log('build', { slots: Object.assign({}, S.slots), salvaged: S.salvaged.slice(), credits: S.credits, left: S.buildLeft });
     B.done = true; HS.go('launch', '255,255,255');
   }
 
+  // buying from the catalog: the part shown lands in this player's hands, paid in full (HS.spent counts it);
+  // going over the cost cap is allowed, and the score pays for it
+  function buy(id) {
+    const S = HS.S, p = B.p, part = HS.PARTS[id];
+    if (p.carry) dropAt(p.carry, p.x + 10, p.y + 4, p.paid);
+    p.carry = id; p.paid = true; S.bought.push(id); S.kioskBuys++; HS.spend();
+    p.shopAt = p.shop; p.shop = null; p.got = { id, t: 0 };
+    HS.sfx.buy(); B.fx.burst(KIOSK.x + 10, KIOSK.y, 30, 46, .9, [C.pink, '#ffffff', C.cyan], 1);
+    HS.log('buy', { id, cost: part.cost || 0, t: B.t });
+    if (S.spent > S.cap) toast(`Over the cost cap: ${S.spent} of ${S.cap} CR spent`, C.red);
+  }
+
   function interact() {
     const S = HS.S, p = B.p;
-    if (B.roll && B.roll.who === B.me) return;   // the buyer waits for the roll; the rest of the crew does not
     if (near(p, PAD.mx, PAD.my, 26)) {
       if (!p.carry) { toast('Bring a part here to mount it', C.muted); HS.sfx.buzz(); return; }
-      const part = HS.PARTS[p.carry], old = S.slots[part.slot];
-      S.slots[part.slot] = p.carry; p.carry = null; HS.sfx.mount();
+      const part = HS.PARTS[p.carry], old = S.slots[part.slot], oldPaid = S.paid[part.slot];
+      S.slots[part.slot] = p.carry; S.paid[part.slot] = !!p.paid; p.carry = null; p.paid = false; HS.spend(); HS.sfx.mount();
       const i = HS.SLOTS.indexOf(part.slot); B.fx.burst(518 + i * 18, 158, 26, 40, .7, [CAT[part.slot], '#ffffff', C.cyan], 1);
       B.mountFlash = .6;
-      if (old) { dropAt(old, PAD.mx - 34 + i * 22, 182); toast(`${part.name} mounted. ${HS.PARTS[old].name} dropped beside the pad.`); }
+      if (old) { dropAt(old, PAD.mx - 34 + i * 22, 182, oldPaid); toast(`${part.name} mounted. ${HS.PARTS[old].name} dropped beside the pad.`); }
       else toast(`${part.name} mounted in the ${HS.SLOT_NAME[part.slot].toLowerCase()} slot`);
       HS.log('mount', { id: S.slots[part.slot], t: B.t }); return;
     }
@@ -34,15 +48,12 @@
     for (const q of B.parts) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd) { bd = d; best = q; } }
     if (best) {
       B.parts.splice(B.parts.indexOf(best), 1);
-      if (p.carry) dropAt(p.carry, best.x, best.y);
-      p.carry = best.id; HS.sfx.pick(); return;
+      if (p.carry) dropAt(p.carry, best.x, best.y, p.paid);
+      p.carry = best.id; p.paid = !!best.paid; HS.sfx.pick(); return;
     }
-    if (near(p, KIOSK.sx, KIOSK.sy, 22)) {
-      if (B.roll) { toast('The kiosk is busy', C.muted); HS.sfx.buzz(); return; }
-      if (S.credits < HS.KIOSK_COST) { toast('Not enough credits for the kiosk', C.red); HS.sfx.buzz(); return; }
-      S.credits -= HS.KIOSK_COST; S.kioskBuys++; B.roll = { t: 0, who: B.me, result: HS.REAL_PARTS[(B.kr() * HS.REAL_PARTS.length) | 0] }; HS.sfx.ok(); return;
-    }
-    if (p.carry) { dropAt(p.carry, p.x + (p.flip ? -8 : 8), p.y + 2); p.carry = null; HS.sfx.drop(); }
+    // the kiosk opens its catalog (S6-12) at the page this player last looked at
+    if (near(p, KIOSK.sx, KIOSK.sy, 22)) { p.shop = p.shopAt || 0; p.shopAx = 0; HS.sfx.blip(); return; }
+    if (p.carry) { dropAt(p.carry, p.x + (p.flip ? -8 : 8), p.y + 2, p.paid); p.carry = null; p.paid = false; HS.sfx.drop(); }
   }
 
   HS.scenes.build = {
@@ -57,12 +68,12 @@
       B = {
         t: 0, left: HS.BUILD_TIME, p: null, ps: {}, me: 'host', done: false,
         parts: picked.concat(rest).map((id, i) => ({ id, x: spots[i][0], y: spots[i][1], seen: false })),
-        kr: HS.R(S.seed * 13 + 101), roll: null, count: null, fx: new HS.Parts(), toast: '', toastT: 0, toastCol: C.cyan, mountFlash: 0, lastTick: 0
+        count: null, fx: new HS.Parts(), toast: '', toastT: 0, toastCol: C.cyan, mountFlash: 0, lastTick: 0
       };
       // one avatar per crew member, side by side at the pad; B.p is whoever the update is moving right now
       HS.ids().forEach((id, i) => { B.ps[id] = { x: 520 + i * 14, y: 188, walk: 0, flip: false, face: 'down', carry: null }; });
       B.p = B.ps[HS.net.me] || B.ps.host;
-      S.slots = { prop: null, power: null, comms: null, payload: null }; S.credits = S.creditsStart; S.salvaged = []; S.emptyAtTimeout = [];
+      S.slots = { prop: null, power: null, comms: null, payload: null }; S.bought = []; S.paid = {}; HS.spend(); S.salvaged = []; S.emptyAtTimeout = [];
       toast('Find a part for each of the four slots and carry it to the pad', C.amber); B.toastT = 5;
     },
     update(dt) {
@@ -70,13 +81,6 @@
       B.t += dt; B.left -= dt; B.toastT -= dt; B.mountFlash = Math.max(0, B.mountFlash - dt); B.fx.update(dt);
       if (B.left <= 10 && Math.ceil(B.left) !== B.lastTick) { B.lastTick = Math.ceil(B.left); HS.sfx.tick(); }
       if (B.left <= 0) { toast('Build time is over'); finishBuild(true); return; }
-      // kiosk roll: the part lands in the hands of whoever paid
-      if (B.roll) {
-        const p = B.ps[B.roll.who] || B.p;
-        B.roll.t += dt; if (B.roll.t < 2.4 && Math.floor(B.roll.t * 12) !== Math.floor((B.roll.t - dt) * 12)) HS.sfx.tick();
-        if (B.roll.t >= 2.4 && !B.roll.given) { B.roll.given = true; if (p.carry) dropAt(p.carry, p.x + 10, p.y + 4); p.carry = B.roll.result; HS.sfx.good(); B.fx.burst(KIOSK.x + 10, KIOSK.y, 30, 46, .9, [C.pink, '#ffffff', C.cyan], 1); }
-        if (B.roll.t > 3.6) B.roll = null;
-      }
       HS.each((id) => { if (!B.done && B.ps[id]) { B.me = id; B.p = B.ps[id]; this.move(dt); } });
       B.me = HS.net.me; B.p = B.ps[B.me] || B.p;
       if (B.count != null && !B.done) {
@@ -87,9 +91,23 @@
     // one crew member's turn: walk, look, pick up and mount, start or stop the countdown
     move(dt) {
       const p = B.p, S = HS.S;
+      if (p.got) { p.got.t += dt; if (p.got.t > 1.6) p.got = null; }
+      // browsing the catalog: left and right turn the page as the stick is pushed (keys or the touch joystick),
+      // E buys, Q, up, down or leaving the kiosk close it. The player stands still while it is open.
+      if (p.shop != null) {
+        const ax = HS.axis(), n = HS.REAL_PARTS.length;
+        if (!near(p, KIOSK.sx, KIOSK.sy, 26) || HS.hit('KeyQ') || ax.y) { p.shopAt = p.shop; p.shop = null; HS.sfx.blip(); }
+        else {
+          if (ax.x && ax.x !== p.shopAx) { p.shop = (p.shop + (ax.x > 0 ? 1 : n - 1)) % n; HS.sfx.tick(); }
+          p.shopAx = ax.x;
+          if (HS.hit('KeyE', 'Space')) buy(HS.REAL_PARTS[p.shop]);
+          p.walk = 0;
+          return;
+        }
+      }
       // move
       const a = HS.axis(), len = Math.hypot(a.x, a.y);
-      if (len && !(B.roll && B.roll.who === B.me) && !p.inspect) {
+      if (len && !p.inspect) {
         const sp = SPEED * (p.carry ? .92 : 1) * dt, nx = clamp(p.x + a.x / len * sp, 6, 634), ny = clamp(p.y + a.y / len * sp, 10, 394);
         if (!inSolid(nx, p.y)) p.x = nx; if (!inSolid(p.x, ny)) p.y = ny;
         p.walk += dt; if (a.x) p.flip = a.x < 0;
@@ -111,7 +129,7 @@
       }
       if (p.inspect) p.inspect.t += dt;
       if (HS.hit('KeyE', 'Space')) { p.inspect = null; interact(); }
-      if (HS.hit('KeyQ') && p.carry) { p.inspect = null; dropAt(p.carry, p.x + (p.flip ? -8 : 8), p.y + 2); p.carry = null; HS.sfx.drop(); }
+      if (HS.hit('KeyQ') && p.carry) { p.inspect = null; dropAt(p.carry, p.x + (p.flip ? -8 : 8), p.y + 2, p.paid); p.carry = null; p.paid = false; HS.sfx.drop(); }
       // launch countdown: anyone at the pad can start it, anyone can cancel it
       if (HS.hit('KeyL') && !p.inspect) {
         if (B.count != null) { B.count = null; toast('Launch cancelled', C.amber); HS.sfx.drop(); }
@@ -119,6 +137,23 @@
         else { toast('Stand at the launch pad to start the countdown', C.muted); HS.sfx.buzz(); }
       }
     },
+    // one page of the kiosk catalog: the part, its slot and cost, and what buying it does to the cost cap
+    catalog(i) {
+      const S = HS.S, n = HS.REAL_PARTS.length, id = HS.REAL_PARTS[i], part = HS.PARTS[id], cost = part.cost || 0;
+      const col = part.slot === 'comms' ? C.cyan : CAT[part.slot], after = S.spent + cost, over = after > S.cap;
+      box(180, 92, 280, 150, C.pink, 6);
+      T('PARTS KIOSK', 192, 108, 8.5, C.pink, { w: 600 });
+      T(`${i + 1} / ${n}`, 448, 108, 7.5, C.muted, { a: 'right' });
+      T('<', 192, 140, 14, C.muted, { w: 700, f: PIX }); T('>', 448, 140, 14, C.muted, { w: 700, f: PIX, a: 'right' });
+      T(part.name, 320, 140, 15, C.white, { w: 700, a: 'center', f: PIX });
+      T(HS.SLOT_NAME[part.slot], 320, 154, 7.5, col, { w: 600, a: 'center' });
+      T(`${part.mass} kg   ${part.power > 0 ? '+' : ''}${part.power} W   ${part.flight}`, 320, 170, 7, C.white, { a: 'center' });
+      T(part.real, 320, 182, 6.5, '#f1d9cf', { a: 'center' });
+      T(`${cost} CR`, 320, 204, 12, over ? C.red : C.amber, { w: 700, a: 'center' });
+      T(over ? `over the cap: ${after} of ${S.cap} CR spent` : `spent ${after} of ${S.cap} CR after buying`, 320, 218, 7, over ? C.red : C.muted, { a: 'center' });
+      T('[A] [D] browse   [E] buy   [Q] close', 320, 234, 7, C.muted, { a: 'center' });
+    },
+
     save() { return HS.pack(B); },
     load(d) { if (!B) return; Object.assign(B, d); B.p = B.ps[HS.net.me] || B.p; },
     // joiner prediction (js/net-game.js): the own avatar in snapshot d, the live one, and one step of this tab's
@@ -127,7 +162,7 @@
     me() { return B && B.ps[HS.net.me]; },
     predict(q, dt) {
       const p = this.me();
-      if (!p || B.done || (B.roll && B.roll.who === HS.net.me) || p.inspect) return false;
+      if (!p || B.done || p.shop != null || p.inspect) return false;
       const a = HS.axis(), len = Math.hypot(a.x, a.y);
       if (!len) { q.walk = 0; return false; }
       const sp = SPEED * (p.carry ? .92 : 1) * dt, nx = clamp(q.x + a.x / len * sp, 6, 634), ny = clamp(q.y + a.y / len * sp, 10, 394);
@@ -169,10 +204,10 @@
         if (s.x > HS.X0 + 30 && s.x < HS.X1 - 30 && s.y > HS.Y0 + 50 && s.y < HS.Y1 - 50 && !(s.x < HS.X0 + 300 && s.y > HS.Y1 - 164)) tag(part.name, s.x, s.y + 20, part.slot === 'comms' ? C.cyan : CAT[part.slot]);
         const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < nd) { nd = d; nearest = q; }
       }
-      const ks = HS.toScreen(cam, KIOSK.x + 10, KIOSK.y - 6); if (ks.x > HS.X0 + 40 && ks.x < HS.X1 - 40 && ks.y > HS.Y0 + 50 && ks.y < HS.Y1 - 30) tag(`PARTS KIOSK  ${HS.KIOSK_COST} CR`, ks.x, ks.y - 8, C.pink);
+      const ks = HS.toScreen(cam, KIOSK.x + 10, KIOSK.y - 6); if (ks.x > HS.X0 + 40 && ks.x < HS.X1 - 40 && ks.y > HS.Y0 + 50 && ks.y < HS.Y1 - 30) tag('PARTS KIOSK', ks.x, ks.y - 8, C.pink);
       const ps = HS.toScreen(cam, PAD.x, PAD.y - 46); if (ps.x > HS.X0 + 40 && ps.x < HS.X1 - 40 && ps.y > HS.Y0 + 36 && ps.y < HS.Y1 - 30) tag('LAUNCH PAD', ps.x, ps.y, C.cyan);
       HS.arrowReset(); HS.edgeArrow(cam, PAD.mx, PAD.my, C.cyan, 'PAD');
-      if (S.credits >= HS.KIOSK_COST) HS.edgeArrow(cam, KIOSK.sx, KIOSK.sy, C.pink, 'KIOSK');
+      HS.edgeArrow(cam, KIOSK.sx, KIOSK.sy, C.pink, 'KIOSK');
 
       // ----- HUD
       const carry = p.carry ? HS.PARTS[p.carry] : null;
@@ -189,10 +224,10 @@
       // prompt for the action E would do right now
       let pr = null, pc = C.cyan;
       const atPad = near(p, PAD.mx, PAD.my, 26), atKiosk = near(p, KIOSK.sx, KIOSK.sy, 22);
-      if (B.roll) pr = null;
+      if (p.shop != null) pr = null;
       else if (atPad && carry) { const old = S.slots[carry.slot]; pr = old ? `[E] swap in ${carry.name}, drop ${HS.PARTS[old].name}` : `[E] mount ${carry.name}`; pc = CAT[carry.slot] === '#e6ebf0' ? C.cyan : CAT[carry.slot]; }
       else if (nearest && nd < 15) pr = carry ? `[E] drop ${carry.name}, take ${HS.PARTS[nearest.id].name}` : `[E] pick up ${HS.PARTS[nearest.id].name}  ${HS.PARTS[nearest.id].mass} kg`;
-      else if (atKiosk) { pr = S.credits >= HS.KIOSK_COST ? `[E] buy a random part  ${HS.KIOSK_COST} CR` : 'kiosk: not enough credits'; pc = C.pink; }
+      else if (atKiosk) { pr = '[E] browse the parts catalog'; pc = C.pink; }
       else if (atPad && B.count == null) { const n = 4 - HS.model().mounted; pr = n ? `[L] launch now (${n} empty slot${n > 1 ? 's' : ''} will get salvage parts)` : '[L] start the launch countdown'; pc = C.amber; }
       if (pr) HS.prompt(pr, 320, HS.Y1 - 60, pc);
       if (atPad && B.count == null) {
@@ -203,14 +238,16 @@
       if (B.toastT > 0) { g.globalAlpha = clamp(B.toastT * 2, 0, 1); tag(B.toast, 320, HS.Y1 - 38, B.toastCol, 8.5); g.globalAlpha = 1; }
       HS.hint('[E] use   [Q] drop   [L] launch   [I] inspect   [B] blueprint   [TAB] map');
 
-      // kiosk roll
-      if (B.roll) {
-        const k = clamp(B.roll.t / 2.4, 0, 1), done = B.roll.t >= 2.4, names = HS.REAL_PARTS.map(id => HS.PARTS[id].name);
-        const res = HS.PARTS[B.roll.result], name = done ? res.name : names[Math.floor(Math.pow(k, .45) * 30) % names.length];
-        box(200, 110, 240, 86, C.pink, 6);
-        T(`PARTS KIOSK   -${HS.KIOSK_COST} CR`, 320, 130, 9, C.pink, { w: 600, a: 'center' });
-        T(name, 320, 160, 18, done ? C.cyan : C.white, { w: 700, a: 'center', f: PIX });
-        T(done ? `it is in your hands  (${HS.SLOT_NAME[res.slot].toLowerCase()} slot)` : 'rolling...', 320, 182, 8, C.muted, { a: 'center' });
+      // the catalog this screen's player is browsing, and the card for a part just bought
+      if (p.shop != null) this.catalog(p.shop);
+      else if (p.got) {
+        const res = HS.PARTS[p.got.id];
+        g.globalAlpha = clamp((1.6 - p.got.t) * 3, 0, 1);
+        box(200, 120, 240, 62, C.pink, 6);
+        T(`PARTS KIOSK   -${res.cost || 0} CR`, 320, 138, 9, C.pink, { w: 600, a: 'center' });
+        T(res.name, 320, 160, 15, C.cyan, { w: 700, a: 'center', f: PIX });
+        T(`in your hands  (${HS.SLOT_NAME[res.slot].toLowerCase()} slot)`, 320, 174, 7.5, C.muted, { a: 'center' });
+        g.globalAlpha = 1;
       }
       // the map, the blueprint sheet and the inspector are each screen's own view
       const mapHeld = HS.local.down.has('Tab');
