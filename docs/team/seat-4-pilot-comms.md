@@ -12,7 +12,7 @@ Two of the four flight stations, plus flight events. The flight shell (S4-01) is
 
 ## If still open at hour 3
 
-Seat 3 (TadeyRuk) takes S4-02 and S4-03. Seat 1 has done S4-04, S4-05, S4-06, S4-09 and S4-10. S4-07 and S4-08 are cut. See the fallback table in `docs/team/README.md`.
+Seat 3 (TadeyRuk) takes S4-02 and S4-03. Seat 1 has done S4-04, S4-05, S4-06, S4-08, S4-09 and S4-10. S4-07 is next. See the fallback table in `docs/team/README.md`.
 
 ## Issues
 
@@ -43,7 +43,7 @@ Seeded flight events: debris fields, solar flares hitting solar arrays, load spi
 Mounted parts change the flight beyond handling: a large solar array is a bigger debris target, solar flares from the event director cut solar array output, an RTG ignores flares. Read every number from `src/data/parts.json`.
 **Done when:** the same debris field hits a large-array ship more often than a small-array one, and a flare drops supply only on solar builds.
 
-### S4-08 Engine-off handshake (hour 8)
+### S4-08 Engine-off handshake (done by seat 1: `src/flight/handshake.register.ts`)
 When the Engineer tries to switch off the engine on the power bus (S5-02), the Pilot gets a prompt to agree or refuse. Refusing keeps the load on. Solo players see the prompt on their next Pilot visit.
 **Done when:** the engine only sheds after the Pilot agrees, in both two-player and solo runs.
 
