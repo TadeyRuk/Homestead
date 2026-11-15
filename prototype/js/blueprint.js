@@ -150,15 +150,15 @@
     if (!part) {
       T('EMPTY', bx + 6, by + 24, 10, AMBER, { w: 700, f: PIX });
       T(fit(`launch now and it gets: ${sal.name}`, 6.5, bw - 12), bx + 6, by + 36, 6.5, INK2);
-      T(fit(`${keyStat(sal)}, ${sal.mass} kg`, 6.5, bw - 12), bx + 6, by + 46, 6.5, DIM);
+      T(fit(`${keyStat(sal)}, ${sal.mass} kg, free`, 6.5, bw - 12), bx + 6, by + 46, 6.5, DIM);
       T(fit(sal.flight + '. ' + sal.surf + '.', 6, bw - 12), bx + 6, by + 56, 6, DIM);
       return;
     }
     T(fit(part.name, 10, bw - 12, { f: PIX, w: 700 }), bx + 6, by + 24, 10, INK, { w: 700, f: PIX });
     // chips: mass, power, the key number
     let cx = bx + 6;
-    const chip = (s, c) => { const w = HS.tw(s, 6, { w: 600 }) + 6; g.fillStyle = 'rgba(150,200,255,.12)'; g.fillRect(cx, by + 29, w, 9); T(s, cx + 3, by + 35.5, 6, c, { w: 600 }); cx += w + 3; };
-    chip(`${part.mass} kg`, INK); chip(`${part.power > 0 ? '+' : ''}${part.power} W`, part.power > 0 ? C.green : AMBER); if (slot !== 'power') chip(keyStat(part), col);
+    const chip = (s, c) => { const w = HS.tw(s, 6, { w: 600 }) + 6; if (cx + w > bx + bw - 4) return; g.fillStyle = 'rgba(150,200,255,.12)'; g.fillRect(cx, by + 29, w, 9); T(s, cx + 3, by + 35.5, 6, c, { w: 600 }); cx += w + 3; };
+    chip(`${part.mass} kg`, INK); chip(`${part.power > 0 ? '+' : ''}${part.power} W`, part.power > 0 ? C.green : AMBER); if (slot !== 'power') chip(keyStat(part), col); chip(`${part.cost || 0} CR`, C.pink);
     T('FLIGHT', bx + 6, by + 46, 5.5, DIM, { w: 600 }); T(fit(part.flight, 6, bw - 40), bx + 34, by + 46, 6, INK);
     T('SURFACE', bx + 6, by + 55, 5.5, DIM, { w: 600 }); T(fit(part.surf, 6, bw - 40), bx + 34, by + 55, 6, INK);
     T('REAL', bx + 6, by + 64, 5.5, DIM, { w: 600 }); T(fit(part.real, 6, bw - 40), bx + 34, by + 64, 6, '#f1d9cf');
@@ -192,7 +192,7 @@
       ['DATA', mm.payload ? mm.payload.rich / 19 : 0, mm.payload ? `${mm.payload.rich} per rich scan, ${mm.payload.poor} per poor` : 'no instrument', AMBER, null],
       ['UPLINK', mm.comms ? mm.comms.rate / .95 : 0, mm.comms ? `${mm.comms.rate.toFixed(2)} units a second` : 'no antenna', C.comms, null],
       ['FLIGHT', mm.prop ? clamp(1.2 - flightTime(mm) / (S.mission.transit * 1.3), 0, 1) : 0, mm.prop ? `${fmt(flightTime(mm))} to arrive` : 'no engine', C.green, null],
-      ['BUDGET', S.credits / S.creditsStart, `${S.credits} CR left`, C.pink, null]
+      ['BUDGET', S.credits / S.creditsStart, `${S.credits} CR left, parts worth ${HS.SLOTS.reduce((a, s) => a + ((HS.PARTS[S.slots[s]] || {}).cost || 0), 0)} CR`, C.pink, null]
     ];
     rows.forEach(([name, f, s, col, pf], i) => {
       const ry = ty + 18 + i * 14;
