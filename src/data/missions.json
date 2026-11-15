@@ -1,0 +1,62 @@
+{
+  "moon": {
+    "name": "Lunar survey",
+    "credits": 20,
+    "dataTarget": 25,
+    "travel": "About 3 days",
+    "radioDelay": "About 1.3 seconds",
+    "fact": "Gravity one sixth of Earth's",
+    "hazard": "Solar flares. Shelter at the lander or behind rock.",
+    "objectives": [
+      "Scan 2 rich sites",
+      "Collect a regolith sample from the crater floor",
+      "Deploy a seismometer on the ridge",
+      "Uplink 25 data units"
+    ],
+    "bonus": "Photograph Earth from the surface",
+    "list": {
+      "scans": 2,
+      "sample": "regolith",
+      "sampleLabel": "Collect regolith from the crater floor",
+      "instrument": "seismometer",
+      "instrumentLabel": "Deploy the seismometer on the ridge",
+      "bonusLabel": "Photograph Earth from the surface"
+    }
+  },
+  "mars": {
+    "name": "Mars survey",
+    "credits": 40,
+    "dataTarget": 40,
+    "travel": "About 7 months",
+    "radioDelay": "3 to 22 minutes",
+    "fact": "Sunlight about 43% of Earth's",
+    "hazard": "Dust storms. They cut sight and drain suits fast.",
+    "objectives": [
+      "Scan 3 rich sites",
+      "Drill a core at the crater rim and carry it to the lander",
+      "Deploy the weather station on the ridge",
+      "Uplink 40 data units"
+    ],
+    "bonus": "Photograph a dust devil",
+    "list": {
+      "scans": 3,
+      "sample": "core-sample",
+      "sampleLabel": "Drill a core at the crater rim",
+      "instrument": "weather-station",
+      "instrumentLabel": "Deploy the weather station on the ridge",
+      "bonusLabel": "Photograph a dust devil"
+    }
+  },
+  "scans": {
+    "camera": { "seconds": 2, "data": 4 },
+    "spectrometer": { "seconds": 4, "data": 8 },
+    "radar": { "seconds": 6, "data": 13 },
+    "salvage-camera": { "seconds": 3, "data": 3 }
+  },
+  "uplinks": {
+    "low-gain": 1.5,
+    "high-gain": 4,
+    "laser": 6,
+    "salvage-antenna": 0.8
+  }
+}
