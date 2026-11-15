@@ -228,7 +228,7 @@
   const QUIT_MS = 3000, NO_QUIT = ['lobby', 'title', 'crew'];
   let quitAt = 0;
   function quitKey(now) {
-    if (N.mode === 'solo' || NO_QUIT.includes(HS.sceneName) || !HS.local.hit.has('Escape')) return;
+    if (N.mode === 'solo' || NO_QUIT.includes(HS.sceneName) || HS.typing || !HS.local.hit.has('Escape')) return;
     HS.local.hit.delete('Escape');
     if (now - quitAt > QUIT_MS) { quitAt = now; HS.sfx.blip(); return; }
     quitAt = 0;

@@ -225,7 +225,7 @@
       // how the run ended, behind the panel: the lander on the surface, the burnt pad, or the planet never reached
       HS.cutArt.report(t); HS.bleedArt(); HS.blitArt();
       box(20, 20, 600, 322, C.cyan, 6);
-      const hd = `MISSION REPORT  /  ${mi.name}  /  `;
+      const hd = `MISSION REPORT  /  ${HS.rocketName() ? HS.rocketName() + '  /  ' : ''}${mi.name}  /  `;
       T(hd, 34, 36, 8.5, C.cyan, { w: 600 }); T(a.outcome, 34 + HS.tw(hd, 8.5, { w: 600 }), 36, 8.5, a.col, { w: 600 });
       T('seed ' + S.seed, 606, 36, 7.5, C.muted, { a: 'right' });
       g.fillStyle = '#22324a'; g.fillRect(34, 43, 572, 1);

@@ -110,8 +110,11 @@
     const S = HS.S, m = HS.model(), n = pv ? HS.model({ [pv.slot]: pvId }) : null;
     const W = 182, H = 122, X = HS.X1 - W - 6, Y = HS.Y0 + 30;   // pinned to the top-right corner
     paper(X, Y, W, H);
-    T('ROCKET', X + 7, Y + 11, 7.5, INK, { w: 600 });
-    T(n ? 'IF MOUNTED' : '[B] blueprint', X + W - 7, Y + 11, 6.5, n ? AMBER : DIM, { w: 600, a: 'right' });
+    // the rocket's name when it has one ([N] names it)
+    const nm = HS.rocketName ? HS.rocketName() : '', right = n ? 'IF MOUNTED' : nm ? '[B] blueprint' : '[N] name it';
+    const rw = HS.tw(right, 6.5, { w: 600 });
+    T(nm ? fit(nm, 8.5, W - rw - 22, { w: 700, f: PIX }) : 'ROCKET', X + 7, Y + 11.5, nm ? 8.5 : 7.5, INK, nm ? { w: 700, f: PIX } : { w: 600 });
+    T(right, X + W - 7, Y + 11, 6.5, n ? AMBER : nm ? DIM : AMBER, { w: 600, a: 'right' });
     const shown = ink(ids(n ? { [pv.slot]: pvId } : null)), sx = X + 6, sy = Y + 17;
     g.imageSmoothingEnabled = false; g.drawImage(shown.c, sx, sy, shown.c.width / 2, shown.c.height / 2);
     // callouts down the right-hand side
@@ -170,7 +173,9 @@
     const X = 30, Y = 22, W = 580, H = 318;
     paper(X, Y, W, H, 5, 25);
     T('ROCKET BLUEPRINT', X + 12, Y + 14, 9, INK, { w: 700 });
-    T(`${S.mission.name}  ·  ${mm.mounted} of 4 slots filled`, X + 112, Y + 14, 7, DIM, { w: 600 });
+    const nm = HS.rocketName ? HS.rocketName() : '';
+    if (nm) T(nm, X + 112, Y + 14.5, 10, INK, { w: 700, f: PIX });
+    T(`${nm ? '' : S.mission.name + '  ·  '}${mm.mounted} of 4 slots filled${nm ? '' : '   ·   [N] name the rocket'}`, nm ? X + 118 + HS.tw(nm, 10, { w: 700, f: PIX }) : X + 112, Y + 14, 7, DIM, { w: 600 });
     T('[B] close', X + W - 12, Y + 14, 7, DIM, { w: 600, a: 'right' });
     // the rocket at 2x, on a dash-dot centre line
     const shown = ink(ids(n ? { [pv.slot]: pvId } : null)), sw = shown.c.width, sh = shown.c.height, sx = 320 - sw / 2, sy = Y + 30;
@@ -207,7 +212,7 @@
     T(v.s, 0, 0, 12, v.col, { w: 700, f: PIX, a: 'center', b: 'middle' });
     g.restore();
     // the title block
-    const bx = X + W - 14 - 178, by = Y + H - 70, cells = [['PROJECT', 'HOMESTEAD'], ['MISSION', S.mission.name], ['DRAWING', `HS-${S.seed}`], ['DRAWN BY', S.name || 'SOLO CREW'], ['SHEET', '1 OF 1']];
+    const bx = X + W - 14 - 178, by = Y + H - 70, cells = [['PROJECT', 'HOMESTEAD'], ['MISSION', S.mission.name], ['DRAWING', `HS-${S.seed}`], ['DRAWN BY', S.name || 'SOLO CREW'], ['ROCKET', (HS.rocketName && HS.rocketName()) || 'UNNAMED']];
     g.fillStyle = 'rgba(8,30,62,.88)'; g.fillRect(bx, by, 178, 60);
     hline(bx, bx + 178, by, INK2); hline(bx, bx + 178, by + 60, INK2); vline(bx, by, by + 60, INK2); vline(bx + 178, by, by + 60, INK2);
     cells.forEach(([k, v2], i) => {
@@ -218,5 +223,5 @@
     vline(bx + 48, by, by + 60, 'rgba(156,202,246,.45)');
   }
 
-  HS.blueprint = { panel, sheet, keyStat, ink };
+  HS.blueprint = { panel, sheet, keyStat, ink, ids, paper, COL: { INK, INK2, DIM, AMBER } };
 })();

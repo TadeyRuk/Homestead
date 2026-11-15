@@ -70,7 +70,7 @@
       B = {
         t: 0, left: HS.BUILD_TIME, p: null, ps: {}, me: 'host', done: false,
         parts: picked.concat(rest).map((id, i) => ({ id, x: spots[i][0], y: spots[i][1], seen: false })),
-        count: null, fx: new HS.Parts(), toast: '', toastT: 0, toastCol: C.cyan, mountFlash: 0, lastTick: 0
+        count: null, naming: null, fx: new HS.Parts(), toast: '', toastT: 0, toastCol: C.cyan, mountFlash: 0, lastTick: 0
       };
       // one avatar per crew member, side by side at the pad; B.p is whoever the update is moving right now
       HS.ids().forEach((id, i) => { B.ps[id] = { x: 520 + i * 14, y: 188, walk: 0, flip: false, face: 'down', carry: null }; });
@@ -80,6 +80,9 @@
     },
     update(dt) {
       if (B.done) return;
+      // naming the rocket ([N]) stops the build clock, the countdown, the kiosk and everyone's hands until the name
+      // is saved or dropped; the campus keeps moving (B.t), and only the namer's keys are read (js/naming.js)
+      if (B.naming) { B.t += dt; const r = HS.naming.type(B, dt); if (r === 'saved') { toast(`Rocket named: ${HS.S.rocket}`, C.cyan); B.toastT = 3; } return; }
       B.t += dt; B.left -= dt; B.toastT -= dt; B.mountFlash = Math.max(0, B.mountFlash - dt); B.fx.update(dt);
       if (B.left <= 10 && Math.ceil(B.left) !== B.lastTick) { B.lastTick = Math.ceil(B.left); HS.sfx.tick(); }
       if (B.left <= 0) { toast('Build time is over'); finishBuild(true); return; }
@@ -130,6 +133,7 @@
         }
       }
       if (p.inspect) p.inspect.t += dt;
+      if (HS.hit('KeyN') && !p.inspect && !(HS.net && HS.net.ask)) { HS.naming.open(B, B.me); return; }
       if (HS.hit('KeyE', 'Space')) { p.inspect = null; interact(); }
       if (HS.hit('KeyQ') && p.carry) { p.inspect = null; dropAt(p.carry, p.x + (p.flip ? -8 : 8), p.y + 2, p.paid); p.carry = null; p.paid = false; HS.sfx.drop(); }
       // launch countdown: anyone at the pad can start it, anyone can cancel it
@@ -164,7 +168,7 @@
     me() { return B && B.ps[HS.net.me]; },
     predict(q, dt) {
       const p = this.me();
-      if (!p || B.done || p.shop != null || p.inspect) return false;
+      if (!p || B.done || B.naming || p.shop != null || p.inspect) return false;
       const a = HS.axis(), len = Math.hypot(a.x, a.y);
       if (!len) { q.walk = 0; return false; }
       const sp = SPEED * (p.carry ? .92 : 1) * dt, nx = clamp(q.x + a.x / len * sp, 6, 634), ny = clamp(q.y + a.y / len * sp, 10, 394);
@@ -207,7 +211,7 @@
         const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < nd) { nd = d; nearest = q; }
       }
       const ks = HS.toScreen(cam, KIOSK.x + 10, KIOSK.y - 6); if (ks.x > HS.X0 + 40 && ks.x < HS.X1 - 40 && ks.y > HS.Y0 + 50 && ks.y < HS.Y1 - 30) tag('PARTS KIOSK', ks.x, ks.y - 8, C.pink);
-      const ps = HS.toScreen(cam, PAD.x, PAD.y - 46); if (ps.x > HS.X0 + 40 && ps.x < HS.X1 - 40 && ps.y > HS.Y0 + 36 && ps.y < HS.Y1 - 30) tag('LAUNCH PAD', ps.x, ps.y, C.cyan);
+      const ps = HS.toScreen(cam, PAD.x, PAD.y - 46); if (ps.x > HS.X0 + 40 && ps.x < HS.X1 - 40 && ps.y > HS.Y0 + 36 && ps.y < HS.Y1 - 30) tag(HS.rocketName() || 'LAUNCH PAD', ps.x, ps.y, C.cyan);
       HS.arrowReset(); HS.edgeArrow(cam, PAD.mx, PAD.my, C.cyan, 'PAD');
       HS.edgeArrow(cam, KIOSK.sx, KIOSK.sy, C.pink, 'KIOSK');
 
@@ -238,7 +242,7 @@
         else if (m.supply && m.draw > m.supply) tag(`POWER SHORT: ${m.draw} W needed, ${m.supply} W supplied. Breakers will trip.`, Math.min(320, HS.X1 - 350), HS.Y0 + 60, C.amber, 8.5);
       }
       if (B.toastT > 0) { g.globalAlpha = clamp(B.toastT * 2, 0, 1); tag(B.toast, 320, HS.Y1 - 38, B.toastCol, 8.5); g.globalAlpha = 1; }
-      HS.hint('[E] use   [Q] drop   [L] launch   [I] inspect   [B] blueprint   [TAB] map');
+      HS.hint('[E] use   [Q] drop   [L] launch   [I] inspect   [B] blueprint   [N] name   [TAB] map');
 
       // the catalog this screen's player is browsing, and the card for a part just bought
       if (p.shop != null) this.catalog(p.shop);
@@ -252,9 +256,11 @@
         g.globalAlpha = 1;
       }
       // the map, the blueprint sheet and the inspector are each screen's own view
-      const mapHeld = HS.local.down.has('Tab');
-      if (HS.local.hit.has('KeyB')) sheetOpen = !sheetOpen;
-      if (sheetOpen && !mapHeld) HS.blueprint.sheet(t, pv, pvId);
+      // while the rocket is being named, this screen's own keys belong to the dialog (HS.typing: no mute, no pause)
+      HS.typing = !!(B.naming && B.naming.who === HS.net.me);
+      const mapHeld = !B.naming && HS.local.down.has('Tab');
+      if (HS.pressed.has('KeyB') && !B.naming) sheetOpen = !sheetOpen;
+      if (sheetOpen && !mapHeld && !B.naming) HS.blueprint.sheet(t, pv, pvId);
       if (p.inspect && !mapHeld) HS.inspect.panel(p.inspect.id, p.inspect.t, { action: pr || (p.carry === p.inspect.id ? 'carry it to the pad to mount it   [Q] drop it' : ''), left: B.left });
       if (mapHeld) this.map(cam);
       if (B.count != null) {
@@ -264,7 +270,9 @@
         T('[L] cancel', 320, 204, 9, C.muted, { a: 'center', b: 'middle' });
       }
       if (B.mountFlash > 0) HS.fillStage(`rgba(120,255,220,${B.mountFlash * .25})`);
+      HS.naming.dialog(B, t);
     },
+    exit() { HS.typing = false; },
 
     // the part you hold or stand by: the part itself, big, with its numbers as chips (the full specs are on [B])
     card(id, head) {
