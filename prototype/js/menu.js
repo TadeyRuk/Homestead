@@ -48,6 +48,8 @@
     g.restore();
   }
   // the film's queued words (gfx.js TextQueue.flush), drawn with the safe box's offset on the stage
+  // the film's words, queued while it drew; also used by the extraction cutscene (js/extract.js)
+  HS.flushFilm = (...a) => flushFilm(...a);
   function flushFilm(tx, S, ox, oy) {
     g.save(); g.setTransform(S, 0, 0, S, ox, oy);
     for (const c of tx.cmds) {
