@@ -3,6 +3,7 @@
   const HS = window.HS, g = HS.g;
   const { T, box, bar, tag, C, CAT, PIX, clamp, px, fmt } = HS;
   const SPEED = 58, PAD = HS.PAD, KIOSK = HS.KIOSK;
+  const SHOP_COLS = 3, SHOP_ROWS = 2, SHOP_PAGE = SHOP_COLS * SHOP_ROWS;   // the kiosk shop: parts per shelf, shelves per page
   let B = null, sheetOpen = false;   // the [B] sheet is this screen's own view, never sent
 
   const inSolid = (x, y) => HS.CAMPUS_SOLID.some(([X, Y, w, h]) => x > X - 3 && x < X + w + 3 && y > Y - 2 && y < Y + h + 4);
@@ -54,7 +55,7 @@
     }
     if (near(p, PAD.mx, PAD.my, 26)) { toast('Bring a part here to mount it', C.muted); HS.sfx.buzz(); return; }
     // the kiosk opens its catalog (S6-12) at the page this player last looked at
-    if (near(p, KIOSK.sx, KIOSK.sy, 22)) { p.shop = p.shopAt || 0; p.shopAx = 0; HS.sfx.blip(); return; }
+    if (near(p, KIOSK.sx, KIOSK.sy, 22)) { p.shop = p.shopAt || 0; p.shopAx = 0; p.shopAy = 0; HS.sfx.blip(); return; }
     if (p.carry) { dropAt(p.carry, p.x + (p.flip ? -8 : 8), p.y + 2, p.paid); p.carry = null; p.paid = false; HS.sfx.drop(); }
   }
 
@@ -97,14 +98,16 @@
     move(dt) {
       const p = B.p, S = HS.S;
       if (p.got) { p.got.t += dt; if (p.got.t > 1.6) p.got = null; }
-      // browsing the catalog: left and right turn the page as the stick is pushed (keys or the touch joystick),
-      // E buys, Q, up, down or leaving the kiosk close it. The player stands still while it is open.
+      // browsing the shop: the stick (keys or the touch joystick) moves the cursor along the shelves, one step per
+      // push: left and right along a shelf, up and down between shelves and pages. E buys, Q or leaving the kiosk
+      // closes it. The player stands still while it is open.
       if (p.shop != null) {
         const ax = HS.axis(), n = HS.REAL_PARTS.length;
-        if (!near(p, KIOSK.sx, KIOSK.sy, 26) || HS.hit('KeyQ') || ax.y) { p.shopAt = p.shop; p.shop = null; HS.sfx.blip(); }
+        if (!near(p, KIOSK.sx, KIOSK.sy, 26) || HS.hit('KeyQ')) { p.shopAt = p.shop; p.shop = null; HS.sfx.blip(); }
         else {
           if (ax.x && ax.x !== p.shopAx) { p.shop = (p.shop + (ax.x > 0 ? 1 : n - 1)) % n; HS.sfx.tick(); }
-          p.shopAx = ax.x;
+          if (ax.y && ax.y !== p.shopAy) { p.shop = (p.shop + (ax.y > 0 ? SHOP_COLS : n - SHOP_COLS)) % n; HS.sfx.tick(); }
+          p.shopAx = ax.x; p.shopAy = ax.y;
           if (HS.hit('KeyE', 'Space')) buy(HS.REAL_PARTS[p.shop]);
           p.walk = 0;
           return;
@@ -143,21 +146,47 @@
         else { toast('Stand at the launch pad to start the countdown', C.muted); HS.sfx.buzz(); }
       }
     },
-    // one page of the kiosk catalog: the part, its slot and cost, and what buying it does to the cost cap
+    // the kiosk shop: a page of parts on two shelves, each drawn with its own pixel art (HS.partIcon, js/art.js) over
+    // a cost tag in its slot colour; the cursor's part is described along the bottom with what buying it costs the cap
     catalog(i) {
-      const S = HS.S, n = HS.REAL_PARTS.length, id = HS.REAL_PARTS[i], part = HS.PARTS[id], cost = part.cost || 0;
-      const col = part.slot === 'comms' ? C.cyan : CAT[part.slot], after = S.spent + cost, over = after > S.cap;
-      box(180, 92, 280, 150, C.pink, 6);
-      T('PARTS KIOSK', 192, 108, 8.5, C.pink, { w: 600 });
-      T(`${i + 1} / ${n}`, 448, 108, 7.5, C.muted, { a: 'right' });
-      T('<', 192, 140, 14, C.muted, { w: 700, f: PIX }); T('>', 448, 140, 14, C.muted, { w: 700, f: PIX, a: 'right' });
-      T(part.name, 320, 140, 15, C.white, { w: 700, a: 'center', f: PIX });
-      T(HS.SLOT_NAME[part.slot], 320, 154, 7.5, col, { w: 600, a: 'center' });
-      T(`${part.mass} kg   ${part.power > 0 ? '+' : ''}${part.power} W   ${part.flight}`, 320, 170, 7, C.white, { a: 'center' });
-      T(part.real, 320, 182, 6.5, '#f1d9cf', { a: 'center' });
-      T(`${cost} CR`, 320, 204, 12, over ? C.red : C.amber, { w: 700, a: 'center' });
-      T(over ? `over the cap: ${after} of ${S.cap} CR spent` : `spent ${after} of ${S.cap} CR after buying`, 320, 218, 7, over ? C.red : C.muted, { a: 'center' });
-      T('[A] [D] browse   [E] buy   [Q] close', 320, 234, 7, C.muted, { a: 'center' });
+      const S = HS.S, ids = HS.REAL_PARTS, n = ids.length, pages = Math.ceil(n / SHOP_PAGE), page = Math.floor(i / SHOP_PAGE);
+      const id = ids[i], part = HS.PARTS[id], cost = part.cost || 0, after = S.spent + cost, over = after > S.cap;
+      const X = 150, Y = 56, W = 340, H = 250, OUT = HS.ART_OUT, slotCol = (s) => (s === 'comms' ? C.cyan : CAT[s]);
+      box(X, Y, W, H, C.pink, 6);
+      T('SHOP', X + 12, Y + 20, 16, C.pink, { w: 700, f: PIX });
+      T('PARTS KIOSK', X + 70, Y + 19, 7, C.muted, { w: 600 });
+      T(`${S.spent} of ${S.cap} CR spent`, X + W - 12, Y + 19, 7.5, S.spent > S.cap ? C.red : C.white, { a: 'right', w: 600 });
+      // page arrows and dots
+      T('<', X + 10, Y + 92, 14, C.muted, { w: 700, f: PIX }); T('>', X + W - 10, Y + 92, 14, C.muted, { w: 700, f: PIX, a: 'right' });
+      for (let k = 0; k < pages; k++) { g.fillStyle = k === page ? C.pink : '#3a4452'; g.fillRect(X + W / 2 - pages * 5 + k * 10, Y + 32, 6, 3); }
+      g.imageSmoothingEnabled = false;
+      const cw = 96, x0 = X + (W - cw * SHOP_COLS) / 2, rows = [Y + 42, Y + 104];
+      for (let r = 0; r < SHOP_ROWS; r++) {
+        const sy = rows[r] + 40;
+        // the shelf: a metal plank with a lit top edge, outlined like the art (js/surface-games.js drawSpot)
+        g.fillStyle = OUT; g.fillRect(x0 - 2, sy - 1, cw * SHOP_COLS + 4, 7);
+        g.fillStyle = '#8a93a3'; g.fillRect(x0 - 1, sy, cw * SHOP_COLS + 2, 5); g.fillStyle = '#b4bcca'; g.fillRect(x0 - 1, sy, cw * SHOP_COLS + 2, 1);
+        for (let c = 0; c < SHOP_COLS; c++) {
+          const k = page * SHOP_PAGE + r * SHOP_COLS + c; if (k >= n) continue;
+          const pid = ids[k], pp = HS.PARTS[pid], cx = x0 + c * cw + cw / 2, sel = k === i, bob = sel ? Math.round(Math.sin(B.t * 5) * 1.5) : 0;
+          if (sel) { g.fillStyle = HS.rgba(C.pink, .16); g.fillRect(cx - 44, rows[r] - 2, 88, 58); g.strokeStyle = C.pink; g.lineWidth = 1.5; g.strokeRect(cx - 44, rows[r] - 2, 88, 58); }
+          g.drawImage(HS.partIcon(pid), Math.round(cx - 16), sy - 34 + bob, 32, 32);
+          // the cost tag hanging from the shelf
+          const tw = HS.tw(`${pp.cost || 0} CR`, 7, { w: 700 }) + 10, tx = Math.round(cx - tw / 2);
+          g.fillStyle = OUT; g.fillRect(tx - 1, sy + 6, tw + 2, 11); g.fillStyle = slotCol(pp.slot); g.fillRect(tx, sy + 7, 3, 9);
+          g.fillStyle = '#1b2430'; g.fillRect(tx + 3, sy + 7, tw - 3, 9);
+          T(`${pp.cost || 0} CR`, cx + 1.5, sy + 14, 7, S.spent + (pp.cost || 0) > S.cap ? C.red : C.amber, { a: 'center', w: 700 });
+        }
+      }
+      // the part under the cursor
+      const dy = Y + 176, col = slotCol(part.slot);
+      g.fillStyle = 'rgba(150,200,255,.07)'; g.fillRect(X + 10, dy - 6, W - 20, 52);
+      T(part.name, X + 16, dy + 8, 11, C.white, { w: 700, f: PIX });
+      T(HS.SLOT_NAME[part.slot], X + W - 16, dy + 7, 7, col, { w: 600, a: 'right' });
+      T(`${part.mass} kg   ${part.power > 0 ? '+' : ''}${part.power} W   ${part.flight}`, X + 16, dy + 21, 7, C.white);
+      T(part.real, X + 16, dy + 32, 6.5, '#f1d9cf');
+      T(over ? `${cost} CR: over the cap, ${after} of ${S.cap} CR` : `${cost} CR: ${after} of ${S.cap} CR spent after buying`, X + W - 16, dy + 32, 6.5, over ? C.red : C.muted, { a: 'right' });
+      T('[A] [D] [W] [S] or the stick: choose   [E] buy   [Q] close', X + W / 2, Y + H - 10, 7, C.muted, { a: 'center' });
     },
 
     save() { return HS.pack(B); },
