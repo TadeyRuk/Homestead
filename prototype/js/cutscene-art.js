@@ -519,7 +519,7 @@
     });
   }
   function rocketArt(slots) {
-    const s = slots || {}, key = HS.SLOTS.map(k => s[k] || '-').join(',');
+    const s = HS.lookSlots(slots), key = HS.SLOTS.map(k => s[k] || '-').join(',');
     if (rockets[key]) return rockets[key];
     const [c, x] = makeRead(RW, RH);
     partsBehind(x, s, RCX, RBY);

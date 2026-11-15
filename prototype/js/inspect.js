@@ -25,7 +25,7 @@
     ],
     power: [
       ['SUPPLY', (p) => p.power, (v) => `${v} W`, 'hi', 'shared by every system on board'],
-      ['SOURCE', (p) => (p.solar ? 0 : 1), (v, p) => (p.solar ? 'sunlight' : 'radioisotope'), 'none', (p) => (p.solar ? 'weaker far from the Sun, drops in flares' : 'steady through flares and night')],
+      ['SOURCE', (p) => (p.solar ? 0 : 1), (v, p) => p.source || (p.solar ? 'sunlight' : 'radioisotope'), 'none', (p) => (p.solar ? 'weaker far from the Sun, drops in flares' : 'steady through flares and night')],
       // the surface multiplies solar recharge by 0.43 on Mars (surface.js), so rank by what you will actually get
       ['SUIT RECHARGE', (p) => p.recharge * (p.solar && HS.S.mission.id === 'mars' ? .43 : 1), (v) => `${+v.toFixed(1)}% a second`, 'hi', (p) => (p.solar && HS.S.mission.id === 'mars' ? 'at the lander; 43% sunlight on Mars' : 'at the lander, on the surface')],
       ['CORE HEAT', (p) => p.heat, heatWord, 'lo', 'heat the science station must cool'],
@@ -127,6 +127,7 @@
     }
   }
   function specimen(id, t, col) {
+    id = HS.look(id);   // new parts borrow an existing part's art (S4-12)
     const x = sx, W = sc.width, H = sc.height;
     IY = FIRES.has(id) ? 34 : 70;
     x.clearRect(0, 0, W, H);

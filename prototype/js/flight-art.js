@@ -51,7 +51,7 @@
     x.drawImage(glowC(r, rgb), Math.round(cx - r), Math.round(cy - r));
     x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
   }
-  const idOf = (slot, p) => (HS.S && HS.S.slots && HS.S.slots[slot]) || Object.keys(HS.PARTS).find((k) => HS.PARTS[k] === p) || '';
+  const idOf = (slot, p) => HS.look((HS.S && HS.S.slots && HS.S.slots[slot]) || Object.keys(HS.PARTS).find((k) => HS.PARTS[k] === p) || '');
 
   const css = (c) => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
   // ---------- palettes (shades of the title film's colours)
@@ -427,6 +427,7 @@
   // the same ship for the build screen's blueprint, cached per part set; ids may be '' for an empty slot
   const shipCache = new Map();
   FA.ship = (ids) => {
+    ids = HS.lookSlots(ids);   // new parts borrow an existing part's art (S4-12)
     const k = [ids.prop, ids.power, ids.comms, ids.payload].join('|');
     let s = shipCache.get(k);
     if (!s) { s = buildShip(ids); shipCache.set(k, s); }
