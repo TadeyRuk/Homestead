@@ -1,7 +1,7 @@
 import type { PartInfo } from "../core/catalog";
 import type { MissionInfo } from "../core/missions";
 import type { MissionId } from "../core/state";
-import type { MissionList, ScanStats } from "../missions/stats";
+import type { MissionList, PoolEntry, ScanStats } from "../missions/stats";
 import missionsJson from "./missions.json";
 import partsJson from "./parts.json";
 
@@ -42,6 +42,8 @@ export interface MissionData extends MissionInfo {
   hazard: string;
   objectives: string[];
   bonus: string;
+  /** what the run's objectives are drawn from (seat 2, S2-18) */
+  pool: PoolEntry[];
   list: Omit<MissionList, "bonusLabel"> & { bonusLabel: string };
 }
 

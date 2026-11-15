@@ -49,6 +49,8 @@ export interface SurfaceGame<G = unknown> {
   keys: string;
   /** may this build get the task at all; panel cleaning returns false for anything not solar */
   eligible?(part: string | null): boolean;
+  /** a few words for the brief on which part makes it easier, for example "an RTG gives the most torque" */
+  tip?: string;
   /** a real-missions line for the overlay and the report */
   fact?(mission: MissionId): string;
   /** a fresh attempt; return plain data only (no classes or functions), since joiners get it in snapshots */
