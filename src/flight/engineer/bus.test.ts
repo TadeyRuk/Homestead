@@ -189,4 +189,12 @@ describe("power bus", () => {
     expect(solar).toBeGreaterThan(3);
     expect(rtg).toBe(0);
   });
+
+  it("strains more slowly while nobody is at the station", () => {
+    const watched = busOn(100);
+    const unwatched = busOn(100);
+    stepBus(watched, still, 1, () => {});
+    stepBus(unwatched, still, 1, () => {}, 0.4);
+    expect(unwatched.strain).toBeCloseTo(watched.strain * 0.4);
+  });
 });

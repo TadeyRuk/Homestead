@@ -49,8 +49,11 @@ export function createConverter(seed: number): Converter {
   return c;
 }
 
-/** one tick of the converter; input is the science officer's, or still when nobody is at the station */
-export function stepConverter(c: Converter, ship: Pick<Ship, "cabinOxygen">, input: Input, dt: number, emit: Emit): void {
+/**
+ * One tick of the converter; input is the science officer's, or still when nobody is at the station.
+ * pace is stationPace: 1 while someone is at the station, less while nobody watches, so the cabin drains slower.
+ */
+export function stepConverter(c: Converter, ship: Pick<Ship, "cabinOxygen">, input: Input, dt: number, emit: Emit, pace = 1): void {
   steer(c, input);
   if (input.interact && c.tray.length > 0) feed(c, ship, emit);
 
@@ -62,7 +65,7 @@ export function stepConverter(c: Converter, ship: Pick<Ship, "cabinOxygen">, inp
     deal(c);
   }
 
-  ship.cabinOxygen = Math.max(0, ship.cabinOxygen - DRAIN_PER_SECOND * dt);
+  ship.cabinOxygen = Math.max(0, ship.cabinOxygen - DRAIN_PER_SECOND * pace * dt);
   if (ship.cabinOxygen < LOW_OXYGEN && !c.low) emit("oxygen_low", { value: ship.cabinOxygen });
   c.low = ship.cabinOxygen < LOW_OXYGEN;
 }

@@ -138,4 +138,10 @@ describe("energy core", () => {
     expect(s.coreTemp).toBeLessThan(SAFE_HIGH);
     expect(s.instrumentHealth).toBe(1);
   });
+
+  it("heats more slowly while nobody is at the station", () => {
+    const s = ship(0.4);
+    stepCore(createCore(radar), s, still, 2, () => {}, 0.4);
+    expect(s.coreTemp).toBeCloseTo(0.4 + radar.heat * 2 * 0.4);
+  });
 });

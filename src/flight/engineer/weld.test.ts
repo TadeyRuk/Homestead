@@ -178,4 +178,12 @@ describe("hull weld", () => {
     stepWeld(w, ship(), still, 0.01, () => {});
     expect(w.jobs[0].next).toBe(1);
   });
+
+  it("leaks more slowly while nobody is at the station", () => {
+    const w = createWelder(1);
+    openBreach(w, 0.2);
+    const s = ship();
+    stepWeld(w, s, still, 2, () => {}, 0.4);
+    expect(s.cabinOxygen).toBeCloseTo(0.8 - LEAK_PER_SECOND * 2 * 0.4);
+  });
 });

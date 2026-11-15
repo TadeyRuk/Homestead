@@ -1,8 +1,11 @@
 import type { DeepReadonly } from "../../core/scene";
+import { partName } from "../../data/data";
+import { alpha, bar, box, clamp, text } from "../../ui/kit";
+import { C, ROLE_COLOUR, SLOT_NAME } from "../../ui/tokens";
 import { draw as busDraw, overloaded, secondsToTrip, type Bus } from "./bus";
 import type { Welder } from "./weld";
 
-/** where on the canvas a station draws; the flight shell (S4-01) decides */
+/** a panel on seat 3's 640 x 360 grid; the station's draw calls begin() first */
 export interface Area {
   x: number;
   y: number;
@@ -10,96 +13,72 @@ export interface Area {
   h: number;
 }
 
-const DIM = "#8a93a6";
-const TEXT = "#e6e9ef";
-const OK = "#5fbf7f";
-const WARN = "#e8b04b";
-const BAD = "#e0605a";
+const EDGE = ROLE_COLOUR.engineer;
 
-export function drawBus(ctx: CanvasRenderingContext2D, bus: DeepReadonly<Bus>, area: Area): void {
-  const { x, y, w } = area;
-  const watts = busDraw(bus);
-  // a dead power part still has to draw as fully loaded, not as NaN
-  const load = bus.supply > 0 ? watts / bus.supply : watts > 0 ? Infinity : 0;
-
-  ctx.font = "16px sans-serif";
-  ctx.fillStyle = TEXT;
-  ctx.fillText("Power bus", x, y + 20);
-  ctx.font = "14px sans-serif";
-  ctx.fillStyle = DIM;
-  ctx.fillText(`${bus.source}: ${bus.supply} W`, x, y + 42);
+/** active: this minigame has the engineer's keys right now, so its edge lights up */
+export function drawBus(ctx: CanvasRenderingContext2D, bus: DeepReadonly<Bus>, a: Area, active: boolean): void {
+  const x = a.x + 10;
+  const w = a.w - 20;
+  box(ctx, a.x, a.y, a.w, a.h, active ? EDGE : C.line);
+  text(ctx, "POWER BUS", x, a.y + 16, 9, active ? EDGE : C.muted, { weight: 600 });
+  text(ctx, `${partName(bus.source)}  ${bus.supply} W`, x, a.y + 29, 7, C.muted);
 
   // load against supply; the bar's end is the supply line
-  const barY = y + 56;
-  ctx.fillStyle = "#1c2230";
-  ctx.fillRect(x, barY, w, 18);
-  ctx.fillStyle = load > 1 ? BAD : load > 0.85 ? WARN : OK;
-  ctx.fillRect(x, barY, w * Math.min(load, 1), 18);
-  ctx.fillStyle = TEXT;
-  ctx.fillText(Number.isFinite(load) ? `${Math.round(load * 100)}% load` : "No supply", x + 6, barY + 14);
-
+  const watts = busDraw(bus);
+  // a dead power part still has to read as fully loaded, not as NaN
+  const load = bus.supply > 0 ? watts / bus.supply : watts > 0 ? Infinity : 0;
   const over = overloaded(bus);
-  ctx.fillStyle = bus.tripped > 0 || over ? BAD : DIM;
-  const breaker =
+  bar(ctx, x, a.y + 36, w, 9, clamp(load), load > 1 ? C.red : load > 0.85 ? C.amber : C.green);
+  text(ctx, Number.isFinite(load) ? `${Math.round(load * 100)}% load` : "no supply", x + w, a.y + 55, 7, C.white, { align: "right" });
+
+  const [breaker, tone] =
     bus.tripped > 0
-      ? `Breaker tripped, resets in ${Math.ceil(bus.tripped)} s`
+      ? [`BREAKER TRIPPED  resets in ${Math.ceil(bus.tripped)} s`, C.red]
       : over
-        ? `${secondsToTrip(bus).toFixed(1)} s from tripping`
+        ? [`${secondsToTrip(bus).toFixed(1)} s from tripping`, C.red]
         : bus.strain > 0
-          ? "Breaker cooling down"
-          : "Breaker closed";
-  ctx.fillText(breaker, x, barY + 40);
-  if (bus.engineOffAsked) {
-    ctx.fillStyle = WARN;
-    ctx.fillText("Engine off: waiting for the pilot", x, barY + 62);
-  }
+          ? ["breaker cooling down", C.amber]
+          : ["breaker closed", C.dim];
+  text(ctx, breaker, x, a.y + 55, 7, tone, { weight: over || bus.tripped > 0 ? 600 : 500 });
+  if (bus.engineOffAsked) text(ctx, "engine off? waiting for the pilot", x, a.y + 68, 7, C.amber);
 
-  const rowsY = barY + 92;
+  const rowsY = a.y + 80;
   bus.loads.forEach((l, i) => {
-    const rowY = rowsY + i * 30;
-    if (i === bus.cursor) {
-      ctx.fillStyle = "#1c2230";
-      ctx.fillRect(x - 6, rowY - 18, w + 12, 26);
+    const y = rowsY + i * 18;
+    if (i === bus.cursor && active) {
+      ctx.fillStyle = alpha(EDGE, 0.12);
+      ctx.fillRect(a.x + 4, y - 11, a.w - 8, 16);
     }
-    ctx.fillStyle = l.on ? OK : DIM;
-    ctx.fillText(l.on ? "ON" : "OFF", x, rowY);
-    ctx.fillStyle = TEXT;
-    ctx.fillText(`${l.slot}: ${l.id}`, x + 48, rowY);
-    ctx.fillStyle = DIM;
-    ctx.textAlign = "right";
-    ctx.fillText(`${l.watts} W`, x + w, rowY);
-    ctx.textAlign = "left";
+    text(ctx, l.on ? "ON" : "OFF", x, y, 8, l.on ? C.green : C.dim, { weight: 600 });
+    text(ctx, `${SLOT_NAME[l.slot]}: ${partName(l.id)}`, x + 26, y, 8, l.on ? C.white : C.dim);
+    text(ctx, `${l.watts} W`, x + w, y, 8, C.muted, { align: "right" });
   });
+  if (bus.loads.length === 0) text(ctx, "nothing on the bus to switch", x, rowsY, 8, C.dim);
 
-  ctx.fillStyle = DIM;
-  ctx.fillText("W/S select, E switch", x, rowsY + bus.loads.length * 30 + 10);
+  text(ctx, "W/S select   E switch", x, a.y + a.h - 8, 7, C.dim);
 }
 
-export function drawWeld(ctx: CanvasRenderingContext2D, w: DeepReadonly<Welder>, area: Area): void {
-  const { x, y, w: width } = area;
+export function drawWeld(ctx: CanvasRenderingContext2D, w: DeepReadonly<Welder>, a: Area, active: boolean): void {
   const job = w.jobs[0];
-
-  ctx.font = "16px sans-serif";
-  ctx.fillStyle = TEXT;
-  ctx.fillText("Hull weld", x, y + 20);
-  ctx.font = "14px sans-serif";
-  ctx.fillStyle = job ? BAD : DIM;
-  const queued = w.jobs.length > 1 ? ` (${w.jobs.length - 1} more waiting)` : "";
-  ctx.fillText(job ? `Breach open, cabin air leaking${queued}` : "Hull holding", x, y + 42);
+  const x = a.x + 10;
+  box(ctx, a.x, a.y, a.w, a.h, active ? EDGE : C.line);
+  text(ctx, "HULL WELD", x, a.y + 16, 9, active ? EDGE : C.muted, { weight: 600 });
+  const queued = w.jobs.length > 1 ? `  (${w.jobs.length - 1} more)` : "";
+  text(ctx, job ? `breach open, cabin air leaking${queued}` : "hull holding", x, a.y + 29, 7, job ? C.red : C.dim);
 
   // the panel is square, so a crack keeps its shape whatever the area
-  const size = Math.max(0, Math.min(width, area.h - 110));
-  const px = x;
-  const py = y + 56;
-  const at = (p: { x: number; y: number }) => [px + p.x * size, py + p.y * size] as const;
-  ctx.fillStyle = "#1c2230";
-  ctx.fillRect(px, py, size, size);
+  const size = Math.max(0, Math.min(a.w - 20, a.h - 66));
+  const px0 = a.x + (a.w - size) / 2;
+  const py0 = a.y + 38;
+  const at = (p: { x: number; y: number }) => [px0 + p.x * size, py0 + p.y * size] as const;
+  ctx.fillStyle = C.ink;
+  ctx.fillRect(px0, py0, size, size);
 
   if (job) {
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 2.5;
     job.crack.forEach((p, i) => {
       if (i === 0) return;
-      ctx.strokeStyle = i < job.next ? OK : BAD;
+      ctx.strokeStyle = i < job.next ? C.green : C.red;
       ctx.beginPath();
       ctx.moveTo(...at(job.crack[i - 1]));
       ctx.lineTo(...at(p));
@@ -107,19 +86,17 @@ export function drawWeld(ctx: CanvasRenderingContext2D, w: DeepReadonly<Welder>,
     });
     // the point to reach next
     const [nx, ny] = at(job.crack[Math.min(job.next, job.crack.length - 1)]);
-    ctx.strokeStyle = WARN;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(nx - 6, ny - 6, 12, 12);
+    ctx.strokeStyle = C.amber;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(nx - 4, ny - 4, 8, 8);
+    const [tx, ty] = at(w.torch);
+    ctx.fillStyle = C.amber;
+    ctx.beginPath();
+    ctx.arc(tx, ty, 3, 0, Math.PI * 2);
+    ctx.fill();
+    text(ctx, `sealant ${Math.round(job.sealant * 100)}%`, x, a.y + a.h - 8, 7, job.sealant < 0.5 ? C.amber : C.muted);
+    text(ctx, "WASD trace the crack", a.x + a.w - 10, a.y + a.h - 8, 7, C.dim, { align: "right" });
+  } else {
+    text(ctx, "a breach from a debris hit opens here", a.x + a.w / 2, py0 + size / 2, 7, C.dim, { align: "center" });
   }
-
-  const [tx, ty] = at(w.torch);
-  ctx.fillStyle = WARN;
-  ctx.beginPath();
-  ctx.arc(tx, ty, 5, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = job && job.sealant < 0.5 ? WARN : DIM;
-  ctx.fillText(job ? `Sealant ${Math.round(job.sealant * 100)}%` : "", px, py + size + 22);
-  ctx.fillStyle = DIM;
-  ctx.fillText("WASD move the torch along the crack", px, py + size + 44);
 }

@@ -102,15 +102,18 @@ export function answerEngineOff(bus: Bus, agree: boolean, emit: Emit): void {
   if (agree && engine?.on) shed(engine, emit);
 }
 
-/** one tick of the bus; input is the engineer's, or still when nobody is at the station */
-export function stepBus(bus: Bus, input: Input, dt: number, emit: Emit): void {
+/**
+ * One tick of the bus; input is the engineer's, or still when nobody is at the station.
+ * pace is stationPace: 1 while someone is at the station, less while nobody watches, so strain builds slower.
+ */
+export function stepBus(bus: Bus, input: Input, dt: number, emit: Emit, pace = 1): void {
   steer(bus, input, emit);
   bus.t += dt;
   if (bus.tripped > 0) {
     bus.tripped = Math.max(0, bus.tripped - dt);
     return;
   }
-  bus.strain = Math.min(1, Math.max(0, bus.strain + (overloaded(bus) ? dt : -dt) / TRIP_SECONDS));
+  bus.strain = Math.min(1, Math.max(0, bus.strain + (overloaded(bus) ? dt * pace : -dt) / TRIP_SECONDS));
   if (bus.strain >= 1) {
     emit("breaker_tripped", { part: bus.source, value: Math.round(draw(bus)) });
     bus.strain = 0;

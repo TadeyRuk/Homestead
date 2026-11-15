@@ -63,8 +63,11 @@ export function openBreach(w: Welder, damage: number, part?: string): void {
   w.jobs.push({ crack, next: 0, sealant: 1, damage, part });
 }
 
-/** one tick of the weld; input is the engineer's, or still when nobody is at the station */
-export function stepWeld(w: Welder, ship: Pick<Ship, "hull" | "cabinOxygen">, input: Input, dt: number, emit: Emit): void {
+/**
+ * One tick of the weld; input is the engineer's, or still when nobody is at the station.
+ * pace is stationPace: 1 while someone is at the station, less while nobody watches, so the leak slows.
+ */
+export function stepWeld(w: Welder, ship: Pick<Ship, "hull" | "cabinOxygen">, input: Input, dt: number, emit: Emit, pace = 1): void {
   const job = w.jobs[0];
   // small steps, so a long tick from a throttled background host can't carry the torch over a crack point
   const steps = Math.max(1, Math.ceil((TORCH_SPEED * dt) / TOLERANCE));
@@ -75,7 +78,7 @@ export function stepWeld(w: Welder, ship: Pick<Ship, "hull" | "cabinOxygen">, in
   }
   if (!job) return;
 
-  ship.cabinOxygen = clamp(ship.cabinOxygen - LEAK_PER_SECOND * dt);
+  ship.cabinOxygen = clamp(ship.cabinOxygen - LEAK_PER_SECOND * pace * dt);
   if (job.next < job.crack.length) return;
   // a clean weld gives back all the breach took, an empty can only half
   const restored = job.damage * (0.5 + 0.5 * job.sealant);
