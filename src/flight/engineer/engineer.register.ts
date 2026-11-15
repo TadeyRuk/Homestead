@@ -8,6 +8,7 @@ import { registerStation, stationInput, stationPace } from "../stations";
 import { stepBus, type Bus, type Emit } from "./bus";
 import { drawBus, drawWeld, type Area } from "./draw";
 import { busFor } from "./supply";
+import { engineerTrouble } from "./trouble";
 import { createWelder, routeEngineer, stepWeld, type Welder } from "./weld";
 
 const LEFT: Area = { x: 16, y: 34, w: 296, h: 300 };
@@ -29,6 +30,9 @@ registerRule("flight", (state, inputs, now, dt) => {
   const pace = stationPace(state, "engineer");
   stepBus(bus, keys.bus, dt, emit, pace);
   stepWeld(weld, state.ship, keys.weld, dt, emit, pace);
+  const trouble = engineerTrouble(bus, weld);
+  if (trouble) state.trouble.engineer = trouble;
+  else delete state.trouble.engineer;
 });
 
 registerStation("engineer", {
