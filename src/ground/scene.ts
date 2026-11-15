@@ -6,6 +6,7 @@ import { drawCountdown, drawGround, drawMarker, drawPadSlots, drawParts, drawPla
 import { bonusSpot } from "../missions/objectives";
 import { missionList } from "../missions/stats";
 import { shipDescent } from "./extraction";
+import { drawHazard, hazardAt } from "./hazards";
 import { LANDER_REACH } from "./suit";
 import { SURFACE } from "./surface";
 import { groundFor, type Ground, type GroundMap } from "./world";
@@ -77,6 +78,16 @@ export function groundScene(which: Ground): Scene {
           if (task) drawTaskRing(ctx, p, task.progress, TASK_LABELS[task.kind]);
           const held = state.surface.held[p.id] ?? 0;
           if (held > 0) drawHeldData(ctx, p, held);
+        }
+      }
+      if (which === "surface") {
+        // seat 6's storm wall or flare tint (#97): over everyone else, so the storm hides what is in it
+        const hazard = hazardAt(state, view.now);
+        drawHazard(ctx, hazard);
+        // but never your own astronaut: you can still steer yourself out of the dust
+        if (hazard && me) {
+          drawPlayers(ctx, [me], view.playerId);
+          if (!me.down) drawSuitBars(ctx, me);
         }
       }
       if (which === "surface" && map.lander) drawShip(ctx, map.lander, shipDescent(state, view.now));
