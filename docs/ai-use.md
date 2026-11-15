@@ -4,13 +4,6 @@ How AI tools were used to make Homestead. This is the project's AI metadata, as 
 
 The game concept, its design and the proposal plan are the team's own. AI was not used to come up with the idea.
 
-## Tools
-
-| Tool | Maker | Used for |
-| --- | --- | --- |
-| Claude, through Claude Code | Anthropic | Writing and testing the code, researching and checking sources, drafting docs |
-| Claude, through the Claude Code GitHub Action | Anthropic | Reviewing pull requests (`.github/workflows/claude-review.yml`) |
-
 ## Code
 
 The game's code was written with AI assistance (Claude Code). Every change went through a pull request that a team member merged, and a person played the game after each merge.
