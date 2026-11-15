@@ -60,12 +60,13 @@ npm run build    # typecheck and build to dist/
 npm run preview  # serve the built dist/
 ```
 
-To publish, zip the contents of `dist/` (so `index.html` is at the root of the zip) and upload it to itch.io as an HTML5 game. Don't use Windows PowerShell 5.1's `Compress-Archive`: it writes `assetsile.js` with a backslash, and itch.io then can't find the scripts. This works on any machine with Python:
+To publish on itch.io:
 
 ```sh
-npm run build
-python -c "import os,zipfile;z=zipfile.ZipFile('homestead.zip','w',zipfile.ZIP_DEFLATED);[z.write(os.path.join(r,f),os.path.relpath(os.path.join(r,f),'dist').replace(os.sep,'/')) for r,_,fs in os.walk('dist') for f in fs if f!='.gitkeep']"
+npm run package   # typecheck, build, and zip dist/ into homestead.zip
 ```
+
+Then on itch.io: create a project, set the kind to HTML, upload `homestead.zip`, tick "This file will be played in the browser", set the viewport to 960 x 540, and open the page to check that Play solo starts. Re-run `npm run package` and upload again whenever main changes before the deadline. The zip is built by `scripts/zip.mjs` on Node's own zlib, with forward-slash paths; PowerShell 5.1's `Compress-Archive` writes backslash paths that itch.io can't serve.
 
 ## Status
 
