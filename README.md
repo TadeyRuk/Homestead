@@ -186,9 +186,10 @@ Homestead was made with AI assistance. The concept and design are the team's own
 - **Reviews:** a GitHub Action runs Claude on each pull request to point out bugs and missing tests (`.github/workflows/claude-review.yml`).
 - **Research and docs:** Claude helped find and check the NASA sources above and drafted parts of this README.
 - **Art:** drawn in code and labelled as made with AI. The game will show a "Made with AI assistance" label in a corner of the screen.
+- **Music:** made with AI assistance.
 - **No NASA branding:** no AI-made content uses NASA logos, flags or mission identifiers.
 
-The full record, area by area, is in [`docs/ai-use.md`](docs/ai-use.md).
+The full record is in [`docs/ai-use.md`](docs/ai-use.md).
 
 ## Credits and licences
 
