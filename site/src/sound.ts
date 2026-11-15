@@ -9,14 +9,40 @@ const ready = (): boolean => !muted && !!ctx && ctx.state === 'running';
 export function unlock(): void {
   if (!ctx) {
     ctx = new AudioContext();
-    out = ctx.createGain(); out.gain.value = .5; out.connect(ctx.destination);
+    out = ctx.createGain(); out.gain.value = muted ? 0 : .5; out.connect(ctx.destination);
+    ctx.addEventListener('statechange', startMusic);
+    loadMusic();
   }
   if (ctx.state === 'suspended') void ctx.resume();
+  startMusic();
+}
+
+// The game's own title music: an intro that plays once, then a part that loops. Ogg first, AAC for browsers
+// that cannot decode Ogg.
+let intro: AudioBuffer | null = null, loop: AudioBuffer | null = null, playing = false;
+const clip = (name: string): Promise<AudioBuffer> => {
+  const get = (ext: string): Promise<AudioBuffer> => fetch(`/assets/${name}.${ext}`).then((r) => r.arrayBuffer()).then((b) => ctx!.decodeAudioData(b));
+  return get('ogg').catch(() => get('m4a'));
+};
+function loadMusic(): void {
+  Promise.all([clip('music-earth-1'), clip('music-earth-2')]).then(([a, b]) => { intro = a; loop = b; startMusic(); }).catch(() => { /* no music: the effects still play */ });
+}
+function startMusic(): void {
+  if (playing || !ctx || !out || ctx.state !== 'running' || !intro || !loop) return;
+  playing = true;
+  const g = ctx.createGain(), t = ctx.currentTime + .05;
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.55, t + .6);
+  g.connect(out);
+  const a = ctx.createBufferSource(), b = ctx.createBufferSource();
+  a.buffer = intro; b.buffer = loop; b.loop = true;
+  a.connect(g); b.connect(g);
+  a.start(t); b.start(t + intro.duration);
 }
 
 export const isMuted = (): boolean => muted;
 export function setMuted(m: boolean): void {
   muted = m;
+  if (out && ctx) out.gain.setTargetAtTime(m ? 0 : .5, ctx.currentTime, .05);
   try { localStorage.setItem('muted', m ? '1' : '0'); } catch { /* not saved */ }
 }
 
