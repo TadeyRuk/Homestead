@@ -387,6 +387,20 @@
   };
 
   HS.netAvailable = () => !!window.HSNet;
+  // a name over each astronaut's head on the campus and the surface. ps maps crew id -> { x, y } (the feet,
+  // in world units); solo shows only a callsign the player has set
+  const HEAD = 36;   // screen pixels from the feet to just above the helmet
+  HS.nameTags = (cam, ps) => {
+    for (const id in ps) {
+      const name = N.mode === 'solo' ? HS.S.name : HS.member(id).name;
+      if (!name) continue;
+      const q = HS.toScreen(cam, ps[id].x, ps[id].y);
+      if (q.x < 0 || q.x > 640 || q.y < 20 || q.y > 380) continue;
+      const w = HS.tw(name, 6.5, { w: 600 }), y = q.y - HEAD;
+      g.fillStyle = 'rgba(8,14,26,.7)'; g.fillRect(Math.round(q.x - w / 2 - 3), Math.round(y - 5), Math.ceil(w + 6), 10);
+      T(name, q.x, y, 6.5, id === N.me && N.mode !== 'solo' ? C.cyan : C.white, { w: 600, a: 'center', b: 'middle' });
+    }
+  };
   // going back to the title ends an online game for everyone
   HS.netQuit = () => { if (N.mode === 'host') N.room.end('The host left the game'); else if (N.mode === 'client') { N.client.leave(); leave(''); } };
 })();

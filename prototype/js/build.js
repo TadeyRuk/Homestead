@@ -159,6 +159,7 @@
       HS.drawCampus(x, cam, t, dyn, B.count);
       HS.drawFx(x, cam, B.fx);
       HS.blitArt();
+      HS.nameTags(cam, B.ps);
 
       // ----- labels in the world
       for (const [X, Y, s] of HS.CAMPUS_LABELS) { const q = HS.toScreen(cam, X, Y); if (q.x > 30 && q.x < 610 && q.y > 44 && q.y < 330) T(s, q.x, q.y, 7, 'rgba(235,240,245,.55)', { w: 600, a: 'center' }); }
