@@ -69,15 +69,36 @@
     lastData = Object.assign({}, data, { fx: [] });   // a keepalive repeats the state, not the sounds
     outbox = [];
   }
+  // ---------- smoothing on joiners: snapshots arrive about 30 a second and unevenly, so a joiner draws the
+  // scene DELAY ms in the past, blending the two snapshots around that moment. Only positions are blended;
+  // counters and everything else take the newer snapshot's value.
+  const DELAY = 50, BLEND = new Set(['x', 'y', 'e', 'rot']);
+  let buf = [];   // [{ t, d }] for the current scene, oldest first
+  const blend = (a, b, k, key) => {
+    if (typeof b === 'number') return typeof a === 'number' && BLEND.has(key) ? a + (b - a) * k : b;
+    if (Array.isArray(b)) return Array.isArray(a) && a.length === b.length ? b.map((v, i) => blend(a[i], v, k, key)) : b;
+    if (b && typeof b === 'object') { const o = {}, ao = a && typeof a === 'object' ? a : {}; for (const n in b) o[n] = blend(ao[n], b[n], k, n); return o; }
+    return b;
+  };
+  function applySmoothed(now) {
+    const cur = HS.scenes[HS.sceneName];
+    if (!cur || !cur.load || !buf.length) return;
+    const rt = now - DELAY;
+    while (buf.length > 2 && buf[1].t <= rt) buf.shift();   // keep one snapshot at or before rt
+    const [a, b] = buf;
+    if (!b || rt <= a.t) cur.load(a.d);
+    else if (rt >= b.t) cur.load(b.d);
+    else cur.load(blend(a.d, b.d, (rt - a.t) / (b.t - a.t)));
+  }
+
   function onSnap(data) {
     if (N.mode !== 'client' || !data) return;
     if (N.client.id()) N.me = N.client.id();   // the welcome comes before the first snapshot
     if (data.crew) N.crew = data.crew;
     if (data.fx) play(data.fx);
     if (data.S) loadS(data.S);
-    if (data.scene !== HS.sceneName && data.scene !== 'lobby') { HS.netGo(data.scene); return; }
-    const cur = HS.scenes[HS.sceneName];
-    if (data.d && cur && cur.load) cur.load(data.d);
+    if (data.scene !== HS.sceneName && data.scene !== 'lobby') { buf = []; HS.netGo(data.scene); return; }
+    if (data.d) buf.push({ t: performance.now(), d: data.d });
   }
 
   // ---------- the frame hooks main.js calls
@@ -88,6 +109,7 @@
     const now = performance.now(), i = encode(HS.local), s = JSON.stringify(i);
     // presses go every frame they happen; held keys and the pointer only when they change
     if (s !== N.sent || i.hit.length || i.click) { N.sent = s; N.client.sendInput(i); }
+    applySmoothed(now);
     if (now - N.lastPing > PING_MS) { N.lastPing = now; N.client.ping(); }
     N.client.check();
   };
