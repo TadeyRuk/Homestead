@@ -34,8 +34,9 @@
 
   function interact() {
     const S = HS.S, p = B.p;
-    if (near(p, PAD.mx, PAD.my, 26)) {
-      if (!p.carry) { toast('Bring a part here to mount it', C.muted); HS.sfx.buzz(); return; }
+    // E means mount only when you carry a part at the pad; with empty hands a part within reach is picked up
+    // first, so a part lying beside the pad (where a swapped-out part lands) can be taken from any side
+    if (p.carry && near(p, PAD.mx, PAD.my, 26)) {
       const part = HS.PARTS[p.carry], old = S.slots[part.slot], oldPaid = S.paid[part.slot];
       S.slots[part.slot] = p.carry; S.paid[part.slot] = !!p.paid; p.carry = null; p.paid = false; HS.spend(); HS.sfx.mount();
       const i = HS.SLOTS.indexOf(part.slot); B.fx.burst(518 + i * 18, 158, 26, 40, .7, [CAT[part.slot], '#ffffff', C.cyan], 1);
@@ -51,6 +52,7 @@
       if (p.carry) dropAt(p.carry, best.x, best.y, p.paid);
       p.carry = best.id; p.paid = !!best.paid; HS.sfx.pick(); return;
     }
+    if (near(p, PAD.mx, PAD.my, 26)) { toast('Bring a part here to mount it', C.muted); HS.sfx.buzz(); return; }
     // the kiosk opens its catalog (S6-12) at the page this player last looked at
     if (near(p, KIOSK.sx, KIOSK.sy, 22)) { p.shop = p.shopAt || 0; p.shopAx = 0; HS.sfx.blip(); return; }
     if (p.carry) { dropAt(p.carry, p.x + (p.flip ? -8 : 8), p.y + 2, p.paid); p.carry = null; p.paid = false; HS.sfx.drop(); }
