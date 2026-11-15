@@ -160,7 +160,7 @@
       T('MISSION CONTROL  /  INCOMING BRIEF', 128, 56, 8.5, C.cyan, { w: 600 });
       T('seed ' + HS.S.seed, 512, 56, 7.5, C.muted, { a: 'right' });
       T(m.name, 128, 86, 24, C.white, { w: 700, f: PIX });
-      m.card.forEach(([a, b], i) => { const k = t - .4 - i * .45; if (k < 0) return; T(a, 128, 112 + i * 19, 8.5, C.muted, { w: 600 }); T(typed(b, k, 55), 220, 112 + i * 19, 9, i === 6 ? C.amber : C.white, { w: i === 6 ? 600 : 500 }); });
+      HS.briefCard(HS.S).forEach(([a, b], i) => { const k = t - .4 - i * .45; if (k < 0) return; T(a, 128, 112 + i * 19, 8.5, C.muted, { w: 600 }); T(typed(b, k, 55), 220, 112 + i * 19, 9, a === 'Spacecraft' ? C.amber : C.white, { w: a === 'Spacecraft' ? 600 : 500 }); });
       if (t > 4) {
         g.globalAlpha = seg(t, 4, 4.6);
         T('Extraction leaves when the clock runs out, finished or not.', 128, 254, 8, C.muted);

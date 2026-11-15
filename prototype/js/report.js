@@ -11,7 +11,10 @@
     const landed = !e || e.phase === 'surface';
     const sal = S.salvaged.map(s => HS.PARTS[HS.SALVAGE[s]].name);
     const salLine = (slot) => S.emptyAtTimeout.includes(slot) ? `The ${HS.SLOT_NAME[slot].toLowerCase()} slot was still empty at launch${S.credits >= HS.KIOSK_COST ? `, with ${S.credits} credits unspent` : ''}, so it got a ${HS.PARTS[HS.SALVAGE[slot]].name.toLowerCase()}.` : null;
-    let head, chain = [], real, realTag = 'What real missions do';
+    let head, chain = [], real, realTag = 'What real missions do', gameSlot = null;
+    // the run's drawn objectives (S2-18); an old save without a list scores the three fixed ones
+    const goals = S.goals && S.goals.length ? S.goals : ['scan', 'sample', 'deploy'];
+    const games = goals.filter(k => HS.surfaceGames[k]), missed = games.find(k => !HS.goalDone(k, S));
     const heavyPct = Math.round(m.massFrac * 100);
 
     if (e && e.reason === 'overweight') {
@@ -45,9 +48,19 @@
       ].sort((a, b) => b.v - a.v);
       const top = u >= target && !e ? { k: 'ok' } : losses[0].v > 0 ? losses[0] : { k: 'short' };
       head = u > target ? `You uplinked ${u} data units. Mission Control asked for ${target}.` : `You uplinked ${u} of the ${target} data units Mission Control asked for.`;
-      if (top.k === 'ok') {
+      if (top.k === 'ok' && missed) {
+        // the data got home, but a surface game on the list was left undone: walk it back to the part that set it
+        const def = HS.surfaceGames[missed], P = m[def.slot], fails = S.log.filter(l => l.type === 'task_failed' && l.kind === missed).length;
+        chain = [`${def.name} was on Mission Control's list and was not finished${fails ? `, after ${fails} failed attempt${fails === 1 ? '' : 's'}` : ''}.`,
+          P ? `The ${P.name.toLowerCase()} in the ${HS.SLOT_NAME[def.slot].toLowerCase()} slot set how hard it was.` : `The ${HS.SLOT_NAME[def.slot].toLowerCase()} slot was empty, which made it as hard as it gets.`,
+          salLine(def.slot)];
+        real = def.fact ? def.fact(mi.id) : m.payload.fact; gameSlot = def.slot;
+      } else if (top.k === 'ok') {
         chain = [`The ${m.payload.name.toLowerCase()} gave ${m.payload.rich} data units for each rich site.`, `The ${m.comms.name.toLowerCase()} sent it home at ${m.comms.rate.toFixed(2)} units per second.`, S.instDamage > 1 ? `The instrument still arrived at ${Math.round(100 - S.instDamage)}% accuracy after a hot core in flight.` : 'The instrument arrived intact, because the core stayed in its safe band.'];
         real = m.payload.fact;
+        // a surface game done on the way: its real mission is the better story
+        const done = games.find(k => HS.surfaceGames[k].fact);
+        if (done) { const def = HS.surfaceGames[done], n = S.log.filter(l => l.type === 'task_failed' && l.kind === done).length; chain[2] = `${def.name} done${n ? ` after ${n} failed attempt${n === 1 ? '' : 's'}` : ' on the first try'}, with the ${m[def.slot] ? m[def.slot].name.toLowerCase() : 'empty slot'}.`; real = def.fact(mi.id); gameSlot = def.slot; }
       } else if (top.k === 'down') {
         const hz = e && e.hazard ? `in the ${mi.hazardName.toLowerCase()}` : 'far from the lander';
         chain = [`Your suit ran out ${hz}${S.lostDown ? `, and ${S.lostDown} carried data units were lost` : ''}.`, `The ${m.power.name.toLowerCase()} recharges a suit at ${rc.toFixed(1)}% per second${m.power.solar && mi.id === 'mars' ? ', because sunlight at Mars is 43% of Earth\'s' : ''}.`, S.hazardTime > 4 ? `You spent ${Math.round(S.hazardTime)} s inside the hazard, where suits drain ${mi.id === 'mars' ? 'four' : 'six'} times faster.` : 'The suit was not topped up at the lander before the long walk.'];
@@ -77,14 +90,14 @@
     rows.push(['Credits unspent', String(S.credits), S.credits * 2]);
     rows.push(['Build time left', HS.fmt(S.buildLeft), Math.min(180, Math.round(S.buildLeft * 180 / HS.BUILD_TIME))]);
     rows.push(['Fuel and hull', `${Math.round(S.fuel)}% / ${Math.round(S.hull)}%`, landed ? Math.round((S.fuel + S.hull) / 5) : 0]);
-    const objN = (S.scansRich >= mi.objectives.scans ? 1 : 0) + (S.sampleDone ? 1 : 0) + (S.deployDone ? 1 : 0);
-    rows.push(['Objectives', `${objN} / 3${S.bonusDone ? ' + bonus' : ''}`, landed ? objN * 20 + (S.bonusDone ? 30 : 0) : 0]);
+    const objN = goals.filter(k => HS.goalDone(k, S)).length;
+    rows.push(['Objectives', `${objN} / ${goals.length}${S.bonusDone ? ' + bonus' : ''}`, landed ? objN * 20 + (S.bonusDone ? 30 : 0) : 0]);
     const score = rows.reduce((a, r) => a + r[2], 0);
-    const full = landed && !e && u >= target && objN === 3;
+    const full = landed && !e && u >= target && objN === goals.length;
     const outcome = full ? 'SUCCESS' : landed && u > 0 ? 'PARTIAL SUCCESS' : 'MISSION FAILED';
     // the part that decided it: the one whose fact the analysis cites (every part has its own fact)
     const factSlot = HS.SLOTS.find(sl => m[sl] && m[sl].fact === real);
-    const culprit = factSlot || (e && e.reason === 'overweight' ? 'prop' : real === mi.hazardFact ? 'power' : e && e.reason === 'oxygen' ? null : 'payload');
+    const culprit = gameSlot || factSlot || (e && e.reason === 'overweight' ? 'prop' : real === mi.hazardFact ? 'power' : e && e.reason === 'oxygen' ? null : 'payload');
     return { head, chain, real, realTag, rows, score, outcome, sal, culprit, full, landed, u, target, objN, m, col: full ? C.green : outcome === 'PARTIAL SUCCESS' ? C.amber : C.red };
   };
 

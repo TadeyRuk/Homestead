@@ -48,6 +48,46 @@
     return !!(S.tasks && S.tasks[id]);
   };
 
+  // ---------- the objective pool (S2-18)
+  const FIXED = ['scan', 'sample', 'deploy'];
+  const idOf = (e) => typeof e === 'string' ? e : e.id;
+  // can this pool entry go on the list: a fixed objective, or a merged game; with a build (m) it has to suit it
+  const drawable = (e, m) => {
+    const id = idOf(e);
+    if (FIXED.includes(id)) return true;
+    if (!HS.gameReady(id, m)) return false;
+    return !m || !e.solar || !!(m.power && m.power.solar);
+  };
+  // the run's objectives: the whole pool shuffled by the seed, the first DRAWN_GOALS that can be drawn, in pool order.
+  // The whole pool is shuffled first, so merging or cutting a game only adds or frees one place. m = null for the
+  // brief, before anything is built: then the build is not checked
+  HS.drawGoals = (seed, mid, m) => {
+    const pool = HS.MISSIONS[mid].pool, order = HS.shuffle(pool.map((_, i) => i), HS.R(seed * 29 + 5)), picked = [];
+    for (const i of order) if (picked.length < HS.DRAWN_GOALS && drawable(pool[i], m) && !picked.some(k => idOf(pool[k]) === idOf(pool[i]))) picked.push(i);
+    return picked.sort((a, b) => a - b).map(i => idOf(pool[i]));
+  };
+  // a few words per objective, for Mission Control's line and the brief
+  HS.goalWords = (goals, mid, tips) => {
+    const o = HS.MISSIONS[mid].objectives, pool = HS.MISSIONS[mid].pool;
+    return goals.map(id => {
+      if (id === 'scan') return `scan ${o.scans} rich sites`;
+      if (id === 'sample') return o.sampleWords;
+      if (id === 'deploy') return o.deployWords;
+      const def = HS.surfaceGames[id]; if (!def) return id;
+      const w = def.brief ? def.brief(mid) : def.label(mid).toLowerCase(), solar = pool.some(e => idOf(e) === id && e.solar);
+      // the tip keeps together on one line of the brief (HS.wrap breaks at plain spaces only)
+      return tips ? w + (def.tip ? ` (${def.tip.replace(/ /g, '\u00a0')})` : '') + (solar ? ', solar builds only' : '') : w;
+    });
+  };
+  // the brief card with this seed's objectives, and what to look for on the campus
+  HS.briefCard = (S) => {
+    const mi = S.mission, card = mi.card.filter(([a, b]) => a !== 'Objectives' && !(a === '' && b));
+    const lines = HS.wrap(HS.goalWords(HS.drawGoals(S.seed, mi.id, null), mi.id, true).concat(`uplink ${mi.target} data units`).join(', '), 296, 9);
+    const at = mi.card.findIndex(([a]) => a === 'Objectives');
+    card.splice(at, 0, ...lines.map((l, i) => [i ? '' : 'Objectives', l]));
+    return card;
+  };
+
   const ctxFor = (run, S) => {
     const P = run.part ? HS.PARTS[run.part] : null;
     return { seed: S.seed, mission: S.mission.id, part: run.part, P, tries: run.tries, r: HS.R(S.seed * 131 + run.tries * 977 + run.kind.length * 53) };
