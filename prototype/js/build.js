@@ -19,7 +19,7 @@
 
   function interact() {
     const S = HS.S, p = B.p;
-    if (B.roll) return;
+    if (B.roll && B.roll.who === B.me) return;   // the buyer waits for the roll; the rest of the crew does not
     if (near(p, PAD.mx, PAD.my, 26)) {
       if (!p.carry) { toast('Bring a part here to mount it', C.muted); HS.sfx.buzz(); return; }
       const part = HS.PARTS[p.carry], old = S.slots[part.slot];
@@ -39,7 +39,7 @@
     }
     if (near(p, KIOSK.sx, KIOSK.sy, 22)) {
       if (S.credits < HS.KIOSK_COST) { toast('Not enough credits for the kiosk', C.red); HS.sfx.buzz(); return; }
-      S.credits -= HS.KIOSK_COST; S.kioskBuys++; B.roll = { t: 0, result: HS.REAL_PARTS[(B.kr() * HS.REAL_PARTS.length) | 0] }; HS.sfx.ok(); return;
+      S.credits -= HS.KIOSK_COST; S.kioskBuys++; B.roll = { t: 0, who: B.me, result: HS.REAL_PARTS[(B.kr() * HS.REAL_PARTS.length) | 0] }; HS.sfx.ok(); return;
     }
     if (p.carry) { dropAt(p.carry, p.x + (p.flip ? -8 : 8), p.y + 2); p.carry = null; HS.sfx.drop(); }
   }
@@ -53,35 +53,47 @@
       const picked = HS.SLOTS.map(s => bySlot[s][(r() * 3) | 0]);
       const rest = HS.shuffle(HS.REAL_PARTS.filter(id => !picked.includes(id)), r).slice(0, 5);
       B = {
-        t: 0, left: HS.BUILD_TIME, p: { x: 520, y: 188, walk: 0, flip: false, face: 'down', carry: null }, done: false,
+        t: 0, left: HS.BUILD_TIME, p: null, ps: {}, me: 'host', done: false,
         parts: picked.concat(rest).map((id, i) => ({ id, x: spots[i][0], y: spots[i][1], seen: false })),
         kr: HS.R(S.seed * 13 + 101), roll: null, count: null, fx: new HS.Parts(), toast: '', toastT: 0, toastCol: C.cyan, mountFlash: 0, lastTick: 0, map: false
       };
+      // one avatar per crew member, side by side at the pad; B.p is whoever the update is moving right now
+      HS.ids().forEach((id, i) => { B.ps[id] = { x: 520 + i * 14, y: 188, walk: 0, flip: false, face: 'down', carry: null }; });
+      B.p = B.ps[HS.net.me] || B.ps.host;
       S.slots = { prop: null, power: null, comms: null, payload: null }; S.credits = S.creditsStart; S.salvaged = []; S.emptyAtTimeout = [];
       toast('Find a part for each of the four slots and carry it to the pad', C.amber); B.toastT = 5;
     },
     update(dt) {
       if (B.done) return;
-      const p = B.p, S = HS.S;
       B.t += dt; B.left -= dt; B.toastT -= dt; B.mountFlash = Math.max(0, B.mountFlash - dt); B.fx.update(dt);
-      B.map = HS.key('Tab');
       if (B.left <= 10 && Math.ceil(B.left) !== B.lastTick) { B.lastTick = Math.ceil(B.left); HS.sfx.tick(); }
       if (B.left <= 0) { toast('Build time is over'); finishBuild(true); return; }
+      // kiosk roll: the part lands in the hands of whoever paid
+      if (B.roll) {
+        const p = B.ps[B.roll.who] || B.p;
+        B.roll.t += dt; if (B.roll.t < 2.4 && Math.floor(B.roll.t * 12) !== Math.floor((B.roll.t - dt) * 12)) HS.sfx.tick();
+        if (B.roll.t >= 2.4 && !B.roll.given) { B.roll.given = true; if (p.carry) dropAt(p.carry, p.x + 10, p.y + 4); p.carry = B.roll.result; HS.sfx.good(); B.fx.burst(KIOSK.x + 10, KIOSK.y, 30, 46, .9, [C.pink, '#ffffff', C.cyan], 1); }
+        if (B.roll.t > 3.6) B.roll = null;
+      }
+      HS.each((id) => { if (!B.done && B.ps[id]) { B.me = id; B.p = B.ps[id]; this.move(dt); } });
+      B.me = HS.net.me; B.p = B.ps[B.me] || B.p;
+      if (B.count != null && !B.done) {
+        const before = Math.ceil(B.count); B.count -= dt; if (Math.ceil(B.count) !== before && B.count > 0) HS.sfx.tick();
+        if (B.count <= 0) finishBuild(false);
+      }
+    },
+    // one crew member's turn: walk, look, pick up and mount, start or stop the countdown
+    move(dt) {
+      const p = B.p, S = HS.S;
       // move
       const a = HS.axis(), len = Math.hypot(a.x, a.y);
-      if (len && !B.roll) {
+      if (len && !(B.roll && B.roll.who === B.me)) {
         const sp = SPEED * (p.carry ? .92 : 1) * dt, nx = clamp(p.x + a.x / len * sp, 6, 634), ny = clamp(p.y + a.y / len * sp, 10, 394);
         if (!inSolid(nx, p.y)) p.x = nx; if (!inSolid(p.x, ny)) p.y = ny;
         p.walk += dt; if (a.x) p.flip = a.x < 0;
         p.face = a.x && Math.abs(a.x) >= Math.abs(a.y) ? 'side' : a.y < 0 ? 'up' : 'down';
         if (Math.random() < .25) B.fx.add(p.x, p.y + 3, (Math.random() - .5) * 8, -4, .35, 'rgba(210,230,220,.5)', 1);
       } else p.walk = 0;
-      // kiosk roll
-      if (B.roll) {
-        B.roll.t += dt; if (B.roll.t < 2.4 && Math.floor(B.roll.t * 12) !== Math.floor((B.roll.t - dt) * 12)) HS.sfx.tick();
-        if (B.roll.t >= 2.4 && !B.roll.given) { B.roll.given = true; if (p.carry) dropAt(p.carry, p.x + 10, p.y + 4); p.carry = B.roll.result; HS.sfx.good(); B.fx.burst(KIOSK.x + 10, KIOSK.y, 30, 46, .9, [C.pink, '#ffffff', C.cyan], 1); }
-        if (B.roll.t > 3.6) B.roll = null;
-      }
       // camera sees parts
       const cam = HS.camera(p);
       for (const q of B.parts) if (q.x > cam.x && q.x < cam.x + HS.VW && q.y > cam.y && q.y < cam.y + HS.VH) q.seen = true;
@@ -93,11 +105,9 @@
         else if (near(p, PAD.mx, PAD.my, 30)) { B.count = 5; HS.sfx.warn(); }
         else { toast('Stand at the launch pad to start the countdown', C.muted); HS.sfx.buzz(); }
       }
-      if (B.count != null) {
-        const before = Math.ceil(B.count); B.count -= dt; if (Math.ceil(B.count) !== before && B.count > 0) HS.sfx.tick();
-        if (B.count <= 0) finishBuild(false);
-      }
     },
+    save() { return HS.pack(B); },
+    load(d) { if (!B) return; Object.assign(B, d); B.p = B.ps[HS.net.me] || B.p; },
     draw() {
       const S = HS.S, p = B.p, t = B.t, cam = HS.camera(p);
       // ----- world, on the 1280 x 720 art grid (js/campus.js, js/art.js)
@@ -110,6 +120,14 @@
         const [hx, hy] = HS.drawCrew(x, cam, p.x, p.y, S.suit, { walk: p.walk, flip: p.flip, face: p.face, carry: !!p.carry, t });
         if (p.carry) x.drawImage(HS.partIcon(p.carry), hx - 17, hy - 30 + Math.round(Math.sin(p.walk * 16)));
       } });
+      for (const id in B.ps) {
+        const o = B.ps[id]; if (o === p) continue;
+        const [oa, ob] = HS.wa(cam, o.x, o.y + 4), suit = HS.member(id).suit;
+        dyn.push({ y: o.y + 4, ghost: [oa - 19, ob - 80, oa + 19, ob], draw: (x) => {
+          const [hx, hy] = HS.drawCrew(x, cam, o.x, o.y, suit, { walk: o.walk, flip: o.flip, face: o.face, carry: !!o.carry, t });
+          if (o.carry) x.drawImage(HS.partIcon(o.carry), hx - 17, hy - 30 + Math.round(Math.sin(o.walk * 16)));
+        } });
+      }
       HS.drawCampus(x, cam, t, dyn, B.count);
       HS.drawFx(x, cam, B.fx);
       HS.blitArt();
@@ -162,7 +180,7 @@
         T(name, 320, 160, 18, done ? C.cyan : C.white, { w: 700, a: 'center', f: PIX });
         T(done ? `it is in your hands  (${HS.SLOT_NAME[res.slot].toLowerCase()} slot)` : 'rolling...', 320, 182, 8, C.muted, { a: 'center' });
       }
-      if (B.map) this.map(cam);
+      if (HS.local.down.has('Tab')) this.map(cam);   // each screen holds its own map
       if (B.count != null) {
         g.fillStyle = 'rgba(4,7,13,.5)'; g.fillRect(0, 0, 640, 360);
         const n = Math.ceil(B.count), pop = 1 + (B.count % 1) * .25;
