@@ -3,7 +3,7 @@ import type { EventKind } from "../../core/events";
 import type { Input } from "../../core/input";
 import type { GameEvent } from "../../core/state";
 import {
-  answerEngineOff, BASE_WATTS, createBus, draw, overloaded, powered, RESET_SECONDS, secondsToTrip, stepBus, TRIP_SECONDS,
+  answerEngineOff, BASE_WATTS, createBus, draw, effectiveSupply, overloaded, powered, RESET_SECONDS, secondsToTrip, stepBus, TRIP_SECONDS,
   type Bus,
 } from "./bus";
 
@@ -197,5 +197,17 @@ describe("power bus", () => {
     stepBus(watched, still, 1, () => {});
     stepBus(unwatched, still, 1, () => {}, 0.4);
     expect(unwatched.strain).toBeCloseTo(watched.strain * 0.4);
+  });
+
+  it("runs on a share of its supply while supplyScale is cut, and trips on it", () => {
+    const bus = busOn(400);
+    expect(effectiveSupply(bus)).toBe(400);
+    bus.supplyScale = 0.5;
+    expect(effectiveSupply(bus)).toBe(200);
+    expect(overloaded(bus)).toBe(true);
+  });
+
+  it("starts with the full supply", () => {
+    expect(busOn(300).supplyScale).toBe(1);
   });
 });

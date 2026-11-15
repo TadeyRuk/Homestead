@@ -41,4 +41,9 @@ describe("core heat from the mounted parts", () => {
   it("never blames a power part that adds no heat", () => {
     expect(heatFor(build({ power: "small-solar" }))).toEqual({ part: "core", heat: 0 });
   });
+
+  it("drops the payload's heat while the payload is off the bus, keeping the RTG's", () => {
+    expect(heatFor(build({ power: "rtg", payload: "radar" }), false).heat).toBeCloseTo(0.02);
+    expect(heatFor(build({ power: "small-solar", payload: "radar" }), false).heat).toBe(0);
+  });
 });
