@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homestead: a co-op space mission design game</title>
+<meta name="description" content="Mission Control has a job for you on Mars, and no rocket. Scavenge real NASA hardware, fly what you built from a first-person cockpit, survive the surface. Free in your browser, solo or with four friends.">
+<meta property="og:title" content="Homestead: finish the mission, go home">
+<meta property="og:description" content="A co-op space mission design game for the NASA Space Apps Challenge 2026. Free, in your browser, 1 to 4 players.">
+<meta property="og:image" content="/assets/trailer-poster.jpg">
+<meta name="theme-color" content="#04070d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%2304070d'/%3E%3Cpath d='M7 2h2v2h1v6h2v2h-3v2H7v-2H4v-2h2V4h1z' fill='%23fff'/%3E%3Crect x='7' y='13' width='2' height='2' fill='%23ffb43c'/%3E%3C/svg%3E">
+<link rel="preload" href="/assets/PixelifySans.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="/assets/splash.mp4" as="video" type="video/mp4">
+<script>document.documentElement.classList.add('js', 'locked');</script>
+</head>
+<body>
+<div id="splash" role="dialog" aria-label="Launch intro">
+  <video src="/assets/splash.mp4" poster="/assets/splash.jpg" muted playsinline preload="auto" aria-hidden="true"></video>
+  <div class="sp-top" aria-hidden="true"><small>Project Hail Marcus presents</small><div id="count">T-3</div></div>
+  <div class="sp-title"><b>HOMESTEAD</b><span>Finish the mission. Go home.</span></div>
+  <button id="skip">Skip ▸</button>
+</div>
+
+<canvas id="stars" aria-hidden="true"></canvas>
+<div id="progress" aria-hidden="true"></div>
+<div class="rail" aria-hidden="true"><i id="ship"></i></div>
+
+<nav aria-label="Main">
+  <div class="wrap">
+    <a class="logo" href="#top">HOMESTEAD</a>
+    <ul>
+      <li><a href="#phases">The run</a></li>
+      <li><a href="#cockpit">Cockpit</a></li>
+      <li><a href="#lab">Build lab</a></li>
+      <li><a href="#data">NASA data</a></li>
+      <li><a href="#trailer">Trailer</a></li>
+      <li><a href="#team">Team</a></li>
+    </ul>
+    <button id="snd" class="snd" aria-pressed="true">Sound on</button>
+    <a class="btn sm" data-play href="https://seedlign.itch.io/homestead"><span class="tri"></span>Play free</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <video src="/assets/hero.mp4" poster="/assets/poster.jpg" muted loop playsinline preload="auto" aria-hidden="true"></video>
+  <div class="hud" aria-hidden="true"><div class="wrap"><span class="rec">REC &nbsp;CAM 3 · MARS SURVEY</span><span id="clock">T+ 00:00.0</span></div></div>
+  <div class="wrap">
+    <span class="tag land">NASA Space Apps Challenge 2026</span>
+    <h1 class="pix"><span class="l land" style="--i:1">A job on <span class="amber">Mars.</span></span><span class="l land red" style="--i:3">No rocket.</span></h1>
+    <p class="lead land" style="--i:5">Build a spacecraft from real NASA hardware. Fly it. Survive the surface. Solo or with four friends.</p>
+    <div class="cta land" style="--i:6">
+      <a class="btn pulse" data-play href="https://seedlign.itch.io/homestead"><span class="tri"></span>Play in your browser</a>
+      <a class="btn ghost" href="#trailer">Watch the trailer</a>
+    </div>
+    <ul class="facts land" style="--i:7">
+      <li><b>Free</b></li><li>No install</li><li><b>1 to 4</b> players</li><li><b>15 min</b> a run</li>
+    </ul>
+  </div>
+  <i class="scroll" aria-hidden="true"></i>
+</header>
+
+<div class="ticker" aria-hidden="true"><div>
+  <span>FINISH THE MISSION</span><i>◆</i><span>GO HOME</span><i>◆</i><span>20 PARTS BASED ON REAL NASA HARDWARE</span><i>◆</i><span>MOON OR MARS</span><i>◆</i><span>4 STATIONS</span><i>◆</i><span>FIRST-PERSON COCKPIT</span><i>◆</i><span>SEEDED RUNS</span><i>◆</i><span>PLAYS IN A BROWSER TAB</span><i>◆</i>
+  <span>FINISH THE MISSION</span><i>◆</i><span>GO HOME</span><i>◆</i><span>20 PARTS BASED ON REAL NASA HARDWARE</span><i>◆</i><span>MOON OR MARS</span><i>◆</i><span>4 STATIONS</span><i>◆</i><span>FIRST-PERSON COCKPIT</span><i>◆</i><span>SEEDED RUNS</span><i>◆</i><span>PLAYS IN A BROWSER TAB</span><i>◆</i>
+</div></div>
+
+<section id="phases">
+  <div class="pin"><div class="pin-in"><div class="wrap">
+    <div class="head">
+      <span class="tag mint">One run, four acts</span>
+      <h2 class="pix">Design it. Fly it. <span class="amber">Live with it.</span></h2>
+    </div>
+    <div class="car" id="run" tabindex="0" role="region" aria-roledescription="carousel" aria-label="The four acts of a run">
+      <div class="car-view"><div class="car-track">
+        <article class="slide" style="--c: var(--amber)">
+          <video src="/assets/c-build.mp4" poster="/assets/build.jpg" muted loop playsinline preload="none"></video>
+          <div class="txt"><div class="n" aria-hidden="true">01</div><span class="time">Build · 5 minutes</span><h3>Scavenge the parts</h3><p>Raid the launch campus. Four slots, and every part costs mass, power and budget.</p></div>
+        </article>
+        <article class="slide" style="--c: var(--mint)">
+          <video src="/assets/c-pilot.mp4" poster="/assets/pilot.jpg" muted loop playsinline preload="none"></video>
+          <div class="txt"><div class="n" aria-hidden="true">02</div><span class="time">Fly · 3 minutes</span><h3>Fly what you built</h3><p>Four stations keep the ship alive. Your parts decide how hard each one is.</p></div>
+        </article>
+        <article class="slide" style="--c: var(--red)">
+          <video src="/assets/c-storm.mp4" poster="/assets/storm.jpg" muted loop playsinline preload="none"></video>
+          <div class="txt"><div class="n" aria-hidden="true">03</div><span class="time">Land · 5 minutes</span><h3>Survive the surface</h3><p>Scan, drill and uplink before the ride home arrives, finished or not.</p></div>
+        </article>
+        <article class="slide" style="--c: var(--pink)">
+          <video src="/assets/c-report.mp4" poster="/assets/report.jpg" muted loop playsinline preload="none"></video>
+          <div class="txt"><div class="n" aria-hidden="true">04</div><span class="time">Debrief · 1 minute</span><h3>Learn what it cost</h3><p>The report traces your biggest loss to one design choice, and the real mission that made it too.</p></div>
+        </article>
+      </div></div>
+      <button class="car-prev" aria-label="Previous act">◂</button>
+      <button class="car-next" aria-label="Next act">▸</button>
+      <div class="car-dots">
+        <button style="--c: var(--amber)">01 Build</button><button style="--c: var(--mint)">02 Fly</button><button style="--c: var(--red)">03 Land</button><button style="--c: var(--pink)">04 Debrief</button>
+      </div>
+      <span class="car-hint" aria-hidden="true">Scroll for the next act ↓</span>
+    </div>
+  </div></div></div>
+</section>
+
+<section id="cockpit">
+  <div class="wrap">
+    <div class="head reveal">
+      <span class="tag">First-person cockpit</span>
+      <h2 class="pix">Four seats. <span class="mint">One ship.</span></h2>
+    </div>
+    <div class="deck reveal">
+      <div>
+        <div class="stations" role="group" aria-label="Flight stations">
+          <button aria-pressed="true" style="--c: var(--amber)"><span>[1]</span><b>Pilot</b></button>
+          <button aria-pressed="false" style="--c: var(--blue)"><span>[2]</span><b>Engineer</b></button>
+          <button aria-pressed="false" style="--c: var(--mint)"><span>[3]</span><b>Comms</b></button>
+          <button aria-pressed="false" style="--c: var(--pink)"><span>[4]</span><b>Science</b></button>
+        </div>
+        <div class="mon tilt"><video id="stv" class="auto" src="/assets/c-pilot.mp4" poster="/assets/pilot.jpg" muted loop playsinline preload="none"></video></div>
+      </div>
+      <div class="info" id="stinfo" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<section id="more">
+  <div class="wrap">
+    <div class="head reveal">
+      <span class="tag red">Also on the manifest</span>
+      <h2 class="pix">Every job is <span class="red">a real one</span></h2>
+    </div>
+    <div class="reel reveal">
+      <div class="mon tilt" style="--c: var(--amber)"><span class="cap">Inspect a part</span><video class="auto" src="/assets/c-inspect.mp4" poster="/assets/inspect.jpg" muted loop playsinline preload="none"></video></div>
+      <div class="mon tilt" style="--c: var(--pink)"><span class="cap">Parts kiosk</span><video class="auto" src="/assets/c-kiosk.mp4" poster="/assets/kiosk.jpg" muted loop playsinline preload="none"></video></div>
+      <div class="mon tilt" style="--c: var(--mint)"><span class="cap">Touchdown</span><video class="auto" src="/assets/c-touchdown.mp4" poster="/assets/touchdown.jpg" muted loop playsinline preload="none"></video></div>
+      <div class="mon tilt" style="--c: var(--blue)"><span class="cap">Ice drill · Phoenix</span><video class="auto" src="/assets/c-drill.mp4" poster="/assets/drill.jpg" muted loop playsinline preload="none"></video></div>
+      <div class="mon tilt" style="--c: var(--mint)"><span class="cap">Relay link · MRO</span><video class="auto" src="/assets/c-relay.mp4" poster="/assets/relay.jpg" muted loop playsinline preload="none"></video></div>
+      <div class="mon tilt" style="--c: var(--amber)"><span class="cap">Dusty panels · Opportunity</span><video class="auto" src="/assets/c-panels.mp4" poster="/assets/panels.jpg" muted loop playsinline preload="none"></video></div>
+    </div>
+  </div>
+</section>
+
+<section id="lab">
+  <div class="wrap">
+    <div class="head reveal">
+      <span class="tag mint">Try it here</span>
+      <h2 class="pix">Every part is <span class="mint">real NASA hardware</span></h2>
+      <p>The game's own numbers. Pick one part per slot and watch the blueprint.</p>
+    </div>
+    <div class="lab reveal">
+      <div class="slots" id="slots"></div>
+      <aside class="sheet" aria-live="polite">
+        <h3>Blueprint <span class="mis" role="group" aria-label="Mission"><button data-m="moon" aria-pressed="false">Moon</button><button data-m="mars" aria-pressed="true">Mars</button></span></h3>
+        <div class="meter" id="m-mass"><div class="row"><span>Mass vs lift</span><span></span></div><div class="bar"><i></i></div></div>
+        <div class="meter" id="m-power"><div class="row"><span>Draw vs supply</span><span></span></div><div class="bar"><i></i></div></div>
+        <div class="meter" id="m-cost"><div class="row"><span>Cost vs cap</span><span></span></div><div class="bar"><i></i></div></div>
+        <div class="verdict" id="verdict"></div>
+        <div class="fact" id="fact"></div>
+        <a class="btn sm" data-play href="https://seedlign.itch.io/homestead"><span class="tri"></span>Fly this build</a>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section id="data">
+  <div class="wrap">
+    <div class="head reveal">
+      <span class="tag">NASA open data</span>
+      <h2 class="pix">The numbers are <span class="amber">checked</span></h2>
+    </div>
+    <div class="stats reveal">
+      <div class="stat"><b><span data-to="1.3" data-dec="1">1.3</span> s</b><span class="what">radio delay to the Moon</span></div>
+      <div class="stat"><b><span data-to="22">22</span> min</b><span class="what">radio delay to Mars, at its farthest</span></div>
+      <div class="stat"><b><span data-to="43">43</span>%</b><span class="what">of Earth's sunlight reaches Mars</span></div>
+      <div class="stat"><b><span data-to="7">7</span> months</b><span class="what">to Mars, as Perseverance flew it</span></div>
+    </div>
+    <ul class="sources reveal">
+      <li><a href="https://science.nasa.gov/mars/facts/" target="_blank" rel="noopener">Mars Facts</a></li>
+      <li><a href="https://science.nasa.gov/moon/facts/" target="_blank" rel="noopener">Moon Facts</a></li>
+      <li><a href="https://ssd.jpl.nasa.gov/horizons/" target="_blank" rel="noopener">JPL Horizons</a></li>
+      <li><a href="https://science.nasa.gov/mission/phoenix/" target="_blank" rel="noopener">Phoenix</a></li>
+      <li><a href="https://science.nasa.gov/mission/mer-opportunity/" target="_blank" rel="noopener">Spirit and Opportunity</a></li>
+      <li><a href="https://www.nasa.gov/sounds-from-beyond/" target="_blank" rel="noopener">Sounds of space</a></li>
+      <li><a href="https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/rocket-parts/" target="_blank" rel="noopener">Rocket Parts · NASA Glenn</a></li>
+      <li><a href="https://etd.gsfc.nasa.gov/capabilities/integrated-design-center/mission-design-lab/" target="_blank" rel="noopener">Mission Design Lab · Goddard</a></li>
+      <li><a href="https://github.com/TadeyRuk/Homestead#nasa-data-and-resources" target="_blank" rel="noopener">Full source list →</a></li>
+    </ul>
+  </div>
+</section>
+
+<section id="trailer">
+  <div class="wrap">
+    <div class="head mid reveal">
+      <span class="tag red">29 seconds</span>
+      <h2 class="pix">Watch the trailer</h2>
+    </div>
+    <div class="mon reveal"><video src="/assets/trailer.mp4" poster="/assets/trailer-poster.jpg" controls playsinline preload="none"></video></div>
+  </div>
+</section>
+
+<section id="crew">
+  <div class="wrap">
+    <div class="head reveal">
+      <span class="tag mint">Bring a crew</span>
+      <h2 class="pix">Four friends. <span class="amber">One browser tab each.</span></h2>
+    </div>
+    <div class="duo reveal">
+      <div class="card"><div class="code">K7M2QX</div><h3>Join with a code</h3><p>One player hosts and shares a six-character code. The others type it in. There is no account and no server of ours in the middle.</p></div>
+      <div class="card"><div class="code">1 – 4</div><h3>Solo works too</h3><p>Alone, you run all four stations and jump to whichever one is on fire. Mission Control's tutorial cards explain each phase the first time.</p></div>
+      <div class="card"><div class="code">WASD</div><h3>Keys or touch</h3><p>Plays on a laptop keyboard, or on a phone or tablet with on-screen controls. The display fills the window at any shape.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="team">
+  <div class="wrap">
+    <div class="head reveal">
+      <span class="tag">The crew</span>
+      <h2 class="pix">Project Hail Marcus</h2>
+      <p>Six people, one weekend, for the NASA Space Apps Challenge 2026.</p>
+    </div>
+    <div class="team reveal">
+      <a class="member" style="--c:#ffb43c" href="https://www.linkedin.com/in/amiel-acu%C3%B1a/" target="_blank" rel="noopener" aria-label="Amiel Acuña on LinkedIn"><i></i>Amiel Acuña<small>LinkedIn ↗</small></a>
+      <a class="member" style="--c:#78ffdc" href="https://www.linkedin.com/in/marcus-ceasar-austria/" target="_blank" rel="noopener" aria-label="Marcus Austria on LinkedIn"><i></i>Marcus Austria<small>LinkedIn ↗</small></a>
+      <a class="member" style="--c:#6aa8ff" href="https://www.linkedin.com/in/paul-dacalan/" target="_blank" rel="noopener" aria-label="Paul Dacalan on LinkedIn"><i></i>Paul Dacalan<small>LinkedIn ↗</small></a>
+      <a class="member" style="--c:#ff7ad0" href="https://www.linkedin.com/in/lord-xander-dacillo/" target="_blank" rel="noopener" aria-label="Xander Dacillo on LinkedIn"><i></i>Xander Dacillo<small>LinkedIn ↗</small></a>
+      <a class="member" style="--c:#ff5a4c" href="https://www.linkedin.com/in/jhezra-tolentino/" target="_blank" rel="noopener" aria-label="Jhezra Tolentino on LinkedIn"><i></i>Jhezra Tolentino<small>LinkedIn ↗</small></a>
+      <a class="member" style="--c:#c9a2ff" href="https://www.linkedin.com/in/ricbarrios/" target="_blank" rel="noopener" aria-label="Ric Barrios on LinkedIn"><i></i>Ric Barrios<small>LinkedIn ↗</small></a>
+    </div>
+    <div class="fine reveal">
+      <div>
+        <h4>AI use</h4>
+        <ul>
+          <li>The concept and design are the team's own. AI was not used to come up with the idea.</li>
+          <li>Code was written with Claude Code (Anthropic) under the team's direction and review.</li>
+          <li>The art is drawn in code and was made with AI assistance.</li>
+          <li>The in-game music was generated with ElevenLabs and mixed with NASA recordings. The trailer voice is an ElevenLabs AI voice.</li>
+          <li>No AI-made content uses NASA logos, flags or mission identifiers.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Credits</h4>
+        <ul>
+          <li><a href="https://github.com/eifetx/Pixelify-Sans" target="_blank" rel="noopener">Pixelify Sans</a> and <a href="https://github.com/IBM/plex" target="_blank" rel="noopener">IBM Plex Mono</a>, SIL Open Font License 1.1</li>
+          <li><a href="https://peerjs.com/" target="_blank" rel="noopener">PeerJS</a> (MIT) for online play</li>
+          <li>Trailer and site music: <a href="https://opengameart.org/content/8-bit-epic-space-shooter-music" target="_blank" rel="noopener">8-bit Epic Space Shooter Music</a> by HydroGene, CC0</li>
+          <li>Homestead is a student project and is not affiliated with or endorsed by NASA.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap reveal">
+    <h2 class="pix">HOMESTEAD</h2>
+    <p>Finish the mission. Go home.</p>
+    <a class="btn" data-play href="https://seedlign.itch.io/homestead"><span class="tri"></span>Play free now</a>
+    <div class="url">seedlign.itch.io/homestead · nothing to install</div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>© 2026 Project Hail Marcus · NASA Space Apps Challenge 2026</div>
+    <div><a href="https://seedlign.itch.io/homestead" target="_blank" rel="noopener">itch.io</a> &nbsp;·&nbsp; <a href="https://github.com/TadeyRuk/Homestead" target="_blank" rel="noopener">GitHub</a> &nbsp;·&nbsp; <a href="https://www.spaceappschallenge.org/2026/challenges/space-mission-design-game/" target="_blank" rel="noopener">The challenge</a></div>
+  </div>
+</footer>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
