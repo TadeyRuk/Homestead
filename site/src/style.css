@@ -73,7 +73,6 @@ nav ul a { color: #c5d0db; } nav ul a:hover { color: #fff; text-decoration: none
 .snd { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--mint); border: 2px solid var(--line); padding: 5px 10px; white-space: nowrap; background: rgba(4, 7, 13, .6); }
 .snd:hover { border-color: var(--mint); }
 .snd[aria-pressed="false"] { color: var(--muted); }
-.sp-hint { position: absolute; z-index: 3; left: 20px; bottom: 26px; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #fff; text-shadow: 0 2px 0 #000; animation: blink 1.2s steps(2) infinite; }
 @media (max-width: 900px) { nav ul { display: none; } nav .wrap { gap: 12px; } .snd { margin-left: auto; } }
 
 .rail { position: fixed; z-index: 40; right: 18px; top: 96px; bottom: 40px; width: 2px; background: repeating-linear-gradient(to bottom, var(--line) 0 6px, transparent 6px 12px); }

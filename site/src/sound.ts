@@ -1,5 +1,5 @@
-// Sound effects, synthesised in the browser so there is nothing to download. Browsers only allow audio
-// after the visitor has clicked or pressed a key, so everything stays silent until then.
+// Sound effects, synthesised in the browser so there is nothing to download. Sound starts on its own where
+// the browser allows it, and otherwise on the visitor's first click, tap or key press.
 let ctx: AudioContext | null = null, out: GainNode | null = null;
 let muted = false;
 try { muted = localStorage.getItem('muted') === '1'; } catch { /* storage blocked: start with sound on */ }
@@ -57,6 +57,11 @@ export function sounds(toggle: HTMLButtonElement): void {
   const paint = (): void => { toggle.textContent = muted ? 'Sound off' : 'Sound on'; toggle.setAttribute('aria-pressed', String(!muted)); };
   paint();
   toggle.addEventListener('click', () => { setMuted(!muted); paint(); unlock(); sfx.click(); });
+
+  // Try to start straight away. A browser that allows autoplay for this visitor plays the splash with sound;
+  // one that does not stays quiet until the first click, tap or key press, which the listeners below catch.
+  unlock();
+  addEventListener('touchend', unlock, true);
 
   const hot = 'a, button';
   addEventListener('pointerdown', (e) => { unlock(); if ((e.target as HTMLElement).closest(hot)) sfx.click(); }, true);
