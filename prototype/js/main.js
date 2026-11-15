@@ -20,7 +20,7 @@
   // a joiner's scene follows the host's (js/net-game.js), so its own scenes cannot move it on
   HS.go = (name, col) => { if (!HS.net || HS.net.mode !== 'client') goTo(name, col); };
   HS.netGo = (name) => { next = null; goTo(name); };
-  const enter = (name) => { if (cur && cur.exit) cur.exit(); cur = HS.scenes[name]; HS.sceneName = name; HS.local.hit.clear(); HS.local.click = false; if (cur.enter) cur.enter(); };
+  const enter = (name) => { if (cur && cur.exit) cur.exit(); cur = HS.scenes[name]; HS.sceneName = name; HS.local.hit.clear(); HS.local.click = false; if (cur.enter) cur.enter(); if (HS.musicFor) HS.musicFor(name); };
 
   // the simulation always advances in fixed steps of STEP seconds, whatever the display's frame rate, so the same
   // seed and the same inputs give the same run on a 60 Hz and a 144 Hz screen. 240 steps a second keeps motion
@@ -58,7 +58,7 @@
   }
   function step(dt) {
     HS.time += dt;
-    if (HS.hit('KeyM') && !HS.typing) { HS.muted = !HS.muted; }
+    if (HS.hit('KeyM') && !HS.typing) { HS.muted = !HS.muted; HS.musicFor(HS.sceneName); }
     // no pause online: it would freeze the whole crew
     if (HS.hit('Escape') && PLAY.includes(HS.sceneName) && !next && !(HS.online && HS.online()) && !HS.typing) { HS.paused = !HS.paused; HS.sfx.blip(); }
     if (HS.paused) {

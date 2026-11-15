@@ -27,7 +27,7 @@
     if (p.carry) dropAt(p.carry, p.x + 10, p.y + 4, p.paid);
     p.carry = id; p.paid = true; S.bought.push(id); S.kioskBuys++; HS.spend();
     p.shopAt = p.shop; p.shop = null; p.got = { id, t: 0 };
-    HS.sfx.good(); B.fx.burst(KIOSK.x + 10, KIOSK.y, 30, 46, .9, [C.pink, '#ffffff', C.cyan], 1);
+    HS.sfx.buy(); B.fx.burst(KIOSK.x + 10, KIOSK.y, 30, 46, .9, [C.pink, '#ffffff', C.cyan], 1);
     HS.log('buy', { id, cost: part.cost || 0, t: B.t });
     if (S.spent > S.cap) toast(`Over the cost cap: ${S.spent} of ${S.cap} CR spent`, C.red);
   }
