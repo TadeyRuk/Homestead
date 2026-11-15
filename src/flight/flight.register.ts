@@ -2,6 +2,7 @@ import { logEvent } from "../core/events";
 import { enterPhase, onEnterPhase, PHASE_SECONDS } from "../core/phases";
 import { registerRule } from "../core/step";
 import { planEvents } from "./events/director";
+import { busSupply } from "./events/power";
 
 // seat 1, taking seat 4's fallback: plan the flight's events (S4-06) and land the ship (S4-09)
 onEnterPhase("flight", (state, now) => {
@@ -17,6 +18,12 @@ registerRule("flight", (state, _inputs, now) => {
   if (state.ship.hull > 0 && state.ship.fuel > 0) return;
   logEvent(state, "ship_lost", now, { value: state.ship.hull <= 0 ? LOST_HULL : LOST_FUEL });
   enterPhase(state, "report", now);
+});
+
+// solar flares dim solar arrays; the engineer's bus feels it as less supply (S4-07)
+registerRule("flight", (state, _inputs, now) => {
+  const bus = state.flight.bus as { supply: number } | undefined;
+  if (bus) bus.supply = busSupply(state, now);
 });
 
 onEnterPhase("surface", (state, now) => {
