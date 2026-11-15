@@ -94,7 +94,7 @@
       T(`${Math.floor(d.sent * 100)}%`, b.x + 100, b.y + 20, 7, C.white, { w: 600 });
       T(`sets in ${left.toFixed(1)} s`, b.x + b.w - 6, b.y + 10, 7, left < 3 ? C.red : C.muted, { a: 'right', w: 600 });
       T(`beam ${Math.round(d.half * 2)} deg`, b.x + b.w - 6, b.y + 21, 7, C.muted, { a: 'right' });
-      if (!d.inBeam && d.t > .6) T('Lost the orbiter: lean the dish back onto it', cx, b.y + 34, 7, C.amber, { a: 'center', w: 600 });
+      if (!d.inBeam && d.t > .6) T('Lost the orbiter: lean the dish back onto it', cx, b.y + b.h - 4, 7, C.amber, { a: 'center', w: 600 });
     }
   };
 })();
