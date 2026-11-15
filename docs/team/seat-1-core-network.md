@@ -38,7 +38,7 @@ WASD or arrows to move, E to pick up or mount, Q for the panel, Tab to switch st
 **Done when:** seats 2 to 5 read input and timers from `src/core/` and not from `window` directly.
 
 ### S1-07 Online run on two machines (hour 8)
-Test across two real machines on different networks. If WebRTC fails behind a strict NAT, document a fallback (a TURN server from a free tier, or play on the same network).
+Test across two real machines on different networks. If WebRTC fails behind a strict NAT, document a fallback (a TURN server from a free tier, or play on the same network). Run it with `docs/team/two-machine-test.md`; if routers block the connection, set `VITE_ICE_SERVERS` (see `.env.example`).
 **Done when:** two players on two machines finish a run, or the cut to solo is called at hour 8.
 
 ### S1-08 Merges and itch.io build (ongoing, hour 10.5)
