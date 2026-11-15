@@ -2,6 +2,7 @@ import { liftOf, massOf } from "../core/catalog";
 import type { DeepReadonly } from "../core/scene";
 import type { GameEvent, GameState, Slot } from "../core/state";
 import { MISSIONS, partData, partName } from "../data/data";
+import { LOST_FUEL } from "../flight/flight.register";
 import { scanStats, uplinkRate } from "../missions/stats";
 
 /**
@@ -84,7 +85,7 @@ export function scoreRows(state: State): ScoreRow[] {
   const extra = Math.max(0, up - target);
   const done = ["scan", "sample", "deploy"].filter((k) => state.objectives[k]).length;
   return [
-    { label: "Data uplinked", detail: `${Math.floor(up)} / ${target}`, points: round(600 * Math.min(1, up / target) + Math.min(100, extra * 2)) },
+    { label: "Data uplinked", detail: `${Math.floor(up)} / ${state.data.target}`, points: round(600 * Math.min(1, up / target) + Math.min(100, extra * 2)) },
     { label: "Objectives", detail: `${done} / 3${state.objectives.bonus ? " + bonus" : ""}`, points: done * 30 + (state.objectives.bonus ? 40 : 0) },
     { label: "Crew standing", detail: reachedSurface ? `${standing} / ${crew}` : "-", points: reachedSurface && crew > 0 ? round((150 * standing) / crew) : 0 },
     { label: "Credits unspent", detail: `${state.credits}`, points: state.credits * 2 },
@@ -138,7 +139,7 @@ function shipLost(state: State, e: Event): Pick<Report, "headline" | "chain" | "
   const mass = massOf(state.ship.slots);
   const lift = liftOf(state.ship.slots) || 1;
   const pct = round((mass / lift) * 100);
-  if ((e.value ?? 0) === 1) {
+  if (e.value === LOST_FUEL) {
     const chain = [`The ${partName(engine).toLowerCase()} burned through its fuel ${round(e.t)} s into the run.`];
     if (pct > 70) chain.push(`The ship weighed ${pct}% of what that engine can lift, and a heavy ship burns more on every turn and burn.`);
     const low = first(log, "fuel_low");
