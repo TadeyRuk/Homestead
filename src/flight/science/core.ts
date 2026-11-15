@@ -38,17 +38,22 @@ export function createCore(source: HeatSource): Core {
   return { part: source.part, heat: source.heat, valve: 0, hot: false, cold: false };
 }
 
-/** one tick of the core; input is the science officer's, or still when nobody is at the station */
+/**
+ * One tick of the core; input is the science officer's, or still when nobody is at the station.
+ * pace is stationPace: 1 while someone is at the station, less while nobody watches, so the core drifts slower
+ * either way: a valve left open can no more overcool an unwatched core than a shut one can cook it.
+ */
 export function stepCore(
   core: Core,
   ship: Pick<Ship, "coreTemp" | "instrumentHealth">,
   input: Input,
   dt: number,
   emit: Emit,
+  pace = 1,
 ): void {
   // up opens the valve, down closes it; it stays where it is when let go
   core.valve = clamp(core.valve - input.dy * VALVE_PER_SECOND * dt);
-  ship.coreTemp = clamp(ship.coreTemp + (core.heat - core.valve * cooling(core)) * dt);
+  ship.coreTemp = clamp(ship.coreTemp + (core.heat - core.valve * cooling(core)) * pace * dt);
 
   const hot = ship.coreTemp > SAFE_HIGH;
   const cold = ship.coreTemp < SAFE_LOW;

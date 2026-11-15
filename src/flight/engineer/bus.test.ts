@@ -152,11 +152,12 @@ describe("power bus", () => {
     expect(powered(bus, "propulsion")).toBe(true);
   });
 
-  it("drops the question when the engineer presses the engine again", () => {
+  it("keeps the question standing until the pilot answers, however often the engineer presses", () => {
     const bus = busOn(300);
     stepBus(bus, press, 0.1, () => {});
     stepBus(bus, press, 0.1, () => {});
-    expect(bus.engineOffAsked).toBe(false);
+    expect(bus.engineOffAsked).toBe(true);
+    expect(powered(bus, "propulsion")).toBe(true);
   });
 
   it("lists only the slots that have a part, so an empty slot has nothing to switch", () => {
@@ -188,5 +189,13 @@ describe("power bus", () => {
     const rtg = trips(createBus(3, { id: "rtg", watts: 450 }, heavy), 120);
     expect(solar).toBeGreaterThan(3);
     expect(rtg).toBe(0);
+  });
+
+  it("strains more slowly while nobody is at the station", () => {
+    const watched = busOn(100);
+    const unwatched = busOn(100);
+    stepBus(watched, still, 1, () => {});
+    stepBus(unwatched, still, 1, () => {}, 0.4);
+    expect(unwatched.strain).toBeCloseTo(watched.strain * 0.4);
   });
 });
