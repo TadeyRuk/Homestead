@@ -55,7 +55,7 @@
       B = {
         t: 0, left: HS.BUILD_TIME, p: { x: 520, y: 188, walk: 0, flip: false, face: 'down', carry: null }, done: false,
         parts: picked.concat(rest).map((id, i) => ({ id, x: spots[i][0], y: spots[i][1], seen: false })),
-        kr: HS.R(S.seed * 13 + 101), roll: null, count: null, fx: new HS.Parts(), toast: '', toastT: 0, toastCol: C.cyan, mountFlash: 0, lastTick: 0, map: false, sheet: false
+        kr: HS.R(S.seed * 13 + 101), roll: null, count: null, fx: new HS.Parts(), toast: '', toastT: 0, toastCol: C.cyan, mountFlash: 0, lastTick: 0, map: false, sheet: false, inspect: null
       };
       S.slots = { prop: null, power: null, comms: null, payload: null }; S.credits = S.creditsStart; S.salvaged = []; S.emptyAtTimeout = [];
       toast('Find a part for each of the four slots and carry it to the pad', C.amber); B.toastT = 5;
@@ -66,11 +66,22 @@
       B.t += dt; B.left -= dt; B.toastT -= dt; B.mountFlash = Math.max(0, B.mountFlash - dt); B.fx.update(dt);
       B.map = HS.key('Tab');
       if (HS.hit('KeyB')) { B.sheet = !B.sheet; HS.sfx.blip(); }
+      // [I] inspects the part in your hands, or the nearest one at your feet; you stand still while it is open
+      if (HS.hit('KeyI')) {
+        if (B.inspect) { B.inspect = null; HS.sfx.blip(); }
+        else {
+          let id = p.carry, bd = 15;
+          if (!id) for (const q of B.parts) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd) { bd = d; id = q.id; } }
+          if (id) { B.inspect = { id, t: 0 }; HS.sfx.scan(); }
+          else { toast('Carry a part, or stand by one, to inspect it', C.muted); HS.sfx.buzz(); }
+        }
+      }
+      if (B.inspect) B.inspect.t += dt;
       if (B.left <= 10 && Math.ceil(B.left) !== B.lastTick) { B.lastTick = Math.ceil(B.left); HS.sfx.tick(); }
       if (B.left <= 0) { toast('Build time is over'); finishBuild(true); return; }
       // move
       const a = HS.axis(), len = Math.hypot(a.x, a.y);
-      if (len && !B.roll) {
+      if (len && !B.roll && !B.inspect) {
         const sp = SPEED * (p.carry ? .92 : 1) * dt, nx = clamp(p.x + a.x / len * sp, 6, 634), ny = clamp(p.y + a.y / len * sp, 10, 394);
         if (!inSolid(nx, p.y)) p.x = nx; if (!inSolid(p.x, ny)) p.y = ny;
         p.walk += dt; if (a.x) p.flip = a.x < 0;
@@ -86,10 +97,10 @@
       // camera sees parts
       const cam = HS.camera(p);
       for (const q of B.parts) if (q.x > cam.x && q.x < cam.x + HS.VW && q.y > cam.y && q.y < cam.y + HS.VH) q.seen = true;
-      if (HS.hit('KeyE', 'Space')) interact();
-      if (HS.hit('KeyQ') && p.carry) { dropAt(p.carry, p.x + (p.flip ? -8 : 8), p.y + 2); p.carry = null; HS.sfx.drop(); }
+      if (HS.hit('KeyE', 'Space')) { B.inspect = null; interact(); }
+      if (HS.hit('KeyQ') && p.carry) { B.inspect = null; dropAt(p.carry, p.x + (p.flip ? -8 : 8), p.y + 2); p.carry = null; HS.sfx.drop(); }
       // launch countdown: anyone at the pad can start it, anyone can cancel it
-      if (HS.hit('KeyL')) {
+      if (HS.hit('KeyL') && !B.inspect) {
         if (B.count != null) { B.count = null; toast('Launch cancelled', C.amber); HS.sfx.drop(); }
         else if (near(p, PAD.mx, PAD.my, 30)) { B.count = 5; HS.sfx.warn(); }
         else { toast('Stand at the launch pad to start the countdown', C.muted); HS.sfx.buzz(); }
@@ -154,7 +165,7 @@
         else if (m.supply && m.draw > m.supply) tag(`POWER SHORT: ${m.draw} W needed, ${m.supply} W supplied. Breakers will trip.`, 285, 60, C.amber, 8.5);
       }
       if (B.toastT > 0) { g.globalAlpha = clamp(B.toastT * 2, 0, 1); tag(B.toast, 320, 322, B.toastCol, 8.5); g.globalAlpha = 1; }
-      HS.hint('[E] use   [Q] drop   [L] launch   [B] blueprint   [TAB] map');
+      HS.hint('[E] use   [Q] drop   [L] launch   [I] inspect   [B] blueprint   [TAB] map');
 
       // kiosk roll
       if (B.roll) {
@@ -166,6 +177,7 @@
         T(done ? `it is in your hands  (${HS.SLOT_NAME[res.slot].toLowerCase()} slot)` : 'rolling...', 320, 182, 8, C.muted, { a: 'center' });
       }
       if (B.sheet && !B.map) HS.blueprint.sheet(t, pv, pvId);
+      if (B.inspect && !B.map) HS.inspect.panel(B.inspect.id, B.inspect.t, { action: pr || (p.carry === B.inspect.id ? 'carry it to the pad to mount it   [Q] drop it' : ''), left: B.left });
       if (B.map) this.map(cam);
       if (B.count != null) {
         g.fillStyle = 'rgba(4,7,13,.5)'; g.fillRect(0, 0, 640, 360);
@@ -191,6 +203,7 @@
       if (part.slot !== 'power') chip(HS.blueprint.keyStat(part), col);
       T('FLIGHT', x + 8, y + 57, 5.5, C.muted, { w: 600 }); T(part.flight, x + 40, y + 57, 6.5, C.white);
       T('SURFACE', x + 8, y + 65, 5.5, C.muted, { w: 600 }); T(part.surf, x + 40, y + 65, 6.5, C.white);
+      T('[I] inspect', x + w - 7, y + 65, 6.5, C.cyan, { w: 600, a: 'right' });
     },
 
     map(cam) {
