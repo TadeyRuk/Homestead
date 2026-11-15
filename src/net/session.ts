@@ -10,6 +10,10 @@ export interface Conn {
   onData(cb: (raw: unknown) => void): void;
   onClose(cb: () => void): void;
   close(): void;
+  /** bytes still waiting to go out, when the transport can tell; a slow link builds this up */
+  backlog?(): number;
+  /** how the link runs: "direct", "relay", or "unknown" */
+  route?(): Promise<string>;
 }
 
 const MAX_CREW = 4;
