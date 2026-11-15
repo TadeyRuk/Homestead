@@ -63,9 +63,10 @@ export function groundScene(which: Ground): Scene {
         if (map === SURFACE) {
           const list = missionList(state.mission);
           const sample = state.mission === "mars" ? "Core sample" : "Regolith";
-          if (!sv.sampleDrilled) drawMarker(ctx, SURFACE.sampleSites[state.mission], "#ff7b3a", sample, 14);
+          // only what this run drew from the pool (S2-18)
+          if ("sample" in state.objectives && !sv.sampleDrilled) drawMarker(ctx, SURFACE.sampleSites[state.mission], "#ff7b3a", sample, 14);
           if (sv.deployed) drawInstrument(ctx, SURFACE.deploySpot, list.instrument);
-          else drawMarker(ctx, SURFACE.deploySpot, "#b48cff", state.mission === "mars" ? "Weather station" : "Seismometer", 14);
+          else if ("deploy" in state.objectives) drawMarker(ctx, SURFACE.deploySpot, "#b48cff", state.mission === "mars" ? "Weather station" : "Seismometer", 14);
           if (!state.objectives.bonus) drawMarker(ctx, bonusSpot(state), "#ffffff", "Photo spot", 12);
           // each minigame on this run's list that is still to do (S2-19)
           for (const [kind, done] of Object.entries(state.objectives)) {

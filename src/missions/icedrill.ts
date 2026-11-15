@@ -174,6 +174,7 @@ export const iceDrill: SurfaceGame<Drill> = {
   label: (mission) => (mission === "mars" ? "Drill for subsurface water ice" : "Drill for polar ice in the shadowed crater"),
   slot: "power",
   keys: "W/S: keep the pressure in the green band",
+  tip: "easiest with an RTG",
   fact: (mission) =>
     mission === "mars"
       ? "Phoenix found water ice just under the Martian soil in 2008; its data is archived in NASA's Planetary Data System (pds.nasa.gov)."

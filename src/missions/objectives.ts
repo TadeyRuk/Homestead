@@ -6,8 +6,18 @@ import { rng } from "../core/rng";
 import type { GameState, Player, SurfaceTask } from "../core/state";
 import { atLander } from "../ground/suit";
 import { SURFACE } from "../ground/surface";
-import { gameEligible, gameSpot, surfaceGame, surfaceGameKinds } from "./games";
-import { missionList, RICH_FACTOR, scanStats, TASK_SECONDS, uplinkRate } from "./stats";
+import { gameEligible, gameSpot, surfaceGame } from "./games";
+import { partData } from "../data/data";
+import {
+  DRAWN_OBJECTIVES,
+  missionList,
+  objectivePool,
+  RICH_FACTOR,
+  scanStats,
+  TASK_SECONDS,
+  uplinkRate,
+  type PoolEntry,
+} from "./stats";
 
 /** the fixed objective ids in state.objectives, in Mission Control's order; minigames add their kinds */
 export const OBJECTIVES = ["scan", "sample", "deploy", "uplink", "bonus"] as const;
@@ -20,6 +30,66 @@ const NO_KEYS: Input = { dx: 0, dy: 0, interact: false, panel: false, switch: fa
 export const TASK_REACH = 36;
 
 const BONUS_STREAM = 0x0b0b05;
+const POOL_STREAM = 0x9001ed;
+
+/** the objectives that need no minigame */
+const FIXED = new Set<string>(["scan", "sample", "deploy"]);
+
+const idOf = (e: PoolEntry) => (typeof e === "string" ? e : e.id);
+const solarOnly = (e: PoolEntry) => typeof e !== "string" && !!e.solarOnly;
+
+/**
+ * Can this pool entry go on the list: a fixed objective, or a minigame that has been merged
+ * (registered, with a map spot). With `slots` it also has to suit the build: solar-only entries
+ * need a solar array, and the minigame's own `eligible` has to agree. Without slots (the brief,
+ * before the build exists) the build is not checked.
+ */
+function drawable(e: PoolEntry, slots: GameState["ship"]["slots"] | null): boolean {
+  const id = idOf(e);
+  if (!FIXED.has(id) && !(surfaceGame(id) && gameSpot(id, "mars") && gameSpot(id, "moon"))) return false;
+  if (!slots) return true;
+  if (solarOnly(e) && !partData(slots.power)?.solar) return false;
+  return FIXED.has(id) || gameEligible(id, slots);
+}
+
+/**
+ * The run's objectives on top of the uplink and the bonus (S2-18): the mission's pool shuffled by
+ * the seed, minus anything not merged or not suited to the build, first DRAWN_OBJECTIVES of it,
+ * shown in the pool's order. Pass `slots: null` for the brief, before anything is built.
+ */
+export function drawObjectives(seed: number, mission: GameState["mission"], slots: GameState["ship"]["slots"] | null): string[] {
+  const pool = objectivePool(mission);
+  const order = pool.map((_, i) => i);
+  const r = rng((seed ^ POOL_STREAM) >>> 0);
+  // the whole pool is shuffled first, so merging or cutting a task only adds or frees one place
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = r.int(i + 1);
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  const picked: number[] = [];
+  for (const i of order) {
+    if (picked.length >= DRAWN_OBJECTIVES) break;
+    if (drawable(pool[i], slots) && !picked.some((k) => idOf(pool[k]) === idOf(pool[i]))) picked.push(i);
+  }
+  return picked.sort((a, b) => a - b).map((i) => idOf(pool[i]));
+}
+
+/** the brief's objective lines for this seed: what to look for on the campus, then the uplink */
+export function briefObjectives(seed: number, mission: GameState["mission"], target: number): string[] {
+  const list = missionList(mission);
+  const pool = objectivePool(mission);
+  return [
+    ...drawObjectives(seed, mission, null).map((id) => {
+      if (id === "scan") return `Scan ${list.scans} rich sites`;
+      if (id === "sample") return list.sampleLabel;
+      if (id === "deploy") return list.instrumentLabel;
+      const def = surfaceGame(id);
+      const solar = pool.some((e) => idOf(e) === id && solarOnly(e));
+      return `${def?.label(mission) ?? id}${def?.tip ? ` (${def.tip})` : ""}${solar ? ", solar builds only" : ""}`;
+    }),
+    `Uplink ${target} data units`,
+  ];
+}
 
 /** a fresh list as the surface starts: every flag false, the instrument waiting at the lander */
 export function startSurface(state: GameState): void {
@@ -33,12 +103,12 @@ export function startSurface(state: GameState): void {
     bonusSpot: rng(state.seed ^ BONUS_STREAM).int(SURFACE.bonusSpots.length),
     games: {},
   };
-  // every minigame this build can play goes on the list before the uplink and the bonus
-  const games = surfaceGameKinds().filter((kind) => gameEligible(kind, state.ship.slots));
-  const ids = [...OBJECTIVES.filter((id) => id !== "uplink" && id !== "bonus"), ...games, "uplink", "bonus"];
+  // three drawn from the mission's pool by the seed (S2-18), then the uplink and the bonus every run
+  const ids = [...drawObjectives(state.seed, state.mission, state.ship.slots), "uplink", "bonus"];
   state.objectives = Object.fromEntries(ids.map((id) => [id, false]));
   const lander = SURFACE.lander;
-  placePart(state, missionList(state.mission).instrument, { x: lander.x + 60, y: lander.y - 48 }, "o"); // clear of the lander art, inside its ring
+  // clear of the lander art, inside its ring; only when the deploy is on the list
+  if ("deploy" in state.objectives) placePart(state, missionList(state.mission).instrument, { x: lander.x + 60, y: lander.y - 48 }, "o");
 }
 
 export function bonusSpot(state: { readonly surface: { readonly bonusSpot: number } }): Point {
@@ -110,10 +180,10 @@ export function jobHere(state: GameState, p: Player): SurfaceTask | null {
   const list = missionList(state.mission);
   const site = nearest(SURFACE.sites, p, TASK_REACH);
   if (site && !state.surface.scanned.includes(site.id)) return { kind: "scan", target: site.id, progress: 0 };
-  if (!state.surface.sampleDrilled && !p.carrying && nearest([SURFACE.sampleSites[state.mission]], p, TASK_REACH)) {
+  if ("sample" in state.objectives && !state.surface.sampleDrilled && !p.carrying && nearest([SURFACE.sampleSites[state.mission]], p, TASK_REACH)) {
     return { kind: "drill", target: list.sample, progress: 0 };
   }
-  if (!state.surface.deployed && p.carrying === list.instrument && nearest([SURFACE.deploySpot], p, TASK_REACH)) {
+  if ("deploy" in state.objectives && !state.surface.deployed && p.carrying === list.instrument && nearest([SURFACE.deploySpot], p, TASK_REACH)) {
     return { kind: "deploy", target: list.instrument, progress: 0 };
   }
   if (!state.objectives.bonus && nearest([bonusSpot(state)], p, TASK_REACH)) {

@@ -87,3 +87,26 @@ export function missionList(mission: MissionId): MissionList {
 
 /** seconds for each timed surface job other than a scan */
 export const TASK_SECONDS = { drill: 4, deploy: 3, photo: 2 } as const;
+
+/**
+ * One entry in a mission's objective pool (S2-18): a fixed objective ("scan", "sample", "deploy")
+ * or a surface minigame's kind. `solarOnly` entries are drawn only for builds with a solar array.
+ */
+export type PoolEntry = string | { id: string; solarOnly?: boolean };
+
+// placeholder until seat 3 registers the pools from missions.json with registerObjectivePool
+let pools: Record<MissionId, PoolEntry[]> = {
+  mars: ["scan", "sample", "deploy", "ice-drill", "relay-align", { id: "panel-clean", solarOnly: true }],
+  moon: ["scan", "sample", "deploy", "ice-drill", "relay-align", { id: "panel-clean", solarOnly: true }],
+};
+
+export function registerObjectivePool(mission: MissionId, pool: PoolEntry[]): void {
+  pools = { ...pools, [mission]: pool };
+}
+
+export function objectivePool(mission: MissionId): readonly PoolEntry[] {
+  return pools[mission];
+}
+
+/** objectives drawn from the pool each run, on top of the uplink and the bonus */
+export const DRAWN_OBJECTIVES = 3;

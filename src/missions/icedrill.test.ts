@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Input } from "../core/input";
 import { enterPhase } from "../core/phases";
 import { createState, type GameState } from "../core/state";
@@ -11,6 +11,7 @@ import { player, recordingCtx, STILL } from "../ground/testing";
 import { gameLines } from "../report/analyze";
 import "./missions.register";
 import { surfaceGame } from "./games";
+import { objectivePool, registerObjectivePool, type PoolEntry } from "./stats";
 import { drawDrill, drillBand, ICE_DRILL, startDrill, stepDrill, type Drill } from "./icedrill";
 
 const DT = 1 / 30;
@@ -93,6 +94,17 @@ describe("the ice drill (S2-20)", () => {
 
 describe("the ice drill on the surface", () => {
   let clock = 70_000_000;
+  // the drill on every run here; the seeded draw itself is tested in pool.test.ts
+  const pools = { mars: [] as readonly PoolEntry[], moon: [] as readonly PoolEntry[] };
+  beforeAll(() => {
+    for (const m of ["mars", "moon"] as const) {
+      pools[m] = objectivePool(m);
+      registerObjectivePool(m, ["scan", ICE_DRILL, "deploy"]);
+    }
+  });
+  afterAll(() => {
+    for (const m of ["mars", "moon"] as const) registerObjectivePool(m, [...pools[m]]);
+  });
   function landed(power: string, mission: "mars" | "moon" = "mars"): GameState {
     const s = createState(21, mission);
     s.players.push(player("a"));
