@@ -3,7 +3,7 @@ import "../data/data.register";
 import { computeMeters, withPart } from "./meters";
 
 const empty = { propulsion: null, power: null, comms: null, payload: null };
-const opts = { credits: 40, startCredits: 40, secondsLeft: 120, buildSeconds: 180, mission: "mars" as const };
+const opts = { credits: 40, startCredits: 40, secondsLeft: 120, buildSeconds: 180 };
 
 describe("meter math (S3-10)", () => {
   it("weighs the mounted parts against the engine's lift", () => {

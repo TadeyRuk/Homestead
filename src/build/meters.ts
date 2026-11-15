@@ -1,6 +1,6 @@
 import { findPart } from "../core/catalog";
 import type { DeepReadonly } from "../core/scene";
-import type { GameState, MissionId, Slot } from "../core/state";
+import type { GameState, Slot } from "../core/state";
 import { scanStats, uplinkRate } from "../missions/stats";
 
 /**
@@ -41,7 +41,7 @@ export function withPart(slots: Slots, part: string | null): Slots {
 
 export function computeMeters(
   slots: Slots,
-  opts: { credits: number; startCredits: number; secondsLeft: number; buildSeconds: number; mission: MissionId },
+  opts: { credits: number; startCredits: number; secondsLeft: number; buildSeconds: number },
 ): Meters {
   const parts = SLOTS.map((s) => (slots[s] ? findPart(slots[s]!) : undefined));
   const mass = parts.reduce((a, p) => a + (p?.mass ?? 0), 0);
@@ -102,6 +102,5 @@ export function metersFor(state: DeepReadonly<GameState>, secondsLeft: number, b
     startCredits,
     secondsLeft,
     buildSeconds,
-    mission: state.mission,
   });
 }
