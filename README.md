@@ -121,6 +121,7 @@ The mission cards, part stats, hazards and report lines come from these sources.
 | [Mars 2020: Perseverance (NASA Science)](https://science.nasa.gov/mission/mars-2020-perseverance/) | Transit time on the Mars card. |
 | [Phoenix (NASA Science)](https://science.nasa.gov/mission/phoenix/) and its [data archive at the PDS Geosciences Node](https://pds-geosciences.wustl.edu/missions/phoenix/index.htm) | The ice drill surface game: Phoenix dug down to water ice just under the Martian soil near the north pole. |
 | [Spirit (NASA Science)](https://science.nasa.gov/mission/mer-spirit/) and [Opportunity (NASA Science)](https://science.nasa.gov/mission/mer-opportunity/) | The solar panel cleaning surface game: dust built up on both rovers' panels and cut their power, until gusts of wind cleared them, the "cleaning events" that kept the rovers going for years. |
+| [Sounds of space and Mars (NASA)](https://www.nasa.gov/sounds-from-beyond/) | The background music: Earth's chorus radio waves, the Artemis lunar surface recording and Perseverance's Mars wind are mixed into the Earth, Moon and Mars loops. Credits below. |
 | [JPL Horizons (NASA JPL Solar System Dynamics)](https://ssd.jpl.nasa.gov/horizons/) | Orbiter positions over a landing site, behind the relay link surface game. A real relay pass lasts about 8 to 10 minutes; the game shortens it to 14 seconds. |
 
 ### Real hardware behind each part
@@ -185,6 +186,7 @@ Homestead was made with AI assistance. The concept and design are the team's own
 - **Code:** written with Claude Code (Anthropic) as an assistant. Every change went through a pull request that a team member merged, and a person played the game after each merge.
 - **Reviews:** a GitHub Action runs Claude on each pull request to point out bugs and missing tests (`.github/workflows/claude-review.yml`).
 - **Research and docs:** Claude helped find and check the NASA sources above and drafted parts of this README.
+- **Music:** the five background loops were generated with the ElevenLabs sound-effects model from text prompts (theme, tempo, instruments), then cut into whole-bar loops by a script, with a NASA recording mixed in under each.
 - **Art:** drawn in code and labelled as made with AI. The game will show a "Made with AI assistance" label in a corner of the screen.
 - **No NASA branding:** no AI-made content uses NASA logos, flags or mission identifiers.
 
@@ -196,4 +198,10 @@ The full record, area by area, is in [`docs/ai-use.md`](docs/ai-use.md).
 - [Pixelify Sans](https://github.com/eifetx/Pixelify-Sans), © 2021 The Pixelify Sans Project Authors, [SIL Open Font License 1.1](src/ui/fonts/OFL-PixelifySans.txt). Used for titles.
 - [IBM Plex Mono](https://github.com/IBM/plex), © 2017 IBM Corp., [SIL Open Font License 1.1](src/ui/fonts/OFL-IBMPlexMono.txt). Used for the HUD, brief and report text.
 
-_Still to add: sounds and any other outside resources._
+- **Music** (`prototype/assets/sfx/music-*.ogg`): five loops generated with [ElevenLabs](https://elevenlabs.io/) sound effects, each with a NASA recording mixed in underneath:
+  - Earth (menus, build, report) with [chorus waves recorded by NASA's Van Allen Probes](https://www.nasa.gov/missions/mms/nasa-listens-in-as-electrons-whistle-while-they-work/) (`chorus.mp3`, NASA / University of Iowa).
+  - Flight to the Moon and the Moon surface with the [Artemis Audio Library](https://www.nasa.gov/artemisaudio)'s lunar surface observation (`3-hour-lunar-surface-observation.wav`, NASA).
+  - Flight to Mars and the Mars surface with [Perseverance's SuperCam recording of wind on Mars](https://mars.nasa.gov/resources/25714/perseverance-rovers-supercam-records-wind-on-mars), sol 4 (NASA/JPL-Caltech/LANL/CNES/CNRS/ISAE-Supaero).
+  - NASA audio is used under [NASA's media usage guidelines](https://www.nasa.gov/nasa-brand-center/images-and-media/); it does not imply NASA endorses this game.
+
+_Still to add: any other outside resources._

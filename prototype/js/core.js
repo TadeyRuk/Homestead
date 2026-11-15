@@ -162,7 +162,9 @@
   // and falls back to the blip until the clip has loaded or if it fails to. MUSIC loops per scene. M mutes all of it.
   // Both lists stay empty until the clips are committed, so the game asks for no files it does not have.
   HS.SFX_FILES = {};   // sound name -> file, e.g. pick: 'pick.ogg'
-  HS.MUSIC = {};       // menu: title, crew, lobby and brief; mars: the Mars surface. e.g. menu: 'music-menu.ogg'
+  // five EDM loops (README credits), each with a NASA recording mixed in: Earth's chorus radio waves, the Artemis
+  // lunar surface recording, Perseverance's Mars wind. Earth plays at home; flight and the surface have their own.
+  HS.MUSIC = { earth: 'music-earth.ogg', 'flight-moon': 'music-flight-moon.ogg', 'flight-mars': 'music-flight-mars.ogg', moon: 'music-moon.ogg', mars: 'music-mars.ogg' };
   const clips = {};    // file -> decoded buffer, once loaded
   let music = null, musicFile = '';
   const loadClip = (file) => {
@@ -184,17 +186,21 @@
     const blip = HS.sfx[name];
     if (blip) HS.sfx[name] = () => { if (!playClip(file)) blip(); };
   }
-  const MENU = ['title', 'crew', 'lobby', 'brief'];
+  HS.musicNow = () => musicFile;   // which loop is playing, for tests
+  const AWAY = ['landing', 'surface'];   // the planet's own theme; flight has the journey's; everything else is Earth's
   // starts the loop this scene wants, if any, and stops the old one; called on every scene change and on M
   HS.musicFor = (scene) => {
-    const key = MENU.includes(scene) ? 'menu' : scene === 'surface' && HS.S && HS.S.mission && HS.S.mission.id === 'mars' ? 'mars' : '';
+    const world = HS.S && HS.S.mission && HS.S.mission.id === 'moon' ? 'moon' : 'mars';
+    const key = scene === 'flight' ? 'flight-' + world : AWAY.includes(scene) ? world : scene ? 'earth' : '';
     const file = (!HS.muted && AC && HS.MUSIC[key]) || '';
     if (file === musicFile) return;
     if (music) { try { music.stop(); } catch (e) { /* already stopped */ } music = null; }
     musicFile = file;
     const buf = file && clips[file];
     if (!buf) return;   // not loaded yet: loadClip starts it when it arrives
-    const s = AC.createBufferSource(), gn = AC.createGain(); s.buffer = buf; s.loop = true; gn.gain.value = .3;
+    // background, not foreground: the music sits well under the game's own sounds, and lower still in flight,
+    // where the stations' alarms and blips carry the game
+    const s = AC.createBufferSource(), gn = AC.createGain(); s.buffer = buf; s.loop = true; gn.gain.value = scene === 'flight' ? .09 : .12;
     s.connect(gn).connect(AC.destination); s.start(); music = s;
   };
 
