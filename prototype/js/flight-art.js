@@ -51,7 +51,6 @@
     x.drawImage(glowC(r, rgb), Math.round(cx - r), Math.round(cy - r));
     x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
   }
-  const idOf = (slot, p) => HS.look((HS.S && HS.S.slots && HS.S.slots[slot]) || Object.keys(HS.PARTS).find((k) => HS.PARTS[k] === p) || '');
 
   const css = (c) => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
   // ---------- palettes (shades of the title film's colours)
@@ -69,7 +68,8 @@
   const PIPE_OFF = ['#1e232b', '#2b313b', '#3a4250', '#566170'];
 
   // =====================================================================
-  // PILOT: space, Earth below, the destination ahead, debris, and the ship
+  // PILOT: deep space, Earth, the destination and debris (drawn in first person by js/cockpit-art.js), and the
+  // ship, which the build screen's blueprint shows
   // =====================================================================
 
   // the sky: a dithered gradient, the Milky Way and the Sun's glow from the top left, in 2 x 2 chunks
@@ -94,27 +94,6 @@
     });
     const [c, x] = make(1280, 720); x.drawImage(half, 0, 0, 1280, 720); BG = c;
     return c;
-  }
-
-  // three layers of stars; the near ones streak with the ship's speed
-  const STARS = (() => {
-    const r = noise(41), out = [];
-    for (let i = 0; i < 380; i++) {
-      const l = i < 230 ? 0 : i < 340 ? 1 : 2, b = l === 0 ? 70 + r() * 70 : l === 1 ? 140 + r() * 70 : 205 + r() * 50, tn = r();
-      const c = tn < .22 ? [b * .82, b * .9, b] : tn < .32 ? [b, b * .9, b * .74] : [b, b, Math.min(255, b + 18)];
-      out.push({ x: (r() * 1280) | 0, y: r() * 720, l, v: .7 + r() * .6, hi: css(c), mid: css(c.map((q) => q * .62)), lo: css(c.map((q) => q * .36)), tw: r() * 9 });
-    }
-    return out;
-  })();
-  function drawStars(x, scroll, speed, t, cm) {
-    const k = clamp((speed - 5) / 5), LV = [.16, .5, 1.25], len1 = 1 + Math.round(k * 7), len2 = 4 + Math.round(k * 26);
-    for (const s of STARS) {
-      const y = ((s.y + scroll * LV[s.l] * s.v) % 720) | 0;
-      if (s.l === 0) { R(x, s.x, y, 1, 1, !cm && Math.sin(t * 2.2 + s.tw) > .82 ? s.mid : s.hi); continue; }
-      if (s.l === 1) { R(x, s.x, y - len1, 1, len1, s.lo); R(x, s.x, y, 1, 1, s.hi); continue; }
-      const h = len2 >> 1;
-      R(x, s.x, y - len2, 1, h, s.lo); R(x, s.x, y - h, 1, h, s.mid); R(x, s.x, y, 2, 2, s.hi);
-    }
   }
 
   // the top of a radius-576 Earth: only the cap that ever shows is rendered, like the film's earthSphere
@@ -218,21 +197,24 @@
     s = { R0, harm, craters, N, bump }; rockBase.set(k, s);
     return s;
   }
-  function rockFrame(b, v, f) {
-    const key = (b * 4 + v) * 16 + f; let c = rockFrames.get(key);
+  // r draws the same rock at another radius (art pixels), for debris seen far off; it is drawn at that size, not
+  // scaled, so its pixels stay square
+  function rockFrame(b, v, f, r = b * 4) {
+    const key = ((b * 4 + v) * 16 + f) * 256 + r; let c = rockFrames.get(key);
     if (c) return c;
-    const { R0, harm, craters, N, bump } = rockShape(b, v), rot = f / 12 * TAU, cr = Math.cos(rot), sr = Math.sin(rot), h = N / 2;
-    c = outlined(paint(N, N, (set) => {
-      for (let y = 0; y < N; y++) for (let X = 0; X < N; X++) {
-        const dx = X + .5 - h, dy = y + .5 - h, lx = dx * cr + dy * sr, ly = -dx * sr + dy * cr, a = Math.atan2(ly, lx);
+    const { R0, harm, craters, N, bump } = rockShape(b, v), rot = f / 12 * TAU, cr = Math.cos(rot), sr = Math.sin(rot), h = N / 2, k = R0 / r;
+    const M = Math.ceil(r * 1.25) * 2 + 2, hm = M / 2;
+    c = outlined(paint(M, M, (set) => {
+      for (let y = 0; y < M; y++) for (let X = 0; X < M; X++) {
+        const dx = X + .5 - hm, dy = y + .5 - hm, lx = dx * cr + dy * sr, ly = -dx * sr + dy * cr, a = Math.atan2(ly, lx);
         let rad = 1; for (const [n, A, p] of harm) rad += A * Math.cos(n * a + p);
-        rad *= R0;
+        rad *= r;
         const dist = Math.hypot(dx, dy);
         if (dist > rad) continue;
         const nx = dx / rad, ny = dy / rad, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
-        let lum = -.62 * nx - .62 * ny + .5 * nz + bump[Math.min(N - 1, Math.max(0, Math.round(ly + h))) * N + Math.min(N - 1, Math.max(0, Math.round(lx + h)))] * .75;
+        let lum = -.62 * nx - .62 * ny + .5 * nz + bump[Math.min(N - 1, Math.max(0, Math.round(ly * k + h))) * N + Math.min(N - 1, Math.max(0, Math.round(lx * k + h)))] * .75;
         for (const [ccx, ccy, crr] of craters) {
-          const qx = lx / R0 - ccx, qy = ly / R0 - ccy, q = Math.hypot(qx, qy) / crr;
+          const qx = lx / r - ccx, qy = ly / r - ccy, q = Math.hypot(qx, qy) / crr;
           if (q > 1.3) continue;
           const wx = qx * cr - qy * sr, wy = qx * sr + qy * cr, dl = -(wx + wy) * .707 / (Math.hypot(wx, wy) || 1);
           if (q < 1) lum += dl * .6 * q - .15; else lum -= dl * .35 * (1.3 - q) / .3;
@@ -244,7 +226,6 @@
     rockFrames.set(key, c);
     return c;
   }
-  const rockSprite = (rk) => rockFrame(clamp(Math.round(rk.s * 2), 6, 12), Math.floor(rk.s * 997) % 2, Math.floor((((rk.rot % TAU) + TAU) % TAU) / TAU * 12) % 12);
   // build the rock frames a few milliseconds at a time before the first debris arrives
   let rockQueue = null;
   function warmRocks(ms) {
@@ -253,18 +234,8 @@
     while (rockQueue.length && performance.now() < end) rockFrame(...rockQueue.shift());
   }
 
-  // a debris warning: a double chevron pointing down
-  let CHEV = null;
-  const chevron = () => (CHEV ??= sprite(30, 21, (x) => {
-    for (const oy of [0, 9]) for (let r = 0; r < 12; r++) {
-      const a = Math.floor(r * 1.25), b = 30 - a;
-      if (a + 4 >= b - 4) { R(x, a, oy + r, b - a, 1, '#ffb43c'); R(x, a, oy + r, 1, 1, '#ffe0a0'); continue; }
-      R(x, a, oy + r, 4, 1, '#ffc860'); R(x, a, oy + r, 1, 1, '#ffe8b0'); R(x, b - 4, oy + r, 4, 1, '#e8962a'); R(x, b - 1, oy + r, 1, 1, '#b8701a');
-    }
-  }, OUT));
-
   // ---------- the ship: the title film's white and orange rocket, nose up, with the parts the player mounted
-  const SW = 156, SH = 130, CX = 78, BL = CX - 18, BR = CX + 18, SHIP_TOP = 424;
+  const SW = 156, SH = 130, CX = 78, BL = CX - 18, BR = CX + 18;
   function solarPanel(x, X0, Y0, w, h, rusty, left) {
     R(x, X0, Y0, w, h, rusty ? '#6a4028' : '#4a5262');
     for (let Y = 1; Y < h - 1; Y++) for (let X = 1; X < w - 1; X++) {
@@ -424,18 +395,11 @@
     return Object.assign(info, { c });
   }
 
-  // the margins round a station (js/art.js): the static backdrop mirrored out, and for the pilot the live stars
-  // carried on across them (no debris or readouts are copied)
-  FA.bleed = (x, kind, F) => {
-    if (!HS.AOX && !HS.AOY) return;
-    HS.bleedFrom(kind === 'pilot' ? background() : cabin(kind));
-    if (kind !== 'pilot') return;
-    const cm = calm();
-    for (const [dx, dy] of [[-1280, 0], [1280, 0], [0, -720], [0, 720]]) {
-      if ((dx < 0 && !HS.AOX) || (dy && !HS.AOY)) continue;
-      x.save(); x.beginPath(); x.rect(dx < 0 ? -HS.AOX : dx > 0 ? 1280 : 0, dy < 0 ? -HS.AOY : dy > 0 ? 720 : 0, dx ? (dx < 0 ? HS.AOX : HS.AX1 - 1280) : 1280, dy ? (dy < 0 ? HS.AOY : HS.AY1 - 720) : 720); x.clip();
-      x.translate(dx, dy); drawStars(x, scroll, F.speed, F.t, cm); x.restore();
-    }
+  // the margins round a station (js/art.js): the static backdrop mirrored out, so no debris or readouts are
+  // copied. The pilot's cockpit (js/cockpit-art.js) is built for the whole stage, so it needs none.
+  FA.bleed = (x, kind) => {
+    if (kind === 'pilot' || (!HS.AOX && !HS.AOY)) return;
+    HS.bleedFrom(cabin(kind));
   };
 
   // the same ship for the build screen's blueprint, cached per part set; ids may be '' for an empty slot
@@ -449,105 +413,8 @@
   };
   FA.SHIP_GEOM = { SW, SH, CX, BL, BR };
 
-  // the exhaust: four flicker frames, short at idle, long under thrust; the ion drive is a blue glow
-  const FLAME = {
-    chem: { cols: ['#fff6d8', '#ffd27a', '#ff9a3c', '#e8501a'], hw: 11, short: 26, long: 66, diamonds: true, glow: '255,150,60' },
-    solid: { cols: ['#fff0c0', '#ffb050', '#ff6a2a', '#b8401a'], hw: 12, short: 30, long: 72, glow: '255,120,50' },
-    ion: { cols: ['#f0fcff', '#9ae8ff', '#3ab4e6', '#1a6aa8'], hw: 11, short: 30, long: 84, ion: true, glow: '90,190,255' },
-    sal: { cols: ['#ffe8b0', '#ffb050', '#e8602a', '#8a3a1a'], hw: 10, short: 22, long: 56, sputter: true, glow: '255,120,50' }
-  };
-  const flames = new Map();
-  function flameSprite(kind, long, f) {
-    const key = kind + (long ? 'L' : 'S') + f; let c = flames.get(key);
-    if (c) return c;
-    const P = FLAME[kind], cols = P.cols.map(hex), len = (long ? P.long : P.short) + [0, 6, -4, 3][f] * (long ? 1 : .5), r = noise(f * 13 + (long ? 7 : 1) + kind.length * 101);
-    const W = P.hw * 2 + 10, H = Math.ceil(len) + 2, cx = W / 2;
-    c = paint(W, H, (set) => {
-      for (let y = 0; y < H; y++) {
-        const k = y / len;
-        if (k >= 1) break;
-        let hw = P.ion ? P.hw * (1 - k * .5) : P.hw * Math.pow(1 - k, .7) * (1 + .12 * Math.sin(y * .45 + f * 1.9));
-        if (!P.ion && y < 4) hw = P.hw * (.88 + y * .03);
-        const core = P.diamonds ? .3 + .28 * Math.abs(Math.sin(y * Math.PI / 11 + f * .3)) : .38, sway = Math.sin(y * .18 + f * 2.3) * k * 1.6;
-        for (let X = 0; X < W; X++) {
-          const d = Math.abs(X + .5 - cx - sway) / hw;
-          if (d > 1) continue;
-          if (k > .5 && bayer(X, y) < (k - .5) / .5 * 1.05) continue;
-          if (P.ion && d > .5 && (X + y + f) & 1) continue;
-          if (P.sputter && r() < .1 * k) continue;
-          set(X, y, cols[d < core * (1 - k * .6) ? 0 : d < .62 ? 1 : d < .86 ? 2 : 3]);
-        }
-      }
-    });
-    flames.set(key, c);
-    return c;
-  }
-  // a little cold-gas puff from an attitude thruster, blowing left; three frames
-  const puffs = [];
-  function puff(f, flip) {
-    const k = f + (flip ? 3 : 0);
-    if (puffs[k]) return puffs[k];
-    const len = [6, 11, 16][f];
-    let c = paint(18, 12, (set) => {
-      for (let y = 0; y < 12; y++) for (let X = 0; X < 18; X++) {
-        const dx = 17 - X, sp = 1 + dx * .32, dy = Math.abs(y - 5.5);
-        if (dx > len || dy > sp) continue;
-        if (bayer(X, y) > 1.15 - dx / len - dy / sp * .3) continue;
-        set(X, y, hex(dx < 4 ? '#ffffff' : dx < 9 ? '#e4ecf4' : '#a8b4c4'));
-      }
-    });
-    if (flip) { const [m, mx] = make(18, 12); mx.translate(18, 0); mx.scale(-1, 1); mx.drawImage(c, 0, 0); c = m; }
-    return (puffs[k] = c);
-  }
-
-  let ship = null, shipKey = '', lastF = null, lastT = 0, scroll = 0;
-  FA.pilot = (x, F, o) => {
-    const t = F.t, cm = calm(), m = F.m;
-    if (F !== lastF) { lastF = F; scroll = 0; lastT = t; }
-    scroll += Math.max(0, t - lastT) * (8 + F.speed * 1.4) * 8; lastT = t;
-    x.imageSmoothingEnabled = false;
-    x.drawImage(background(), 0, 0);
-    drawStars(x, scroll, F.speed, t, cm);
-    // Earth falls away below
-    const ec = earthCap(), ey = Math.round(1200 + F.prog * 720) - 576 - ec.halo;
-    if (ey < 720) x.drawImage(ec.c, 640 - (ec.c.width >> 1), ey);
-    // the destination grows ahead, top right; Mars brings Phobos
-    const dr = Math.max(8, Math.round((16 + clamp(F.prog) * 72) / 2) * 2);
-    if (o.dest === 'mars' && dr >= 24) { const ph = L.phobosSprite(); x.drawImage(ph, 1024 - dr - 34, 112 + Math.round(dr * .45) + 8); }
-    const ps = planetSprite(o.dest, dr);
-    x.drawImage(ps, 1024 - (ps.width >> 1), 112 - (ps.height >> 1));
-    // warning chevrons where warned debris will come in
-    if (Math.floor(t * 6) % 2) for (const pd of F.pending) if (pd.warned) { const c = chevron(); x.drawImage(c, Math.round((pd.aimed ? F.x : pd.x) * 8) - (c.width >> 1), 6); }
-    for (const rk of F.rocks) { const s = rockSprite(rk); x.drawImage(s, Math.round(rk.x * 8) - (s.width >> 1), Math.round(rk.y * 8) - (s.height >> 1)); }
-    // the ship
-    const ids = { prop: idOf('prop', m.prop), power: idOf('power', m.power), comms: idOf('comms', m.comms), payload: idOf('payload', m.payload) };
-    const key = ids.prop + ids.power + ids.comms + ids.payload;
-    if (!ship || key !== shipKey) { ship = buildShip(ids); shipKey = key; }
-    const sx = Math.round(F.x * 8), top = SHIP_TOP, ion = ship.kind === 'ion';
-    // sparks: exhaust and hit bursts, at full resolution (the ion drive's exhaust is blue)
-    for (const p of F.fx.a) {
-      x.globalAlpha = clamp(p.life / p.max * 1.6);
-      const col = ion && p.col === '#ff9a3c' ? '#5ab4ff' : ion && p.col === '#fff0c8' ? '#d8f4ff' : p.col, s = p.size * 3;
-      R(x, Math.round(p.x * 8) - (s >> 1), Math.round(p.y * 8), s, s, col);
-    }
-    x.globalAlpha = 1;
-    if (o.engine) {
-      const fr = Math.floor(t * (cm ? 8 : 20)) % 4, fl = flameSprite(ship.kind, !!F.thrust, fr), fy = top + ship.exitY;
-      glow(x, sx, fy + 6, F.thrust ? 46 : 30, FLAME[ship.kind].glow, F.thrust ? .55 : .35);
-      x.drawImage(fl, sx - (fl.width >> 1), fy - 1);
-    }
-    x.drawImage(ship.c, sx - CX - 1, top - 1);
-    // attitude puff on the side opposite the turn
-    if (F.vx) { const f = Math.floor(t * 16) % 3, right = F.vx < 0; x.drawImage(puff(f, right), right ? sx + 21 : sx - 21 - 18, top + 52); }
-    // nose beacon and wing-tip strobes
-    const on = cm || (t * 1.3) % 1 < .5;
-    R(x, sx - 1, top, 2, 2, on ? '#ff5a50' : '#5a1814');
-    if (on) glow(x, sx, top + 1, 7, '255,90,80', .55);
-    const strobe = cm || (t % 1.2) < .14;
-    for (const [lx, ly, k] of ship.lights) { const X = sx - CX + lx, col = k === 'red' ? '#ff5a50' : '#6edc82'; R(x, X, top + ly, 2, 2, strobe ? col : '#2a3040'); if (strobe && !cm) glow(x, X + 1, top + ly + 1, 8, k === 'red' ? '255,90,80' : '110,220,130', .6); }
-    if (ship.rtg) glow(x, sx - CX + ship.rtg[0], top + ship.rtg[1], 14, '255,120,60', .18 + (cm ? 0 : Math.sin(t * 2) * .05));
-    warmRocks(2);
-  };
+  // the pieces js/cockpit-art.js draws the pilot's view with
+  FA.kit = { paint, outlined, disc, line, glow, rivet, background, earthCap, planetSprite, rockFrame, warmRocks };
 
   // =====================================================================
   // CABIN: the wall, the monitors and each station's machines

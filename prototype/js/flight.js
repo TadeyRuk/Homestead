@@ -4,7 +4,6 @@
   const HS = window.HS, g = HS.g;
   const { T, box, bar, tag, C, PIX, clamp, lerp, seg, px, ell, shade } = HS;
   const ST = ['pilot', 'eng', 'comms', 'sci'];
-  const SUB = { pilot: 'speed, fuel, hull', eng: 'power and hull', comms: 'keep Earth in the beam', sci: 'core temp and oxygen' };
   const ITEMS = { ice: { col: '#bee6ff', o2: 10, name: 'ice block' }, co2: { col: '#8c9096', o2: 6, name: 'CO2 cartridge' }, food: { col: '#825a3c', o2: 2, name: 'food waste' }, wrench: { col: '#c8ccd4', o2: 0, name: 'wrench' } };
   const LOAD_KEYS = ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU'];
   let F = null;
@@ -12,6 +11,14 @@
   // joiner prediction for the station controls, eased so it starts and stops softly (see lead() below)
   const ahead = { x: 0, sp: 0, e: 0, v: 0 };
   const loadOn = (k) => { const l = F.loads.find(l => l.key === k); return l.on && F.blackout <= 0; };
+  // a warning tag led by its pixel icon (js/icons.js), centred on x
+  const iconTag = (icon, s, x, y, col, size = 7) => {
+    const w = HS.tw(s, size, { w: 600 }) + 12, bh = size + 7;
+    x = clamp(x, HS.X0 + w / 2 + 8, HS.X1 - w / 2 - 8);
+    box(x - w / 2 - 5, y - size + 1, w + 10, bh, col, 3);
+    HS.drawIcon(icon, x - w / 2, y - size + 1 + (bh - 9) / 2, col);
+    T(s, x - w / 2 + 12, y + 1.5, size, col, { w: 600, b: 'middle' });
+  };
   const supply = () => {
     const p = F.m.power; let s = p.power;
     if (p.solar) { s *= lerp(1, HS.S.mission.solarFlight, F.prog); if (F.flare > 0) s *= .55; }
@@ -269,33 +276,46 @@
       // station tabs, with alerts from the other stations
       // the shared HUD is pinned to the top edge and corners of the screen (js/art.js)
       const Y0 = HS.Y0;
-      HS.chip(role, HS.X0 + 8, Y0 + 6, SUB[role]);
       const al = F.alerts || [null, null, null, null];
       const mine = HS.rolesOf(HS.net.me);
+      // the station tabs: each station's icon and key, the one on screen opened out with its name; a tab blinks
+      // with its station's alert
+      const TW = (i) => (i === F.st ? 54 : 24);
+      let tx = 320 - (ST.reduce((s, r, i) => s + TW(i), 0) + 12) / 2;
       ST.forEach((r, i) => {
         g.globalAlpha = mine.includes(r) ? 1 : .4;   // a station someone else holds: press it to ask for a swap
-        const x = 214 + i * 46, on = i === F.st, a = al[i], blink = a && Math.floor(t * (a.sev === 2 ? 5 : 2)) % 2;
-        const edge = a ? (a.sev === 2 ? C.red : C.amber) : on ? C[r] : '#3a4a62';
-        box(x, Y0 + 4, 42, 22, edge, 4, a && blink ? HS.rgba(a.sev === 2 ? C.red : C.amber, .3) : on ? HS.rgba(C[r], .2) : 'rgba(8,14,26,.9)');
-        T(`[${i + 1}]`, x + 4, Y0 + 13, 6.5, C.muted, { b: 'middle' }); T(['PILOT', 'ENG', 'COMMS', 'SCI'][i], x + 38, Y0 + 13, 6.5, on ? C.white : C[r], { w: 600, a: 'right', b: 'middle' });
-        g.fillStyle = a ? edge : C[r]; g.fillRect(x + 4, Y0 + 20, 34, 2);
-        g.globalAlpha = 1;
+        const w = TW(i), on = i === F.st, a = al[i], blink = a && Math.floor(t * (a.sev === 2 ? 5 : 2)) % 2;
+        const edge = a ? (a.sev === 2 ? C.red : C.amber) : on ? C[r] : '#2a3a52';
+        box(tx, Y0 + 4, w, 20, edge, 4, a && blink ? HS.rgba(a.sev === 2 ? C.red : C.amber, .3) : on ? HS.rgba(C[r], .2) : 'rgba(8,14,26,.85)');
+        T(String(i + 1), tx + 3, Y0 + 8.5, 5, C.muted, { w: 600, b: 'middle' });
+        HS.drawIcon(r, tx + 9, Y0 + 9.5, a ? edge : C[r]);
+        if (on) T(['PILOT', 'ENG', 'COMMS', 'SCI'][i], tx + 21, Y0 + 14.5, 6.5, C.white, { w: 600, b: 'middle' });
+        g.globalAlpha = 1; tx += w + 4;
       });
       const ask = HS.askLine && HS.askLine();
       if (ask) HS.prompt(ask[0], 320, 40, ask[1]);
       const worst = al.map((a, i) => a && Object.assign({ i }, a)).filter(a => a && a.i !== F.st).sort((a, b) => b.sev - a.sev)[0];
       if (worst) { const col = worst.sev === 2 ? C.red : C.amber; tag(`[${worst.i + 1}] ${HS.NAME[ST[worst.i]]}: ${worst.s}`, 306, Y0 + 34, col, 7); }
-      // transit box
-      const m = S.mission, days = Math.round(m.days * clamp(F.prog, 0, 1));
-      const TX = HS.X1 - 196;
-      box(TX, Y0 - 4, 188, 46, C.cyan, 5);
-      // the rocket's name heads the box when it has one
-      const nm = HS.rocketName(), pct = `${Math.floor(clamp(F.prog, 0, 1) * 100)}%`;
-      T(nm ? HS.fitText(`${nm} → ${m.short.toUpperCase()}`, 8.5, 118, { w: 600 }) + '  ' + pct : `${m.short.toUpperCase()} TRANSIT  ${pct}`, TX + 8, Y0 + 9, 8.5, C.white, { w: 600, b: 'middle' });
-      T(m.id === 'moon' ? `T+ ${(m.days * clamp(F.prog, 0, 1) * 24).toFixed(0)} hours` : `T+ ${days} days`, TX + 180, Y0 + 9, 7, C.muted, { a: 'right', b: 'middle' });
-      bar(TX + 8, Y0 + 17, 172, 4, F.prog, F.rate < 1 ? C.amber : C.cyan);
-      T(F.rate < 1 ? 'slow: off the transfer speed' : 'on schedule', TX + 8, Y0 + 26.5, 6.5, F.rate < 1 ? C.amber : C.muted, { b: 'middle' });
-      [['O2', S.cabinO2], ['HULL', S.hull], ['FUEL', S.fuel]].forEach(([n, v], i) => { T(n, TX + 8 + i * 60, Y0 + 36.5, 6.5, C.muted, { b: 'middle', w: 600 }); T(Math.round(v) + '%', TX + 8 + i * 60 + (i ? 22 : 13), Y0 + 36.5, 6.5, v < 30 ? C.red : v < 55 ? C.amber : C.white, { b: 'middle', w: 600 }); });
+      // the route, top right: Earth, the trail behind the ship (amber while it runs slow), the destination and the
+      // trip's clock; under it the three numbers every station watches, as icons, and the rocket's name
+      const m = S.mission, p = clamp(F.prog, 0, 1), slow = F.rate < 1;
+      const RW = 178, RX = HS.X1 - RW - 6, RY = Y0 + 4, ry = RY + 10, rx0 = RX + 18, rx1 = RX + RW - 52;
+      box(RX, RY, RW, 34, '#2a3a52', 4, 'rgba(8,14,26,.78)');
+      HS.drawPlanet('earth', RX + 9, ry);
+      HS.drawPlanet(m.id === 'moon' ? 'moon' : 'mars', rx1 + 9, ry);
+      const sx = rx0 + (rx1 - rx0) * p;
+      g.fillStyle = '#3a4a62'; for (let X = rx0; X < rx1; X += 3) if (X > sx + 4) g.fillRect(X, ry - .5, 1, 1);
+      g.fillStyle = slow ? C.amber : C.cyan; g.fillRect(rx0, ry - .5, Math.max(0, sx - rx0), 1);
+      HS.drawIcon('ship', sx - 4.5, ry - 4.5, slow && Math.floor(t * 2) % 2 ? C.amber : C.white);
+      HS.drawIcon('time', RX + RW - 34, ry - 4.5, C.muted);
+      T(m.id === 'moon' ? `${Math.round(m.days * p * 24)}h` : `${Math.round(m.days * p)}d`, RX + RW - 6, ry + .5, 6.5, C.white, { w: 600, a: 'right', b: 'middle' });
+      const nm = HS.rocketName();
+      [['o2', S.cabinO2, '#78d8ff'], ['hull', S.hull, '#c8d0dc'], ['fuel', S.fuel, C.pilot]].forEach(([ic, v, col], i) => {
+        const X = RX + 6 + i * (nm ? 40 : 60), Y = RY + 23, low = v < 30;
+        HS.drawIcon(ic, X, Y - 4.5, low && Math.floor(t * 4) % 2 ? C.red : col);
+        T(String(Math.round(v)), X + 11, Y + .5, 6.5, low ? C.red : v < 55 ? C.amber : C.white, { w: 600, b: 'middle' });
+      });
+      if (nm) T(HS.fitText(nm.toUpperCase(), 5.5, 44, { w: 600 }), RX + RW - 6, RY + 23.5, 5.5, C.muted, { w: 600, a: 'right', b: 'middle' });
       if (F.noteT > 0) { g.globalAlpha = clamp(F.noteT * 2, 0, 1); tag(F.noteS, 306, Y0 + (role === 'pilot' ? 62 : 47), F.noteCol, 7); g.globalAlpha = 1; }
       HS.hint(HS.online() ? (mine.length > 1 ? '[TAB] switch between your stations   [1]-[4] ask for another' : '[1]-[4] ask another player for their station') : '[1] [2] [3] [4] or [TAB] switch station');
       if (F.over) {
@@ -305,34 +325,27 @@
       }
     },
     pilot() {
-      const S = HS.S, t = F.t, m = F.m, mars = S.mission.id === 'mars';
-      const eng = loadOn('engine');
-      // space, Earth, the destination, debris and the ship built from the four parts, on the 1280 x 720 art grid (js/flight-art.js)
-      HS.flightArt.pilot(HS.ax, F, { dest: S.mission.id, engine: eng }); HS.flightArt.bleed(HS.ax, 'pilot', F); HS.blitArt();
-      // warnings
+      const S = HS.S, t = F.t, m = F.m, eng = loadOn('engine'), live = F.blackout <= 0;
+      // the view from the pilot's seat: space ahead, the debris coming at the windshield, and the dashboard (js/cockpit-art.js)
+      const flame = HS.look(S.slots.prop) === 'ion' ? '90,190,255' : '255,150,60';
+      const ck = HS.flightArt.pilot(HS.ax, F, { dest: S.mission.id, engine: eng, flame }); HS.flightArt.bleed(HS.ax, 'pilot', F); HS.blitArt();
+      // the art is laid out in art pixels; labels go at half that
+      const K = HS.flightArt.COCKPIT, h = (v) => v / 2, MUTED = '#8a96a4';
+      // warnings, on the glass: an icon and a few words
       const warned = F.pending.filter(p => p.warned);
-      if (warned.length) tag(`DEBRIS IN ${Math.max(0, Math.ceil(Math.min(...warned.map(p => p.at - t))))} s  (link warning)`, 306, 48, C.amber, 7);
-      else if (F.link < 60) tag('LINK DOWN: no debris warning', 306, 48, C.red, 7);
-      if (!eng) tag('ENGINE IS SWITCHED OFF at the power bus', 320, 150, C.red, 8.5);
-      // speed dial
-      // pinned to the screen: the dial and fuel to the bottom-left, the hull panel to the right edge
-      const L0 = HS.X0, B0 = HS.Y1 - 360, R0 = HS.X1 - 640, dx = L0 + 58, dy = B0 + 292, r0 = 40;
-      box(dx - r0 - 8, dy - r0 - 8, 2 * r0 + 16, 2 * r0 + 16, C.cyan, 48);
-      const ang = (v) => (135 + 270 * clamp((v - 6.5) / 3, 0, 1)) * Math.PI / 180;
-      g.strokeStyle = HS.rgba(C.green, .9); g.lineWidth = 5; g.beginPath(); g.arc(dx, dy, r0 - 3, ang(F.target - .25), ang(F.target + .25)); g.stroke();
-      g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; for (let a = 135; a <= 405; a += 27) { const ra = a * Math.PI / 180; g.beginPath(); g.moveTo(dx + Math.cos(ra) * (r0 - 7), dy + Math.sin(ra) * (r0 - 7)); g.lineTo(dx + Math.cos(ra) * r0, dy + Math.sin(ra) * r0); g.stroke(); }
-      const na = ang(F.speed + Math.sin(t * 9) * .008); g.strokeStyle = '#ff7a3c'; g.lineWidth = 3; g.beginPath(); g.moveTo(dx, dy); g.lineTo(dx + Math.cos(na) * (r0 - 11), dy + Math.sin(na) * (r0 - 11)); g.stroke();
-      const inBand = Math.abs(F.speed - F.target) <= .25;
-      T(F.speed.toFixed(2), dx, dy + 16, 12, inBand ? C.white : C.amber, { w: 600, a: 'center', b: 'middle' }); T('km/s', dx, dy + 27, 6.5, C.muted, { a: 'center', b: 'middle' });
-      box(L0 + 8, dy - r0 - 26, 100, 14, null, 3, 'rgba(8,14,26,.75)'); T('TRANSFER SPEED ' + F.target.toFixed(1), L0 + 13, dy - r0 - 18.5, 7, C.green, { b: 'middle', w: 600 });
-      // fuel
-      box(L0 + 116, B0 + 322, 316, 28, C.cyan, 5); T('FUEL', L0 + 124, B0 + 337, 8, C.muted, { w: 600, b: 'middle' }); bar(L0 + 152, B0 + 331, 220, 10, S.fuel / 100, S.fuel < 20 ? C.red : C.pilot); T(Math.round(S.fuel) + '%', L0 + 424, B0 + 337, 9, C.white, { w: 600, a: 'right', b: 'middle' });
-      box(L0 + 116, B0 + 296, 316, 22, null, 4, 'rgba(8,14,26,.75)'); T('[A][D] steer   [W] speed up   [S] slow down', L0 + 124, B0 + 313, 6.5, '#c8d2dc'); T(`${m.prop.name}: ${m.prop.flight}`, L0 + 124, B0 + 304, 6.5, C.pilot);
-      // hull
-      box(R0 + 560, 70, 72, 196, C.cyan, 5); T('HULL', R0 + 568, 86, 8, C.muted, { w: 600 }); T(Math.round(S.hull) + '%', R0 + 624, 86, 9, S.hull < 40 ? C.red : C.white, { w: 600, a: 'right' });
-      F.sections.forEach((v, i) => { const breach = F.breach && F.breach.sec === i; g.fillStyle = breach ? (Math.floor(t * 5) % 2 ? C.red : '#7a2a26') : v >= 100 ? C.green : v >= 60 ? C.amber : C.red; g.fillRect(R0 + 584, 96 + i * 30, 24, 26); });
-      if (F.breach) T('breach', R0 + 596, 258, 7.5, C.red, { w: 600, a: 'center' });
-      if (m.heavy > 0) T(`heavy: ${Math.round(m.massFrac * 100)}% of lift`, L0 + 424, B0 + 313, 6.5, C.amber, { a: 'right' });
+      if (warned.length) iconTag('debris', `DEBRIS IN ${Math.max(0, Math.ceil(Math.min(...warned.map(p => p.at - t))))} s`, 320, 48, C.amber);
+      else if (F.link < 60) iconTag('link', 'LINK DOWN', 320, 48, C.red);
+      if (!eng) iconTag('engine', 'ENGINE OFF', 320, 150, C.red, 8.5);
+      // speed: the reading in the dial, the transfer speed under it
+      const G = K.GAUGE, inBand = Math.abs(F.speed - F.target) <= .25;
+      if (live) { T(F.speed.toFixed(2), h(G.x), h(G.y) + 14, 9, inBand ? C.white : C.amber, { w: 600, a: 'center', b: 'middle' }); T('km/s', h(G.x), h(G.y) + 23, 5.5, MUTED, { a: 'center', b: 'middle' }); }
+      HS.drawIcon('target', h(G.x) - 12, h(G.y + G.r) + 4.5, C.green); T(F.target.toFixed(1), h(G.x) - 1, h(G.y + G.r) + 9, 6.5, C.green, { w: 600, b: 'middle' });
+      // the numbers the instruments can't show by themselves
+      T(Math.round(S.hull) + '%', h(K.HULL.x + K.HULL.w) - 2, h(K.HULL.y) + 7, 6.5, S.hull < 40 ? C.red : C.white, { w: 600, a: 'right', b: 'middle' });
+      T(Math.round(S.fuel) + '%', h(K.FUEL.x + K.FUEL.w / 2), h(K.FUEL.y + K.FUEL.h) + 9, 6.5, S.fuel < 20 ? C.red : C.white, { w: 600, a: 'center', b: 'middle' });
+      // the letters on the keycaps, which sink with them
+      K.KEYS.forEach((kc, i) => T(kc.k, h(kc.x + K.KEY_S / 2), h(K.KEY_Y + K.KEY_S / 2 - 1 + (ck.keys[i] ? 2 : 0)), 7.5, '#1a2030', { w: 700, a: 'center', b: 'middle' }));
+      if (m.heavy > 0) { HS.drawIcon('heavy', h(K.HEAVY.x), h(K.HEAVY.y), C.amber); T(`${Math.round(m.massFrac * 100)}%`, h(K.HEAVY.x) + 12, h(K.HEAVY.y) + 4.5, 6.5, C.amber, { w: 600, b: 'middle' }); }
     },
 
     eng() {
