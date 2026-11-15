@@ -19,7 +19,7 @@ describe("science trouble for the crew strip", () => {
   it("names a jammed intake next", () => {
     const c = createConverter(1);
     c.jammed = 2;
-    expect(scienceTrouble(c, ship(0.9, SAFE_HIGH + 0.1))).toBe("Intake jammed");
+    expect(scienceTrouble(c, ship(0.9, SAFE_HIGH + 0.1))).toBe("Intake jam");
   });
 
   it("warns when the core runs hot or cold", () => {
