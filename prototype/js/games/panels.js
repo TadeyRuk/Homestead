@@ -24,7 +24,7 @@
   HS.surfaceGames.panels = {
     name: 'Panel cleaning',
     slot: 'power',
-    label: (mid) => mid === 'mars' ? 'Sweep Mars dust off the solar panels' : 'Sweep Moon dust off the solar panels',
+    label: () => 'Dust off the solar panels',
     brief: () => 'clean the solar panels',
     keys: '[W] [A] [S] [D] sweep the brush',
     fact: () => 'Wind cleaned the solar panels of Spirit and Opportunity and gave them power back. NASA\'s CubeSat 101 shows the power budget that dust eats.',
@@ -54,6 +54,31 @@
       return d.batt <= 0 ? 'failed' : 'playing';
     },
 
-    draw(d, b, info) {}
+    draw(d, b, info) {
+      const out = output(d), low = d.batt < .25, dust = DUST[info.mission] || DUST.mars, cell = HS.CAT.power;
+      // power out of the panel against the target, and the battery it is meant to keep up
+      T('OUTPUT', b.x + 6, b.y + 10, 6.5, C.muted, { w: 600 });
+      HS.bar(b.x + 6, b.y + 15, 90, 5, out / 100, out >= TARGET ? C.green : C.cyan);
+      g.fillStyle = C.white; g.fillRect(b.x + 6 + Math.round(90 * TARGET / 100), b.y + 13, 1, 9);
+      T(`${Math.floor(out)}%`, b.x + 100, b.y + 20, 7, C.white, { w: 600 });
+      T(`BATTERY ${Math.round(d.batt * 100)}%`, b.x + b.w - 6, b.y + 10, 6.5, low ? C.red : C.muted, { a: 'right', w: 600 });
+      HS.bar(b.x + b.w - 96, b.y + 15, 90, 5, d.batt, low ? C.red : C.green);
+
+      // the panel: blue cells in a dark frame, each under a layer of dust as thick as its dust number
+      const cs = Math.min(18, Math.floor((b.w - 16) / d.cols)), gw = cs * d.cols, gh = cs * d.rows;
+      const gx = Math.round(b.x + (b.w - gw) / 2), gy = Math.round(b.y + 30 + (b.h - 46 - gh) / 2);
+      g.fillStyle = C.ink; g.fillRect(gx - 2, gy - 2, gw + 3, gh + 3);
+      for (let i = 0; i < d.dust.length; i++) {
+        const x = gx + (i % d.cols) * cs, y = gy + Math.floor(i / d.cols) * cs;
+        g.fillStyle = cell; g.fillRect(x, y, cs - 1, cs - 1);
+        g.fillStyle = HS.shade(cell, 1.35); g.fillRect(x, y, cs - 1, 1);
+        if (d.dust[i] > 0) { g.fillStyle = HS.rgba(dust, d.dust[i] / 100 * .9); g.fillRect(x, y, cs - 1, cs - 1); }
+      }
+      // the brush: an outline on the cell it is wiping
+      g.strokeStyle = C.white; g.lineWidth = 1;
+      g.strokeRect(gx + Math.round(d.x) * cs - .5, gy + Math.round(d.y) * cs - .5, cs, cs);
+
+      T(low ? 'Battery low: sweep the dustiest cells' : 'Dust keeps settling. Keep the brush moving', b.x + b.w / 2, b.y + b.h - 4, 7, low ? C.red : C.muted, { a: 'center', w: 600 });
+    }
   };
 })();
