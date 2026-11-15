@@ -43,7 +43,7 @@ Seeded flight events: debris fields, solar flares hitting solar arrays, load spi
 Mounted parts change the flight beyond handling: a large solar array is a bigger debris target, solar flares from the event director cut solar array output, an RTG ignores flares. Read every number from `src/data/parts.json`.
 **Done when:** the same debris field hits a large-array ship more often than a small-array one, and a flare drops supply only on solar builds.
 
-### S4-08 Engine-off handshake (done by seat 1: `src/flight/handshake.register.ts`; live once seat 5 stores the bus in `state.flight.bus`)
+### S4-08 Engine-off handshake (done by seat 1: `src/flight/handshake.register.ts`)
 When the Engineer tries to switch off the engine on the power bus (S5-02), the Pilot gets a prompt to agree or refuse. Refusing keeps the load on. Solo players see the prompt on their next Pilot visit.
 **Done when:** the engine only sheds after the Pilot agrees, in both two-player and solo runs.
 

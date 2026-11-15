@@ -78,6 +78,40 @@ describe("engine-off handshake", () => {
     expect(engineOn(s)).toBe(true);
   });
 
+  it("runs end to end from the keys: the Engineer asks, then the Pilot agrees and the engine sheds", () => {
+    const s = createState(1, "mars");
+    s.players.push(crew("pilot", ["pilot"]), crew("eng", ["engineer"]));
+    Object.assign(s.ship.slots, { propulsion: "chemical-engine", power: "rtg", comms: "low-gain", payload: "camera" });
+    enterPhase(s, "flight", 0);
+    const bus = s.flight.bus as Bus;
+    const engine = () => bus.loads.find((l) => l.slot === "propulsion")!;
+    bus.cursor = bus.loads.indexOf(engine());
+    step(s, { eng: { ...still, interact: true } }, 100, 0.016);
+    expect(engineOffPending(s)).toBe(true);
+    expect(engine().on).toBe(true);
+    step(s, { pilot: { ...still, interact: true } }, 200, 0.016);
+    expect(engineOffPending(s)).toBe(false);
+    expect(engine().on).toBe(false);
+  });
+
+  it("runs end to end for a solo crew: ask at the Engineer station, Tab to Pilot, agree", () => {
+    const s = createState(1, "mars");
+    s.players.push(crew("solo", ["pilot", "engineer", "comms", "science"]));
+    Object.assign(s.ship.slots, { propulsion: "chemical-engine", power: "rtg", comms: "low-gain", payload: "camera" });
+    enterPhase(s, "flight", 0);
+    const bus = s.flight.bus as Bus;
+    const engine = () => bus.loads.find((l) => l.slot === "propulsion")!;
+    bus.cursor = bus.loads.indexOf(engine());
+    s.players[0].station = "engineer";
+    step(s, { solo: { ...still, interact: true } }, 100, 0.016);
+    expect(engineOffPending(s)).toBe(true);
+    expect(engine().on).toBe(true);
+    s.players[0].station = "pilot";
+    step(s, { solo: { ...still, interact: true } }, 200, 0.016);
+    expect(engineOffPending(s)).toBe(false);
+    expect(engine().on).toBe(false);
+  });
+
   it("tells whoever holds Pilot what to do: answer at the Pilot station, or Tab there from elsewhere", () => {
     const s = flightWithRequest();
     s.players[0].roles = ["pilot", "comms"];
