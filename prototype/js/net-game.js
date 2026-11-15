@@ -15,11 +15,66 @@
     mode: 'solo',          // solo | host | client
     me: 'host',            // this tab's crew id
     crew: [],              // [{ id, name, suit }]
-    room: null, client: null, code: '', want: false, msg: '', busy: false, gen: 0, lastSnap: 0, lastPing: 0, sent: ''
+    room: null, client: null, code: '', want: false, msg: '', busy: false, gen: 0, lastSnap: 0, lastPing: 0, sent: '',
+    roles: {},             // crew id -> the stations they may work in flight
+    seat: {},              // crew id -> the role they are on in the lobby (what they offer in a swap)
+    ask: null,             // { from, to, want, give, t }: a swap waiting for an answer
+    moved: {},             // crew id -> the role a swap just gave them, so flight can move them onto it
+    dealtFor: ''
   };
   HS.online = () => N.mode !== 'solo';
   HS.ids = () => N.mode === 'solo' ? ['host'] : N.crew.map(m => m.id);
   HS.member = (id) => N.crew.find(m => m.id === id) || { id, name: HS.S.name || 'Crew', suit: HS.S.suit };
+
+  // ---------- roles: solo holds all four; online they are split 2+2, 1+1+2 or 1+1+1+1 in the lobby, and
+  // players trade by asking: the holder of the role says yes or no. Only the host changes them.
+  const SHORT = { pilot: 'PILOT', eng: 'ENG', comms: 'COMMS', sci: 'SCI' };
+  const SPLIT = [[4], [2, 2], [1, 1, 2], [1, 1, 1, 1]];
+  const ASK_MS = 10000;
+  HS.rolesOf = (id) => N.mode === 'solo' ? HS.ROLES : (N.roles[id] || []);
+  const ownerOf = (role) => Object.keys(N.roles).find(id => N.roles[id].includes(role));
+  function deal() {
+    const ids = HS.ids(), split = SPLIT[Math.min(ids.length, 4) - 1];
+    let k = 0;
+    N.roles = {}; N.seat = {}; N.ask = null; N.moved = {};
+    ids.forEach((id, i) => { N.roles[id] = HS.ROLES.slice(k, k + split[i]); N.seat[id] = N.roles[id][0]; k += split[i]; });
+    N.dealtFor = ids.join(',');
+  }
+  // host: a crew member pressed a role's key while on role `seat`; true when the role is already theirs
+  HS.pickRole = (id, role, seat) => {
+    if (HS.rolesOf(id).includes(role)) return true;
+    const to = ownerOf(role);
+    if (to && !N.ask && HS.rolesOf(id).includes(seat)) { N.ask = { from: id, to, want: role, give: seat, t: performance.now() }; HS.sfx.warn(); }
+    return false;
+  };
+  // host, inside HS.as(id): the asked player answers with Enter or N, the asker can cancel with N; true if handled
+  HS.answerRole = (id) => {
+    const a = N.ask;
+    if (!a) return false;
+    if (a.from === id && HS.hit('KeyN')) { N.ask = null; HS.sfx.drop(); return true; }
+    if (a.to !== id) return false;
+    if (HS.hit('KeyN')) { N.ask = null; HS.sfx.drop(); return true; }
+    if (!HS.hit('Enter')) return false;
+    const R = N.roles;
+    if (R[a.to].includes(a.want) && R[a.from].includes(a.give)) {
+      R[a.to] = R[a.to].map(r => r === a.want ? a.give : r);
+      R[a.from] = R[a.from].map(r => r === a.give ? a.want : r);
+      N.seat[a.from] = a.want; if (N.seat[a.to] === a.want) N.seat[a.to] = a.give;
+      N.moved = { [a.from]: a.want, [a.to]: a.give };
+      HS.sfx.ok();
+    }
+    N.ask = null;
+    return true;
+  };
+  // the line every screen shows while a swap is waiting, or null
+  HS.askLine = () => {
+    const a = N.ask;
+    if (!a || N.mode === 'solo') return null;
+    const nm = (id) => HS.member(id).name;
+    if (a.to === N.me) return [`${nm(a.from)} wants your ${SHORT[a.want]} for their ${SHORT[a.give]}.  [ENTER] swap  [N] no`, C.amber];
+    if (a.from === N.me) return [`Asked ${nm(a.to)} for ${SHORT[a.want]}.  [N] cancel`, C.muted];
+    return [`${nm(a.from)} asked ${nm(a.to)} for ${SHORT[a.want]}`, C.muted];
+  };
 
   // ---------- each crew member's input, as the HS.In shape the scenes read
   const blank = () => ({ down: new Set(), hit: new Set(), mx: 320, my: 180, mdown: false, click: false });
@@ -64,7 +119,7 @@
     if (now - N.lastSnap < SNAP_MS) return;
     N.lastSnap = now;
     const cur = HS.scenes[HS.sceneName];
-    const data = { scene: HS.sceneName, S: HS.S && HS.S.mission ? packS() : null, d: cur && cur.save ? cur.save() : null, fx: outbox, crew: N.crew };
+    const data = { scene: HS.sceneName, S: HS.S && HS.S.mission ? packS() : null, d: cur && cur.save ? cur.save() : null, fx: outbox, crew: N.crew, roles: N.roles, seat: N.seat, ask: N.ask };
     N.room.send(data, now);
     lastData = Object.assign({}, data, { fx: [] });   // a keepalive repeats the state, not the sounds
     outbox = [];
@@ -95,6 +150,7 @@
     if (N.mode !== 'client' || !data) return;
     if (N.client.id()) N.me = N.client.id();   // the welcome comes before the first snapshot
     if (data.crew) N.crew = data.crew;
+    if (data.roles) { N.roles = data.roles; N.seat = data.seat || {}; N.ask = data.ask || null; }
     if (data.fx) play(data.fx);
     if (data.S) loadS(data.S);
     if (data.scene !== HS.sceneName && data.scene !== 'lobby') { buf = []; HS.netGo(data.scene); return; }
@@ -117,6 +173,7 @@
     if (N.mode !== 'host') return;
     N.room.check();
     if (N.mode !== 'host') return;   // check may have ended the game
+    if (N.ask && performance.now() - N.ask.t > ASK_MS) N.ask = null;
     sendSnap(performance.now());
     N.room.clearPresses();
   };
@@ -135,7 +192,7 @@
 
   function leave(reason) {
     const was = N.mode;
-    N.mode = 'solo'; N.me = 'host'; HS.NAME.crew = 'SOLO CREW'; N.crew = []; N.room = null; N.client = null; N.code = ''; N.busy = false; N.want = false;
+    N.mode = 'solo'; N.me = 'host'; HS.NAME.crew = 'SOLO CREW'; N.roles = {}; N.seat = {}; N.ask = null; N.moved = {}; N.dealtFor = ''; N.crew = []; N.room = null; N.client = null; N.code = ''; N.busy = false; N.want = false;
     if (was !== 'solo') { N.msg = reason; if (HS.sceneName !== 'title') HS.netGo('title'); }
   }
   const profile = () => ({ name: HS.S.name || 'Crew', suit: HS.S.suit });
@@ -176,7 +233,13 @@
     update(dt) {
       L.t += dt; N.crew = N.mode === 'host' ? N.room.members() : N.mode === 'client' ? N.client.members() : [];
       if (N.mode === 'host') {
-        if (HS.hit('Enter') && L.t > .3) { N.room.lock(); HS.sfx.ok(); HS.go('brief'); }
+        if (N.dealtFor !== HS.ids().join(',')) deal();
+        let answered = false;
+        HS.each((id) => {
+          if (HS.answerRole(id)) { if (id === N.me) answered = true; return; }
+          for (let d = 0; d < 4; d++) if (HS.hit('Digit' + (d + 1)) && HS.pickRole(id, HS.ROLES[d], N.seat[id])) { N.seat[id] = HS.ROLES[d]; HS.sfx.blip(); }
+        });
+        if (!answered && !N.ask && HS.hit('Enter') && L.t > .3) { N.room.lock(); HS.sfx.ok(); HS.go('brief'); }
         if (HS.hit('Escape')) N.room.end('The host closed the game');
         return;
       }
@@ -202,7 +265,7 @@
         const shown = L.typing + (Math.floor(L.t * 2) % 2 && L.typing.length < 6 ? '_' : '');
         T(shown || 'type the code', 180, 192, shown ? 13 : 8, shown ? C.white : '#6f7d8c', { w: 600, b: 'middle' });
         btn('[ENTER] Join', 330, 181, 90, C.cyan, () => L.typing.length === 6 && joinGame(L.typing), L.typing.length === 6 && !N.busy);
-        T('Up to four crew. Each of you runs one station in flight.', 170, 228, 7.5, C.muted);
+        T('Up to four crew. The four flight roles are split between you.', 170, 228, 7.5, C.muted);
       } else {
         T(N.mode === 'host' ? 'YOUR CODE' : 'JOINED', 170, 104, 7.5, C.muted, { w: 600 });
         // the code is read aloud and typed: in the pixel font S/5, B/8 and Z/2 look the same, so it stays in mono
@@ -211,9 +274,18 @@
         N.crew.forEach((m, i) => {
           const y = 172 + i * 16; g.fillStyle = m.suit; g.fillRect(170, y, 9, 9);
           T(m.name + (m.id === N.me ? '  (you)' : m.id === 'host' ? '  (host)' : ''), 186, y + 5, 8.5, C.white, { b: 'middle' });
-          T(HS.NAME[HS.ROLES[i]], 470, y + 5, 7.5, C[HS.ROLES[i]], { a: 'right', w: 600, b: 'middle' });
+          // their roles, right-aligned; the one they are on is bracketed
+          let rx = 470;
+          for (const r of HS.rolesOf(m.id).slice().reverse()) {
+            const s = N.seat[m.id] === r ? `[${SHORT[r]}]` : SHORT[r];
+            T(s, rx, y + 5, 7.5, C[r], { a: 'right', w: 600, b: 'middle' });
+            rx -= HS.tw(s, 7.5, { w: 600 }) + 8;
+          }
         });
-        if (N.mode === 'host') btn(N.crew.length > 1 ? '[ENTER] Start the run' : '[ENTER] Start solo', 170, 248, 150, C.amber, () => { N.room.lock(); HS.go('brief'); }, true);
+        const ask = HS.askLine();
+        if (ask) T(ask[0], 170, 238, 7.5, ask[1], { w: 600 });
+        else T('[1]-[4] pick one of your roles, or ask for someone else\'s', 170, 238, 7.5, C.muted);
+        if (N.mode === 'host') btn(N.crew.length > 1 ? '[ENTER] Start the run' : '[ENTER] Start solo', 170, 248, 150, C.amber, () => { if (!N.ask) { N.room.lock(); HS.go('brief'); } }, !N.ask);
       }
       if (N.msg) T(N.msg, 170, 292, 8, N.busy ? C.muted : C.amber);
       HS.hint(N.mode === 'solo' ? '[ESC] back to the title' : N.mode === 'host' ? '[ESC] close the game' : '[ESC] leave');

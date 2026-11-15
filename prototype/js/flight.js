@@ -76,7 +76,7 @@
         note(s, col) { this.noteS = s; this.noteT = 4.5; this.noteCol = col; }
       };
       // online, each crew member starts at their own station (the lobby's order); solo, the one player switches between all four
-      HS.ids().forEach((id, i) => { F.seats[id] = i % 4; });
+      HS.ids().forEach((id) => { const mine = HS.rolesOf(id), r = HS.net.seat[id]; F.seats[id] = ST.indexOf(mine.includes(r) ? r : mine[0]); });
       F.st = F.seats[HS.net.me] || 0;
       S.fuel = 100; S.hull = 100; S.cabinO2 = 100; S.instDamage = 0; S.hits = 0; S.hitsNoWarn = 0; S.trips = 0; S.telemetry = 0; S.hotTime = 0;
       F.note('Reach transfer speed: hold [W] at the pilot station', C.pilot);
@@ -88,12 +88,17 @@
       if (F.over) { F.over.t += dt; F.fx.update(dt); if (F.over.t > 3.2) { F.done = true; HS.go('report'); } return; }
       F.t += dt; S.flightTime = F.t; F.noteT -= dt; F.fx.update(dt);
       // each crew member moves between stations on their own; F.st is the station this screen shows
+      // online a player may only work the stations they hold; pressing another station asks its holder to swap
       HS.each((id) => {
+        const mine = HS.rolesOf(id), moved = HS.net.moved[id];
         let st = F.seats[id] ?? 0;
-        if (HS.hit('Digit1')) st = 0; if (HS.hit('Digit2')) st = 1; if (HS.hit('Digit3')) st = 2; if (HS.hit('Digit4')) st = 3;
-        if (HS.hit('Tab')) st = (st + 1) % 4;
-        if (HS.hit('Digit1', 'Digit2', 'Digit3', 'Digit4', 'Tab')) HS.sfx.blip();
-        for (let i = 0; i < 4; i++) if (HS.In.click && HS.over(214 + i * 46, 4, 42, 22)) { st = i; HS.sfx.blip(); HS.In.click = false; }
+        if (!mine.includes(ST[st])) st = ST.indexOf(mine.includes(moved) ? moved : mine[0]);   // a swap took this station
+        if (!HS.answerRole(id)) {
+          const go = (i) => { if (HS.pickRole(id, ST[i], ST[st])) { st = i; HS.sfx.blip(); } };
+          for (let i = 0; i < 4; i++) if (HS.hit('Digit' + (i + 1))) go(i);
+          if (HS.hit('Tab') && mine.length > 1) { st = ST.indexOf(mine[(mine.indexOf(ST[st]) + 1) % mine.length]); HS.sfx.blip(); }
+          for (let i = 0; i < 4; i++) if (HS.In.click && HS.over(214 + i * 46, 4, 42, 22)) { go(i); HS.In.click = false; }
+        }
         F.seats[id] = st;
       });
       F.st = F.seats[HS.net.me] ?? 0;
@@ -240,13 +245,18 @@
       // station tabs, with alerts from the other stations
       HS.chip(role, 8, 6, SUB[role]);
       const al = F.alerts || [null, null, null, null];
+      const mine = HS.rolesOf(HS.net.me);
       ST.forEach((r, i) => {
+        g.globalAlpha = mine.includes(r) ? 1 : .4;   // a station someone else holds: press it to ask for a swap
         const x = 214 + i * 46, on = i === F.st, a = al[i], blink = a && Math.floor(t * (a.sev === 2 ? 5 : 2)) % 2;
         const edge = a ? (a.sev === 2 ? C.red : C.amber) : on ? C[r] : '#3a4a62';
         box(x, 4, 42, 22, edge, 4, a && blink ? HS.rgba(a.sev === 2 ? C.red : C.amber, .3) : on ? HS.rgba(C[r], .2) : 'rgba(8,14,26,.9)');
         T(`[${i + 1}]`, x + 4, 13, 6.5, C.muted, { b: 'middle' }); T(['PILOT', 'ENG', 'COMMS', 'SCI'][i], x + 38, 13, 6.5, on ? C.white : C[r], { w: 600, a: 'right', b: 'middle' });
         g.fillStyle = a ? edge : C[r]; g.fillRect(x + 4, 20, 34, 2);
+        g.globalAlpha = 1;
       });
+      const ask = HS.askLine && HS.askLine();
+      if (ask) HS.prompt(ask[0], 320, 40, ask[1]);
       const worst = al.map((a, i) => a && Object.assign({ i }, a)).filter(a => a && a.i !== F.st).sort((a, b) => b.sev - a.sev)[0];
       if (worst) { const col = worst.sev === 2 ? C.red : C.amber; tag(`[${worst.i + 1}] ${HS.NAME[ST[worst.i]]}: ${worst.s}`, 306, 34, col, 7); }
       // transit box
@@ -258,7 +268,7 @@
       T(F.rate < 1 ? 'slow: off the transfer speed' : 'on schedule', 452, 26.5, 6.5, F.rate < 1 ? C.amber : C.muted, { b: 'middle' });
       [['O2', S.cabinO2], ['HULL', S.hull], ['FUEL', S.fuel]].forEach(([n, v], i) => { T(n, 452 + i * 60, 36.5, 6.5, C.muted, { b: 'middle', w: 600 }); T(Math.round(v) + '%', 452 + i * 60 + (i ? 22 : 13), 36.5, 6.5, v < 30 ? C.red : v < 55 ? C.amber : C.white, { b: 'middle', w: 600 }); });
       if (F.noteT > 0) { g.globalAlpha = clamp(F.noteT * 2, 0, 1); tag(F.noteS, 306, role === 'pilot' ? 62 : 47, F.noteCol, 7); g.globalAlpha = 1; }
-      HS.hint('[1] [2] [3] [4] or [TAB] switch station');
+      HS.hint(HS.online() ? (mine.length > 1 ? '[TAB] switch between your stations   [1]-[4] ask for another' : '[1]-[4] ask another player for their station') : '[1] [2] [3] [4] or [TAB] switch station');
       if (F.over) {
         g.fillStyle = `rgba(4,7,13,${clamp(F.over.t * .6, 0, .8)})`; g.fillRect(0, 0, 640, 360);
         const msg = { hull: ['HULL LOST', 'The ship broke up before it arrived.'], fuel: ['OUT OF FUEL', 'The ship is drifting. Mission Control is sending a tug.'], oxygen: ['NO OXYGEN', 'The cabin ran out of air before arrival.'] }[F.over.reason];
