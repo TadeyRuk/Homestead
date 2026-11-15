@@ -289,7 +289,9 @@
       const m = S.mission, days = Math.round(m.days * clamp(F.prog, 0, 1));
       const TX = HS.X1 - 196;
       box(TX, Y0 - 4, 188, 46, C.cyan, 5);
-      T(`${m.short.toUpperCase()} TRANSIT  ${Math.floor(clamp(F.prog, 0, 1) * 100)}%`, TX + 8, Y0 + 9, 8.5, C.white, { w: 600, b: 'middle' });
+      // the rocket's name heads the box when it has one
+      const nm = HS.rocketName(), pct = `${Math.floor(clamp(F.prog, 0, 1) * 100)}%`;
+      T(nm ? HS.fitText(`${nm} → ${m.short.toUpperCase()}`, 8.5, 118, { w: 600 }) + '  ' + pct : `${m.short.toUpperCase()} TRANSIT  ${pct}`, TX + 8, Y0 + 9, 8.5, C.white, { w: 600, b: 'middle' });
       T(m.id === 'moon' ? `T+ ${(m.days * clamp(F.prog, 0, 1) * 24).toFixed(0)} hours` : `T+ ${days} days`, TX + 180, Y0 + 9, 7, C.muted, { a: 'right', b: 'middle' });
       bar(TX + 8, Y0 + 17, 172, 4, F.prog, F.rate < 1 ? C.amber : C.cyan);
       T(F.rate < 1 ? 'slow: off the transfer speed' : 'on schedule', TX + 8, Y0 + 26.5, 6.5, F.rate < 1 ? C.amber : C.muted, { b: 'middle' });

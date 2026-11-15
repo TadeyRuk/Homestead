@@ -27,8 +27,14 @@
   // smooth on fast displays. After a long stall the backlog is dropped instead of being replayed all at once.
   const STEP = 1 / 240, MAX_BACKLOG = .25;
   let acc = 0;
+  // HS.pressed: this screen's presses that are new this frame, for code that runs while drawing (a press is
+  // cleared after the first step, before draw). A press kept for the next frame because no step ran is not
+  // counted twice.
+  let shown = new Set();
+  HS.pressed = new Set();
   function frame(now) {
     const dt = Math.min(MAX_BACKLOG, (now - last) / 1000) || 0; last = now;
+    HS.pressed = new Set([...HS.local.hit].filter((c) => !shown.has(c)));
     acc = Math.min(acc + dt * HS.speed, MAX_BACKLOG * HS.speed);
     let n = 0;
     try {
@@ -38,6 +44,7 @@
       while (acc >= STEP) { step(STEP); acc -= STEP; if (n++ === 0) { HS.endFrame(); if (HS.clearRemotePresses) HS.clearRemotePresses(); } }
       if (HS.netAfter) HS.netAfter();
       draw();
+      shown = n === 0 ? new Set(HS.local.hit) : new Set();
       // spend a few spare milliseconds a frame building the launch campus ahead of time (js/campus.js)
       if (HS.campusPrewarm && HS.sceneName !== 'build') HS.campusPrewarm(5);
     } catch (e) {
@@ -53,7 +60,7 @@
     HS.time += dt;
     if (HS.hit('KeyM') && !HS.typing) { HS.muted = !HS.muted; }
     // no pause online: it would freeze the whole crew
-    if (HS.hit('Escape') && PLAY.includes(HS.sceneName) && !next && !(HS.online && HS.online())) { HS.paused = !HS.paused; HS.sfx.blip(); }
+    if (HS.hit('Escape') && PLAY.includes(HS.sceneName) && !next && !(HS.online && HS.online()) && !HS.typing) { HS.paused = !HS.paused; HS.sfx.blip(); }
     if (HS.paused) {
       if (HS.hit('KeyT')) { HS.paused = false; HS.go('title'); }
       else if (HS.hit('KeyR')) { const S = HS.S; HS.paused = false; HS.newRun(S.mission.id, S.seed); HS.S.suit = S.suit; HS.go('brief'); }

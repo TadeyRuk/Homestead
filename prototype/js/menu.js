@@ -210,7 +210,9 @@
       if (!fail) {
         g.globalAlpha = seg(t, .8, 1.3) * (1 - seg(t, 3.4, 4.1));
         T('LIFTOFF', 320, 60, 30, C.white, { w: 700, a: 'center', b: 'middle', f: PIX });
-        T(names + '   ' + m.mass + ' kg', 320, 86, 8.5, C.white, { a: 'center', b: 'middle' });
+        const nm = HS.rocketName();
+        if (nm) T(nm, 320, 86, 13, C.cyan, { w: 700, a: 'center', b: 'middle', f: PIX });
+        T(names + '   ' + m.mass + ' kg', 320, nm ? 104 : 86, 8.5, C.white, { a: 'center', b: 'middle' });
       } else if (t < 3) {
         g.globalAlpha = seg(t, .8, 1.3);
         T('TOO HEAVY', 320, 60, 30, C.amber, { w: 700, a: 'center', b: 'middle', f: PIX });
@@ -236,7 +238,9 @@
       g.globalAlpha = seg(t, 3.1, 3.4);
       T('TOUCHDOWN', 320, 60, 30, C.white, { w: 700, a: 'center', b: 'middle', f: PIX });
       const dmg = HS.S.instDamage > 1 ? `instrument at ${Math.round(100 - HS.S.instDamage)}%` : 'instrument intact';
-      T(`Hull ${Math.round(HS.S.hull)}%  /  fuel ${Math.round(HS.S.fuel)}%  /  ${dmg}`, 320, 86, 8.5, '#f1d9cf', { a: 'center', b: 'middle' });
+      const nm = HS.rocketName();
+      if (nm) T(`${nm} is down`, 320, 86, 13, C.cyan, { w: 700, a: 'center', b: 'middle', f: PIX });
+      T(`Hull ${Math.round(HS.S.hull)}%  /  fuel ${Math.round(HS.S.fuel)}%  /  ${dmg}`, 320, nm ? 104 : 86, 8.5, '#f1d9cf', { a: 'center', b: 'middle' });
       g.globalAlpha = 1;
     }
   };

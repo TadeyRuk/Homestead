@@ -95,10 +95,12 @@
     const s = HS.sceneName, play = PLAY.includes(s);
     stick.hidden = !play || HS.paused;
     pad.textContent = ''; top.textContent = '';
-    if (play) button(top, HS.online && HS.online() ? 'Leave' : 'Pause', 'Escape');
+    // while you type the rocket's name, Esc means cancel (the Cancel button), so Pause and Leave step aside
+    if (play && !HS.typing) button(top, HS.online && HS.online() ? 'Leave' : 'Pause', 'Escape');
     if (HS.paused) { button(pad, 'Resume', 'Enter', true); button(pad, 'Restart', 'KeyR'); button(pad, 'Title', 'KeyT'); return; }
     if (askedMe()) { button(pad, 'Swap', 'Enter', true); button(pad, 'No', 'KeyN'); }
-    if (s === 'build') { button(pad, 'Map', 'Tab'); button(pad, 'Inspect', 'KeyI'); button(pad, 'Blueprint', 'KeyB'); button(pad, 'Launch', 'KeyL'); button(pad, 'Drop', 'KeyQ'); button(pad, 'Use', 'KeyE', true); }
+    if (s === 'build' && HS.typing) { button(pad, 'Cancel', 'Escape'); button(pad, 'Suggest', 'Tab'); button(pad, 'Save', 'Enter'); button(pad, 'Type', keyboard, true); }
+    else if (s === 'build') { button(pad, 'Map', 'Tab'); button(pad, 'Inspect', 'KeyI'); button(pad, 'Blueprint', 'KeyB'); button(pad, 'Name', 'KeyN'); button(pad, 'Launch', 'KeyL'); button(pad, 'Drop', 'KeyQ'); button(pad, 'Use', 'KeyE', true); }
     else if (s === 'surface') { button(pad, 'Map', 'Tab'); button(pad, 'Suit', 'KeyQ'); button(pad, 'Photo', 'KeyF'); button(pad, 'Work', 'KeyE', true); }
     else if (s === 'flight') {
       const st = station();
@@ -114,7 +116,7 @@
   function tick(now) {
     if (now - lastCheck > 200) {
       lastCheck = now;
-      const sig = [HS.sceneName, HS.paused, lobbyMode(), askedMe(), station(), HS.online && HS.online()].join('|');
+      const sig = [HS.sceneName, HS.paused, !!HS.typing, lobbyMode(), askedMe(), station(), HS.online && HS.online()].join('|');
       if (sig !== shown) { shown = sig; layout(); }
     }
     requestAnimationFrame(tick);
