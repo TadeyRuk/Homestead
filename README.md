@@ -119,6 +119,8 @@ The mission cards, part stats, hazards and report lines come from these sources.
 | [Opportunity (NASA Science)](https://science.nasa.gov/mission/mer-opportunity/) | The 2018 dust storm that ended the rover's mission, used by the Mars hazard and the report. |
 | [Apollo 11 (NASA)](https://www.nasa.gov/mission/apollo-11/) | Transit time on the Lunar card. |
 | [Mars 2020: Perseverance (NASA Science)](https://science.nasa.gov/mission/mars-2020-perseverance/) | Transit time on the Mars card. |
+| [Phoenix (NASA Science)](https://science.nasa.gov/mission/phoenix/) and its [data archive at the PDS Geosciences Node](https://pds-geosciences.wustl.edu/missions/phoenix/index.htm) | The ice drill surface game: Phoenix dug down to water ice just under the Martian soil near the north pole. |
+| [JPL Horizons (NASA JPL Solar System Dynamics)](https://ssd.jpl.nasa.gov/horizons/) | Orbiter positions over a landing site, behind the relay link surface game. A real relay pass lasts about 8 to 10 minutes; the game shortens it to 14 seconds. |
 
 ### Real hardware behind each part
 
@@ -136,6 +138,16 @@ The mission cards, part stats, hazards and report lines come from these sources.
 | Camera | HiRISE on Mars Reconnaissance Orbiter | [MRO Science Instruments](https://science.nasa.gov/mission/mars-reconnaissance-orbiter/science-instruments/) |
 | Spectrometer | SuperCam on Perseverance | [Perseverance Science Instruments](https://science.nasa.gov/mission/mars-2020-perseverance/science-instruments/) |
 | Radar sounder | SHARAD on Mars Reconnaissance Orbiter | [MRO Science Instruments](https://science.nasa.gov/mission/mars-reconnaissance-orbiter/science-instruments/) |
+| Hall thruster | Hall-effect thrusters on Psyche | [Psyche](https://science.nasa.gov/mission/psyche/) |
+| Storable engine | Orion's service module engine | [Orion Spacecraft](https://www.nasa.gov/humans-in-space/orion-spacecraft/) |
+| Fission reactor | Kilopower (the KRUSTY test) | [Kilopower](https://www.nasa.gov/directorates/spacetech/kilopower) |
+| Roll-out solar array | ROSA on the ISS and DART | [DART](https://science.nasa.gov/mission/dart/) |
+| UHF relay radio | Electra UHF radios on MRO and the rovers | [Mars Reconnaissance Orbiter](https://science.nasa.gov/mission/mars-reconnaissance-orbiter/) |
+| CubeSat reflectarray | MarCO CubeSats | [MarCO](https://science.nasa.gov/mission/marco/) |
+| Neutron spectrometer | Lunar Prospector and LEND on LRO | [Lunar Prospector](https://science.nasa.gov/mission/lunar-prospector/), [LRO](https://science.nasa.gov/mission/lro/) |
+| Sample lab | SAM on Curiosity | [Curiosity Science Instruments](https://science.nasa.gov/mission/msl-curiosity/science-instruments/) |
+
+Part costs (in credits, shown in the inspector, the blueprint and the kiosk catalog) are game estimates scaled from public cost ratios, for example an MMRTG costing far more than a small solar array. They are not taken from a NASA cost source.
 
 ### Mission card numbers, checked
 
@@ -155,12 +167,12 @@ The mission cards, part stats, hazards and report lines come from these sources.
 
 | Resource | What we take from it |
 | --- | --- |
-| [Mission Design Lab (NASA Goddard)](https://etd.gsfc.nasa.gov/capabilities/integrated-design-center/mission-design-lab/) | The idea of a trade study, which is how the report explains what was traded for what. |
-| [Concept Maturity Levels (NASA Science)](https://science.nasa.gov/wp-content/uploads/2023/11/03-ziemer-mission-development-101-cmls.pdf) | Same as above. |
+| [Mission Design Lab (NASA Goddard)](https://etd.gsfc.nasa.gov/capabilities/integrated-design-center/mission-design-lab/) | The idea of a trade study, which is how the report explains what was traded for what. Its point design ends in a cost estimate, which is behind the cost cap: each mission's credits are its cap, found parts count half their cost and kiosk parts their full cost. |
+| [Concept Maturity Levels (NASA Science)](https://science.nasa.gov/wp-content/uploads/2023/11/03-ziemer-mission-development-101-cmls.pdf) | Same as above: cost and schedule realism is one of the things a concept is judged on, which is why going over the cap costs score. |
 | [CubeSat 101 (NASA CubeSat Launch Initiative)](https://www.nasa.gov/wp-content/uploads/2017/03/nasa_csli_cubesat_101_508.pdf) | A check on how we describe power, comms and payload to beginners. |
-| [GMAT, General Mission Analysis Tool (NASA Goddard)](https://etd.gsfc.nasa.gov/capabilities/capabilities-listing/general-mission-analysis-tool-gmat/) | Reference for transit times only. Not built into the game. |
-| [Design and Develop Science Missions (NASA SmallSat Institute)](https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf) | The four mission segments. Launch and space segments are the build, operations are the flight and surface, and the user segment is the report. |
-| [A Learning Game About Telescopes (NASA Webb)](https://science.nasa.gov/mission/webb/game-build-it-yourself/) | Ending the report on a real mission that made the same choice as the player. |
+| [GMAT, General Mission Analysis Tool (NASA Goddard)](https://etd.gsfc.nasa.gov/capabilities/capabilities-listing/general-mission-analysis-tool-gmat/) | Reference for transit times and, with JPL Horizons, for how long a relay orbiter stays in view. Not built into the game. |
+| [Design and Develop Science Missions (NASA SmallSat Institute)](https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf) | The four mission segments. Launch and space segments are the build, operations are the flight and surface, and the user segment is the report. The ground and user segments are also behind the relay link: data only counts once it reaches the ground through a relay. |
+| [A Learning Game About Telescopes (NASA Webb)](https://science.nasa.gov/mission/webb/game-build-it-yourself/) | Ending the report on a real mission that made the same choice as the player, and the objective pool: science goals are drawn each run and drive what the crew has to build and do. |
 | [NASA Mission Viz](https://nasa.github.io/mission-viz/) | Reference for transit times only. |
 
 Challenge page: [Space Mission Design Game](https://www.spaceappschallenge.org/2026/challenges/space-mission-design-game/).
