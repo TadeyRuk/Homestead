@@ -8,6 +8,7 @@
 //     brief: (mid) => 'drill for ice',         // optional: a few words for the brief card
 //     keys: '[W] [S] keep the needle in the green',
 //     fact: (mid) => '...',                    // optional: a real-missions line for the panel and the report
+//     failNote: (game) => 'Jammed',            // optional: what the note says when an attempt fails
 //     eligible: (m) => true,                   // optional: may this build (HS.model()) get the task at all
 //     spot: { moon: [x, y], mars: [x, y] },    // optional: defaults to HS.SURFACE[mid].games[kind] in world.js
 //     start(ctx) { return {...} },             // a fresh attempt, plain data only (it travels in snapshots)
@@ -65,13 +66,13 @@
       const S = HS.S, run = U.game, def = HS.surfaceGames[run.kind];
       if (!def || S.tasks[run.kind] || U.down) { U.game = null; return null; }
       if (HS.hit('KeyQ')) { U.game = null; HS.sfx.blip(); return null; }
-      const res = def.update(run.g, dt);
+      const res = def.update(run.g, dt), why = res === 'failed' && def.failNote ? def.failNote(run.g) : null;
       if (res === 'failed') {
         // progress resets and the player can go again at once
         HS.log('task_failed', { kind: run.kind, part: run.part, slot: def.slot, tries: run.tries + 1 });
         run.tries++; run.failT = U.t; run.g = def.start(ctxFor(run, S));
         HS.sfx.jam(); HS.shake(2);
-        return [`${def.name} failed. Try again.`, C.red];
+        return [why || `${def.name} failed. Try again.`, C.red];
       }
       if (res === 'done') {
         U.game = null; S.tasks[run.kind] = true;
@@ -98,7 +99,7 @@
       g.restore();
       T(def.keys, X + 10, Y + H - 16, 7, C.white);
       T('[Q] step away', X + W - 10, Y + H - 16, 7, C.muted, { a: 'right' });
-      if (def.fact) { const line = HS.wrap(def.fact(mid), W, 6.5)[0]; T(line, X + W / 2, Y + H + 10, 6.5, C.muted, { a: 'center' }); }
+      if (def.fact) HS.wrap(def.fact(mid), W + 40, 6.5).slice(0, 2).forEach((line, i) => T(line, X + W / 2, Y + H + 10 + i * 9, 6.5, C.muted, { a: 'center' }));
       if (flash) tag('FAILED', X + W / 2, Y + H / 2, C.red, 10);
     },
 
