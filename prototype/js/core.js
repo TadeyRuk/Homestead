@@ -164,17 +164,20 @@
   HS.SFX_FILES = {};   // sound name -> file, e.g. pick: 'pick.ogg'
   // five EDM loops (README credits), each with a NASA recording mixed in: Earth's chorus radio waves, the Artemis
   // lunar surface recording, Perseverance's Mars wind. Earth plays at home; flight and the surface have their own.
-  HS.MUSIC = { earth: 'music-earth.ogg', 'flight-moon': 'music-flight-moon.ogg', 'flight-mars': 'music-flight-mars.ogg', moon: 'music-moon.ogg', mars: 'music-mars.ogg' };
+  // each track is two files: part 1 builds from quiet and filtered and plays once, part 2 loops; part 1 ends on the
+  // bar where part 2 begins. Leaving a phase fades the track out (FADE_S) while the next one starts on its own part 1
+  const track = (k) => ({ intro: `music-${k}-1.ogg`, loop: `music-${k}-2.ogg` });
+  HS.MUSIC = { earth: track('earth'), 'flight-moon': track('flight-moon'), 'flight-mars': track('flight-mars'), moon: track('moon'), mars: track('mars') };
   const clips = {};    // file -> decoded buffer, once loaded
-  let music = null, musicFile = '';
+  let music = null, musicFile = '', musicIntro = '';   // clips[f]: undefined unasked, null loading, false failed
   const loadClip = (file) => {
     if (clips[file] !== undefined || !AC) return;
     clips[file] = null;
     fetch('assets/sfx/' + file).then((r) => r.ok ? r.arrayBuffer() : Promise.reject(new Error('HTTP ' + r.status)))
-      .then((b) => AC.decodeAudioData(b)).then((buf) => { clips[file] = buf; if (file === musicFile) { musicFile = ''; HS.musicFor(HS.sceneName); } })
-      .catch((e) => console.warn('sound not loaded, keeping the blip:', file, e.message));
+      .then((b) => AC.decodeAudioData(b)).then((buf) => { clips[file] = buf; if (file === musicFile || file === musicIntro) { musicFile = ''; HS.musicFor(HS.sceneName); } })
+      .catch((e) => { clips[file] = false; console.warn('sound not loaded, keeping the blip:', file, e.message); if (file === musicIntro) { musicFile = ''; HS.musicFor(HS.sceneName); } });
   };
-  const loadClips = () => { for (const f of Object.values(HS.SFX_FILES)) loadClip(f); for (const f of Object.values(HS.MUSIC)) loadClip(f); };
+  const loadClips = () => { for (const f of Object.values(HS.SFX_FILES)) loadClip(f); for (const t of Object.values(HS.MUSIC)) { loadClip(t.intro); loadClip(t.loop); } };
   const playClip = (file, v = .55) => {
     const buf = clips[file];
     if (!buf) return false;
@@ -189,19 +192,34 @@
   HS.musicNow = () => musicFile;   // which loop is playing, for tests
   const AWAY = ['landing', 'surface'];   // the planet's own theme; flight has the journey's; everything else is Earth's
   // starts the loop this scene wants, if any, and stops the old one; called on every scene change and on M
+  const FADE_S = 2.5;
   HS.musicFor = (scene) => {
     const world = HS.S && HS.S.mission && HS.S.mission.id === 'moon' ? 'moon' : 'mars';
     const key = scene === 'flight' ? 'flight-' + world : AWAY.includes(scene) ? world : scene ? 'earth' : '';
-    const file = (!HS.muted && AC && HS.MUSIC[key]) || '';
+    const t = (!HS.muted && AC && HS.MUSIC[key]) || null, file = t ? t.loop : '';
     if (file === musicFile) return;
-    if (music) { try { music.stop(); } catch (e) { /* already stopped */ } music = null; }
-    musicFile = file;
-    const buf = file && clips[file];
-    if (!buf) return;   // not loaded yet: loadClip starts it when it arrives
+    // the old track fades out on its own, so a phase ends softly instead of cutting off
+    if (music) {
+      const old = music, now = AC.currentTime;
+      old.gain.gain.cancelScheduledValues(now); old.gain.gain.setValueAtTime(old.gain.gain.value, now);
+      old.gain.gain.linearRampToValueAtTime(0, now + (HS.muted ? .05 : FADE_S));
+      for (const src of old.srcs) { try { src.stop(now + FADE_S + .1); } catch (e) { /* already stopped */ } }
+      music = null;
+    }
+    musicFile = file; musicIntro = t ? t.intro : '';
+    const loop = file && clips[file];
+    // wait for both parts, so part 1 is never skipped; a part that failed to load is skipped instead
+    if (!loop || (t && clips[t.intro] === null)) return;
     // background, not foreground: the music sits well under the game's own sounds, and lower still in flight,
     // where the stations' alarms and blips carry the game
-    const s = AC.createBufferSource(), gn = AC.createGain(); s.buffer = buf; s.loop = true; gn.gain.value = scene === 'flight' ? .09 : .12;
-    s.connect(gn).connect(AC.destination); s.start(); music = s;
+    const level = scene === 'flight' ? .09 : .12, gn = AC.createGain(), at = AC.currentTime + .05, srcs = [];
+    gn.gain.setValueAtTime(0, AC.currentTime); gn.gain.linearRampToValueAtTime(level, at + .4);
+    gn.connect(AC.destination);
+    const intro = clips[t.intro];
+    let loopAt = at;
+    if (intro) { const s1 = AC.createBufferSource(); s1.buffer = intro; s1.connect(gn); s1.start(at); srcs.push(s1); loopAt = at + intro.duration; }
+    const s2 = AC.createBufferSource(); s2.buffer = loop; s2.loop = true; s2.connect(gn); s2.start(loopAt); srcs.push(s2);
+    music = { gain: gn, srcs };
   };
 
   HS.hint = (s) => { const w = HS.tw(s, 6.5); g.fillStyle = 'rgba(8,14,26,.7)'; g.fillRect(HS.X0, HS.Y1 - 11, w + 16, 11); T(s, HS.X0 + 8, HS.Y1 - 5, 6.5, '#aab6c2', { b: 'middle' }); };
