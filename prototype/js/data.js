@@ -7,8 +7,13 @@
   HS.CABIN_MASS = 200;   // crew cabin and tanks, kg (game assumption)
   HS.BASE_LOAD = 150;    // life support 90 W + galley heater 40 W + cabin lights 20 W (game assumption)
   HS.KIOSK_COST = 20;
-  HS.BUILD_TIME = 180;
-  HS.SURFACE_TIME = 180;
+  // pacing: a run is about 14-15 minutes. PACE stretches every phase clock (3:00 became 5:00); the goals are
+  // rescaled with it so a longer run is fuller, not easier. Flight events come EVENT_K times further apart, so a
+  // longer flight has about 30% more of them; fuel burn and hull damage per hit are divided by EVENT_K to match.
+  HS.PACE = 5 / 3;
+  HS.EVENT_K = Math.sqrt(HS.PACE);
+  HS.BUILD_TIME = 300;
+  HS.SURFACE_TIME = 300;
 
   HS.SLOTS = ['prop', 'power', 'comms', 'payload'];
   HS.SLOT_NAME = { prop: 'PROPULSION', power: 'POWER', comms: 'COMMS', payload: 'PAYLOAD' };
@@ -42,19 +47,19 @@
 
   HS.MISSIONS = {
     moon: {
-      id: 'moon', name: 'LUNAR SURVEY', short: 'Moon', credits: 20, target: 25, transit: 85, eventGap: [14, 20], solarAtArrival: 1, solarFlight: 1, days: 3,
+      id: 'moon', name: 'LUNAR SURVEY', short: 'Moon', credits: 20, target: 33, transit: 142, eventGap: [18, 26], sites: [4, 4], solarAtArrival: 1, solarFlight: 1, days: 3,
       card: [['Destination', 'the Moon, about 3 days away'], ['Radio delay', 'about 1.3 seconds each way'], ['Gravity', 'one sixth of Earth\'s'],
-        ['Objectives', 'scan 2 rich sites, bring back regolith,'], ['', 'deploy a seismometer, uplink 25 data units'], ['Budget', '20 credits'], ['Spacecraft', 'none. Build one from what you find.']],
-      objectives: { scans: 2, sample: 'Regolith to lander', deploy: 'Seismometer', sampleSite: 'CRATER FLOOR', deploySite: 'SEISMOMETER SITE', bonus: 'Photograph Earth' },
+        ['Objectives', 'scan 3 rich sites, bring back regolith,'], ['', 'deploy a seismometer, uplink 33 data units'], ['Budget', '20 credits'], ['Spacecraft', 'none. Build one from what you find.']],
+      objectives: { scans: 3, sample: 'Regolith to lander', deploy: 'Seismometer', sampleSite: 'CRATER FLOOR', deploySite: 'SEISMOMETER SITE', bonus: 'Photograph Earth' },
       hazard: 'flare', hazardName: 'SOLAR FLARE',
       hazardFact: 'The Moon has no thick atmosphere or global magnetic field, so solar particles reach the surface. Crews need shelter within minutes of a warning.',
       walk: 40
     },
     mars: {
-      id: 'mars', name: 'MARS SURVEY', short: 'Mars', credits: 40, target: 40, transit: 125, eventGap: [9, 14], solarAtArrival: .43, solarFlight: .6, days: 210,
+      id: 'mars', name: 'MARS SURVEY', short: 'Mars', credits: 40, target: 50, transit: 208, eventGap: [12, 18], sites: [5, 5], solarAtArrival: .43, solarFlight: .6, days: 210,
       card: [['Destination', 'Mars, about 7 months away'], ['Radio delay', '3 to 22 minutes each way'], ['Sunlight', 'about 43% of what Earth gets'],
-        ['Objectives', 'scan 3 rich sites, drill a core, deploy a'], ['', 'weather station, uplink 40 data units'], ['Budget', '40 credits'], ['Spacecraft', 'none. Build one from what you find.']],
-      objectives: { scans: 3, sample: 'Core sample to lander', deploy: 'Weather station', sampleSite: 'CORE SITE', deploySite: 'WEATHER STATION', bonus: 'Photograph a dust devil' },
+        ['Objectives', 'scan 4 rich sites, drill a core, deploy a'], ['', 'weather station, uplink 50 data units'], ['Budget', '40 credits'], ['Spacecraft', 'none. Build one from what you find.']],
+      objectives: { scans: 4, sample: 'Core sample to lander', deploy: 'Weather station', sampleSite: 'CORE SITE', deploySite: 'WEATHER STATION', bonus: 'Photograph a dust devil' },
       hazard: 'storm', hazardName: 'DUST STORM',
       hazardFact: 'In 2018 a planet-wide dust storm cut off power to the Opportunity rover, and the mission ended. Planners now schedule surface work around Mars weather.',
       walk: 36
