@@ -23,7 +23,7 @@
   HS.scenes.surface = {
     enter() {
       const S = HS.S, m = HS.model(), mi = S.mission, r = HS.R(S.seed * 17 + 11), D = HS.SURFACE[mi.id], mars = mi.id === 'mars';
-      const rich = HS.shuffle(D.rich, r).slice(0, mars ? 4 : 3), poor = HS.shuffle(D.poor, r).slice(0, mars ? 4 : 3);
+      const rich = HS.shuffle(D.rich, r).slice(0, mi.sites[0]), poor = HS.shuffle(D.poor, r).slice(0, mi.sites[1]);
       U = {
         t: 0, left: HS.SURFACE_TIME, m, mars, p: { x: L.x + 4, y: L.y + 16, walk: 0, flip: false, face: 'down' }, carry: null, o2: 100, pw: 100, fx: new HS.Parts(),
         sites: rich.map(([x, y]) => ({ x, y, kind: 'rich', done: false })).concat(poor.map(([x, y]) => ({ x, y, kind: 'poor', done: false }))),
@@ -33,8 +33,10 @@
       };
       const si = D.sample.find(s => s[0] === U.sample.x); U.sample.y = si[1];
       const di = D.deploy[(r() * 2) | 0]; U.deploy.x = di[0]; U.deploy.y = di[1];
-      if (mars) { const d1 = r() < .5 ? 1 : -1; U.storms = [{ at: 26 + r() * 14, dir: d1, w: 230, x: null }, { at: 104 + r() * 18, dir: -d1, w: 260, x: null }]; U.devilSeed = r() * 6; }
-      else { U.flares = [{ at: 34 + r() * 14, dur: 12 }, { at: 108 + r() * 20, dur: 13 }]; const o = D.overlook[(r() * D.overlook.length) | 0]; U.overlook = { x: o[0], y: o[1] }; }
+      // hazards keep their old spacing on the longer clock: the first two stretch with it and a third is added
+      const k = HS.SURFACE_TIME / 180;
+      if (mars) { const d1 = r() < .5 ? 1 : -1; U.storms = [{ at: (26 + r() * 14) * k, dir: d1, w: 230, x: null }, { at: (104 + r() * 18) * k * .8, dir: -d1, w: 260, x: null }, { at: (150 + r() * 14) * k, dir: d1, w: 250, x: null }]; U.devilSeed = r() * 6; }
+      else { U.flares = [{ at: (34 + r() * 14) * k, dur: 12 }, { at: (108 + r() * 20) * k * .8, dur: 13 }, { at: (152 + r() * 12) * k, dur: 12 }]; const o = D.overlook[(r() * D.overlook.length) | 0]; U.overlook = { x: o[0], y: o[1] }; }
       S.uplinked = 0; S.buffer = 0; S.carried = 0; S.lostDown = 0; S.yieldLost = 0; S.scansRich = 0; S.scansPoor = 0; S.sampleDone = false; S.deployDone = false; S.bonusDone = false; S.crewStanding = 1; S.hazardTime = 0;
       A.enter(mi.id);   // builds this mission's ground and sprites the first time
       note(`Mission Control: ${mi.objectives.scans} rich sites, the ${mi.objectives.sampleSite.toLowerCase()}, the ${mi.objectives.deploy.toLowerCase()}. Data counts at the lander.`, C.amber, 6);
