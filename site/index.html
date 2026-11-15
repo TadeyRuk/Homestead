@@ -44,7 +44,7 @@
 
 <header class="hero" id="top">
   <video src="/assets/hero.mp4" poster="/assets/poster.jpg" muted loop playsinline preload="auto" aria-hidden="true"></video>
-  <div class="hud" aria-hidden="true"><div class="wrap"><span class="rec">REC &nbsp;CAM 3 · MARS SURVEY</span><span id="clock">T+ 00:00.0</span></div></div>
+  <div class="hud" aria-hidden="true"><div class="wrap"><span class="rec">REC &nbsp;CAM 3<i> · MARS SURVEY</i></span><span id="clock">T+ 00:00.0</span></div></div>
   <div class="wrap">
     <span class="tag land">NASA Space Apps Challenge 2026</span>
     <h1 class="pix"><span class="l land" style="--i:1">A job on <span class="amber">Mars.</span></span><span class="l land red" style="--i:3">No rocket.</span></h1>
@@ -149,9 +149,11 @@
       <div class="slots" id="slots"></div>
       <aside class="sheet" aria-live="polite">
         <h3>Blueprint <span class="mis" role="group" aria-label="Mission"><button data-m="moon" aria-pressed="false">Moon</button><button data-m="mars" aria-pressed="true">Mars</button></span></h3>
+        <div class="meters">
         <div class="meter" id="m-mass"><div class="row"><span>Mass vs lift</span><span></span></div><div class="bar"><i></i></div></div>
         <div class="meter" id="m-power"><div class="row"><span>Draw vs supply</span><span></span></div><div class="bar"><i></i></div></div>
         <div class="meter" id="m-cost"><div class="row"><span>Cost vs cap</span><span></span></div><div class="bar"><i></i></div></div>
+        </div>
         <div class="verdict" id="verdict"></div>
         <div class="fact" id="fact"></div>
         <a class="btn sm" data-play href="https://seedlign.itch.io/homestead"><span class="tri"></span>Fly this build</a>

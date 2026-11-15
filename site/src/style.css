@@ -90,6 +90,7 @@ nav ul a { color: #c5d0db; } nav ul a:hover { color: #fff; text-decoration: none
 .hero .wrap { position: relative; z-index: 2; }
 .hud { position: absolute; z-index: 2; top: 84px; left: 0; right: 0; }
 .hud .wrap { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; letter-spacing: .08em; color: #fff; text-shadow: 0 2px 0 #000; }
+.rec i { font-style: normal; }
 .rec::before { content: ""; display: inline-block; width: 10px; height: 10px; background: var(--red); margin-right: 8px; animation: blink 1.2s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 .hero h1 { font-size: clamp(38px, 6.4vw, 96px); text-shadow: 6px 6px 0 var(--bg); margin: 18px 0 20px; text-transform: uppercase; }
@@ -282,4 +283,70 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: 
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .reveal, .slide .txt > *, .js body:not(.ready) .land { opacity: 1; transform: none; }
   .slide, .slide video { transform: none; }
+}
+
+/* ---------- phones */
+@media (max-width: 760px) {
+  section { padding: 64px 0; }
+  .head { margin-bottom: 28px; }
+  .head p { font-size: 16px; }
+
+  /* nav: everything has to fit on one 320px line */
+  nav .wrap { gap: 8px; height: 54px; }
+  .logo { font-size: 20px; }
+  .snd { font-size: 10px; padding: 4px 6px; letter-spacing: .04em; }
+  nav .btn.sm { font-size: 13px; padding: 6px 10px 7px; gap: 7px; }
+  nav .btn .tri { border-width: 6px; border-left-width: 9px; }
+
+  .sp-title b { font-size: clamp(34px, 12.5vw, 60px); }
+  .sp-top small { font-size: 11px; letter-spacing: .2em; }
+
+  .hero { padding: 104px 0 44px; }
+  .hud { top: 66px; }
+  .hud .wrap { font-size: 11px; white-space: nowrap; }
+  .hud .rec i { display: none; }
+  .tag { font-size: 11px; }
+  .hero h1 { margin: 14px 0 14px; text-shadow: 4px 4px 0 var(--bg); }
+  .cta { flex-direction: column; gap: 16px; margin: 22px 0 22px; }
+  .cta .btn { justify-content: center; font-size: 18px; padding: 12px 14px 13px; white-space: normal; text-align: center; }
+  .facts { font-size: 12px; gap: 8px; }
+  .scroll { display: none; }
+
+  .pin-in { padding-top: 54px; }
+  .pin .head { margin-bottom: 14px; }
+  .car-dots { margin-top: 18px; gap: 6px; }
+  .car-dots button { font-size: 10px; letter-spacing: 0; white-space: nowrap; overflow: hidden; }
+  .car-hint { font-size: 10px; margin-top: 8px; }
+  .slide .n { font-size: 54px; }
+
+  .info { padding-left: 16px; }
+  .info p { font-size: 16px; }
+  .reel { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .reel .mon { border-width: 2px; box-shadow: none; }
+  .mon .cap { font-size: 9px; left: 5px; top: 5px; padding: 1px 5px; letter-spacing: .04em; border-width: 1px; }
+
+  /* the blueprint rides along the bottom of the screen while you pick parts above it */
+  .parts { grid-template-columns: repeat(2, 1fr); }
+  .sheet { position: sticky; bottom: 0; z-index: 5; margin-inline: -16px; padding: 10px 16px 12px; border-width: 3px 0 0; box-shadow: 0 -14px 24px rgba(4, 7, 13, .8); }
+  .sheet h3 { font-size: 18px; }
+  .sheet .meters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .meter { margin-top: 8px; }
+  .meter .row { flex-direction: column; gap: 0; font-size: 10px; letter-spacing: .02em; line-height: 1.35; }
+  .meter .bar { height: 8px; margin-top: 3px; }
+  .verdict { margin-top: 10px; padding: 7px 10px; font-size: 18px; border-width: 2px; }
+  .verdict small { font-size: 12px; margin-top: 3px; }
+  .sheet .fact, .sheet .btn { display: none; }
+
+  .stat { padding: 14px; }
+  .card { padding: 18px; }
+  .code { font-size: 32px; }
+  .final { padding: 90px 0 80px; }
+  .final .btn { padding: 16px 22px 18px; }
+  footer .wrap { justify-content: flex-start; }
+}
+/* short phones: the pinned carousel has little height, so its slides carry the title only */
+@media (max-width: 760px) and (max-height: 700px) {
+  .slide p { display: none; }
+  .slide .n { font-size: 40px; margin-bottom: 4px; }
+  .pin .head h2 { font-size: 24px; }
 }
