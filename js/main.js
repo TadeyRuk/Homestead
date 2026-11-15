@@ -10,7 +10,7 @@
   const PLAY = ['build', 'flight', 'surface'];
 
   HS.go = (name, col) => { if (next) return; next = name; fadeDir = 1; fadeCol = col || '4,7,13'; };
-  const enter = (name) => { cur = HS.scenes[name]; HS.sceneName = name; HS.In.hit.clear(); HS.In.click = false; if (cur.enter) cur.enter(); };
+  const enter = (name) => { if (cur && cur.exit) cur.exit(); cur = HS.scenes[name]; HS.sceneName = name; HS.In.hit.clear(); HS.In.click = false; if (cur.enter) cur.enter(); };
 
   function frame(now) {
     let dt = Math.min(.05, (now - last) / 1000) || 0; last = now;
@@ -43,10 +43,11 @@
     if (cur) { g.save(); cur.draw(); g.restore(); }
     if (HS.flashA > 0) { g.fillStyle = `rgba(${HS.flashCol},${HS.flashA})`; g.fillRect(-10, -10, 660, 380); }
     // watermark required by the Space Apps AI rules, plus the sound state
-    const s = 'AI-assisted placeholder art', w = HS.tw(s, 6.5);
-    g.fillStyle = 'rgba(8,14,26,.7)'; g.fillRect(640 - w - (PLAY.includes(HS.sceneName) ? 96 : 44), 349, w + 96, 11);
-    HS.T(s, 636, 355, 6.5, '#aab6c2', { a: 'right', b: 'middle' });
-    HS.T(HS.muted ? '[M] off' : '[M] snd', 640 - w - 41, 355, 6.5, HS.muted ? HS.C.red : '#6f7d8c', { b: 'middle' });
+    // on the title the film has its own words along the bottom, so the watermark moves to the top edge there
+    const s = 'AI-assisted placeholder art', w = HS.tw(s, 6.5), wy = HS.sceneName === 'title' ? 0 : 349;
+    g.fillStyle = 'rgba(8,14,26,.7)'; g.fillRect(640 - w - (PLAY.includes(HS.sceneName) ? 96 : 44), wy, w + 96, 11);
+    HS.T(s, 636, wy + 6, 6.5, '#aab6c2', { a: 'right', b: 'middle' });
+    HS.T(HS.muted ? '[M] off' : '[M] snd', 640 - w - 41, wy + 6, 6.5, HS.muted ? HS.C.red : '#6f7d8c', { b: 'middle' });
     if (HS.paused) {
       g.fillStyle = 'rgba(4,7,13,.78)'; g.fillRect(-10, -10, 660, 380);
       HS.box(210, 112, 220, 136, HS.C.cyan, 6);
