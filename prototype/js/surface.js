@@ -4,6 +4,10 @@
   const { T, box, bar, tag, C, PIX, clamp, seg, fmt } = HS;
   const L = HS.LANDER, A = HS.surfaceArt;   // the art is in js/surface-art.js
   let U = null;
+  // what each crew member has of their own on the surface; use() swaps one of them into U, keep() saves it back
+  const PK = ['p', 'carry', 'o2', 'pw', 'hold', 'tab', 'down', 'downT', 'inHazard'];
+  const use = (id) => { const o = U.ps[id]; for (const k of PK) U[k] = o[k]; U.me = id; };
+  const keep = (id) => { const o = U.ps[id]; for (const k of PK) o[k] = U[k]; };
 
   const atLander = (p) => ((p.x - L.x) / 34) ** 2 + ((p.y - L.y) / 24) ** 2 < 1.15;
   const note = (s, col = C.cyan, d = 3) => { U.noteS = s; U.noteT = d; U.noteCol = col; };
@@ -13,8 +17,9 @@
   const sheltered = (p) => atLander(p) || U.rocks.some(([X, Y]) => Math.hypot(p.x - (X + 5), p.y - (Y + 6)) < 13);
 
   function goDown() {
-    const S = HS.S; U.down = true; S.crewStanding = 0; S.lostDown = S.carried; S.carried = 0; U.carry = null;
-    S.ended = { phase: 'surface', reason: 'suit', hazard: U.inHazard };
+    const S = HS.S; U.down = true; S.lostDown += S.carried; S.carried = 0; U.carry = null;
+    // the run only ends early when nobody is left standing
+    if (Object.keys(U.ps).every(id => id === U.me || U.ps[id].down)) { S.crewStanding = 0; S.ended = { phase: 'surface', reason: 'suit', hazard: U.inHazard }; }
     HS.log('down', { lost: S.lostDown, hazard: U.inHazard, left: Math.round(U.left) });
     HS.sfx.sad(); HS.shake(5); HS.flash('255,60,60', .4); U.downT = 0;
   }
@@ -29,8 +34,10 @@
         sites: rich.map(([x, y]) => ({ x, y, kind: 'rich', done: false })).concat(poor.map(([x, y]) => ({ x, y, kind: 'poor', done: false }))),
         sample: { x: D.sample[(r() * 2) | 0][0], y: 0, done: false }, deploy: { x: 0, y: 0, done: false, prog: 0 },
         hold: null, tab: 'MISSION', noteS: '', noteT: 0, noteCol: C.cyan, down: false, downT: 0, ext: null, done: false, inHazard: false, map: false, photoT: 0, lowBeep: 0,
-        storms: [], flares: [], rocks: D.rocks, devil: { x: 0, y: 0 }, overlook: null, upT: 0
+        storms: [], flares: [], rocks: D.rocks, devil: { x: 0, y: 0 }, overlook: null, upT: 0, ps: {}, me: 'host'
       };
+      HS.ids().forEach((id, i) => { U.ps[id] = { p: { x: L.x + 4 + i * 10, y: L.y + 16, walk: 0, flip: false, face: 'down' }, carry: null, o2: 100, pw: 100, hold: null, tab: 'MISSION', down: false, downT: 0, inHazard: false }; });
+      use(U.ps[HS.net.me] ? HS.net.me : HS.ids()[0]);
       const si = D.sample.find(s => s[0] === U.sample.x); U.sample.y = si[1];
       const di = D.deploy[(r() * 2) | 0]; U.deploy.x = di[0]; U.deploy.y = di[1];
       if (mars) { const d1 = r() < .5 ? 1 : -1; U.storms = [{ at: 26 + r() * 14, dir: d1, w: 230, x: null }, { at: 104 + r() * 18, dir: -d1, w: 260, x: null }]; U.devilSeed = r() * 6; }
@@ -41,15 +48,14 @@
     },
 
     update(dt) {
-      const S = HS.S, m = U.m, p = U.p, mi = S.mission;
+      const S = HS.S, m = U.m;
       if (U.done) return;
       U.t += dt; U.noteT -= dt; U.photoT -= dt; U.fx.update(dt);
       if (U.ext) { U.ext.t += dt; if (U.ext.t > 5) { U.done = true; HS.go('report'); } return; }
-      if (U.down) { U.downT += dt; if (U.downT > 2.6) extraction(); return; }
+      const ids = Object.keys(U.ps);
+      // extraction comes early once the whole crew is down
+      if (ids.every(id => U.ps[id].down)) { if (Math.max(...ids.map(id => (U.ps[id].downT += dt))) > 2.6) extraction(); return; }
       U.left -= dt; if (U.left <= 0) { U.left = 0; extraction(); return; }
-      U.map = HS.key('Tab');
-      if (HS.hit('KeyQ')) { U.tab = U.tab === 'MISSION' ? 'SUIT' : 'MISSION'; HS.sfx.blip(); }
-      if (HS.In.click && HS.over(8, 238, 204, 20)) { U.tab = HS.In.mx < 100 ? 'MISSION' : 'SUIT'; HS.sfx.blip(); }
 
       // hazards
       for (const s of U.storms) {
@@ -61,10 +67,23 @@
         if (U.t >= f.at - 10 && !f.warned) { f.warned = true; note('SOLAR FLARE in 10 s. Get to the lander or behind a rock.', C.amber, 5); HS.sfx.warn(); }
         if (U.t >= f.at && !f.hit) { f.hit = true; HS.flash('255,250,220', .5); HS.sfx.hitHull(); }
       }
-      const home = atLander(p), storm = U.mars && stormAt(p.x) && !home, flare = !U.mars && flareOn() && !sheltered(p);
-      U.inHazard = storm || flare; if (U.inHazard) S.hazardTime += dt;
       if (U.mars) { const k = U.t * .11 + U.devilSeed; U.devil.x = 320 + Math.sin(k) * 250 + Math.sin(k * 2.7) * 30; U.devil.y = 200 + Math.cos(k * 1.3) * 150; }
 
+      HS.each((id) => { if (!U.ps[id] || U.ext) return; use(id); this.walk(dt); keep(id); });
+      use(U.ps[HS.net.me] ? HS.net.me : ids[0]);
+
+      // the lander uplinks whatever the crew has handed in
+      if (S.buffer > 0) { const d = Math.min(S.buffer, m.comms.rate * dt); S.buffer -= d; S.uplinked += d; U.upT += dt; if (U.upT > .25) { U.upT = 0; U.fx.add(L.x + A.ANT.x, L.y + A.ANT.y, (Math.random() - .5) * 4, -30, 1.1, '#78ffdc', 1); } }
+    },
+
+    // one crew member's turn, with their suit swapped into U by use()
+    walk(dt) {
+      const S = HS.S, m = U.m, p = U.p, mi = S.mission;
+      if (U.down) return;
+      if (HS.hit('KeyQ')) { U.tab = U.tab === 'MISSION' ? 'SUIT' : 'MISSION'; HS.sfx.blip(); }
+      if (HS.In.click && HS.over(8, 238, 204, 20)) { U.tab = HS.In.mx < 100 ? 'MISSION' : 'SUIT'; HS.sfx.blip(); }
+      const home = atLander(p), storm = U.mars && stormAt(p.x) && !home, flare = !U.mars && flareOn() && !sheltered(p);
+      U.inHazard = storm || flare; if (U.inHazard) S.hazardTime += dt;
       // move
       const a = HS.axis(), len = Math.hypot(a.x, a.y);
       if (len) {
@@ -101,11 +120,13 @@
       } else {
         const k = storm ? 4 : flare ? 6 : 1; U.o2 -= .7 * k * dt; U.pw -= .32 * k * dt;
       }
-      if (S.buffer > 0) { const d = Math.min(S.buffer, m.comms.rate * dt); S.buffer -= d; S.uplinked += d; U.upT += dt; if (U.upT > .25) { U.upT = 0; U.fx.add(L.x + A.ANT.x, L.y + A.ANT.y, (Math.random() - .5) * 4, -30, 1.1, '#78ffdc', 1); } }
       U.lowBeep -= dt;
       if ((U.o2 < 30 || U.pw < 30) && U.lowBeep <= 0) { U.lowBeep = 1.6; HS.sfx.warn(); }
       if (U.o2 <= 0 || U.pw <= 0) { U.o2 = Math.max(0, U.o2); U.pw = Math.max(0, U.pw); goDown(); }
     },
+
+    save() { keep(U.me); return HS.pack(U); },
+    load(d) { if (!U) return; Object.assign(U, d); use(U.ps[HS.net.me] ? HS.net.me : Object.keys(U.ps)[0]); },
 
     // what holding E would work on right now
     target() {
@@ -137,6 +158,11 @@
       if (U.down || !(U.ext && U.ext.t > 2.6)) {
         const held = U.down ? null : U.carry ? (mars ? 'core' : 'can') : S.carried > 0 ? 'data' : null;
         list.push({ y: p.y + 4, draw: () => A.crew(x, cam, p, S.suit, { walk: p.walk, flip: p.flip, face: p.face, carry: !!held, down: U.down, t }, held, t) });
+      }
+      for (const id in U.ps) {
+        const o = U.ps[id]; if (id === U.me || (U.ext && U.ext.t > 2.6 && !o.down)) continue;
+        const held = o.down ? null : o.carry ? (mars ? 'core' : 'can') : null, q = o.p;
+        list.push({ y: q.y + 4, draw: () => A.crew(x, cam, q, HS.member(id).suit, { walk: q.walk, flip: q.flip, face: q.face, carry: !!held, down: o.down, t }, held, t) });
       }
       list.sort((a, b) => a.y - b.y);
       for (const d of list) d.draw();
@@ -179,7 +205,7 @@
       if (U.noteT > 0) { g.globalAlpha = clamp(U.noteT * 2, 0, 1); tag(U.noteS, 320, 72, U.noteCol, 8); g.globalAlpha = 1; }
       if (U.photoT > 0) { g.fillStyle = `rgba(255,255,255,${U.photoT * 2})`; g.fillRect(0, 0, 640, 360); }
       HS.hint('[E] hold to work   [F] photo   [Q] mission / suit   [TAB] hold for map');
-      if (U.map) this.map(cam);
+      if (HS.local.down.has('Tab')) this.map(cam);   // each screen holds its own map
       if (U.down && !U.ext) { g.fillStyle = 'rgba(4,7,13,.45)'; g.fillRect(0, 0, 640, 360); HS.prompt(S.lostDown ? `suit empty: ${S.lostDown} carried units lost` : 'suit empty', 320, 180, C.red); }
       if (U.ext) {
         g.fillStyle = `rgba(4,7,13,${seg(U.ext.t, .2, 1.2) * .55})`; g.fillRect(0, 0, 640, 360); g.globalAlpha = seg(U.ext.t, .4, 1);
