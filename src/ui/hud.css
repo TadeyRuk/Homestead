@@ -204,3 +204,25 @@
 .hs-panel[data-under="1"] {
   opacity: 0.28;
 }
+
+/* seat 6's hazard warning on the surface */
+.hs-banner {
+  max-width: calc(var(--u) * 300);
+  padding: calc(var(--u) * 4) calc(var(--u) * 9);
+  font-size: calc(var(--u) * 7.5);
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+.hs-banner[data-tone="warn"] {
+  color: var(--hs-amber);
+  border-color: var(--hs-amber);
+}
+.hs-banner[data-tone="bad"] {
+  color: var(--hs-red);
+  border-color: var(--hs-red);
+  animation: hs-pulse 1.2s steps(2, jump-none) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hs-banner[data-tone="bad"] { animation: none; }
+}

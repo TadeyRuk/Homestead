@@ -85,7 +85,7 @@ From proposal section 02, which follows the 2026 Project Submission Guide and th
 | 5 | AI may not be used to come up with the idea. AI-made images and video carry a visible watermark. AI-written code and data are noted in text and metadata. | The concept is the team's. Every AI-made image and the video carry a watermark. The "AI use" section below says where AI was used (S6-05). | acmrsu, with every seat reporting its AI use | Not yet |
 | 6 | AI-made content may not contain NASA logos, flags or mission identifiers. | No NASA logos, flags or mission patches in any art. Real mission names appear only as plain text in the report. | acmrsu (art pass, S6-03) | Not yet |
 | 7 | List every outside resource, even free ones. No copyrighted material without permission. | Fonts, sounds and libraries come from free licences and are listed under "Credits and licences". The game screenshots used as style references stay out of the build, video and repo. | acmrsu | Not yet |
-| 8 | At most six members, all registered at the same Local Event. | Team "Project Hail Marcus". Every member is on the team and registered at our Local Event (table below). Anyone who joins later must be added to the team and registered there too. | acmrsu | Yes |
+| 8 | At most six members, all registered at the same Local Event. | Team "Project Hail Marcus". All six members are on the team and registered at our Local Event (table below). Six is the limit, so nobody else can join. | acmrsu | Yes |
 | 9 | No images, video or voices of anyone under 18. | Checked before the video is recorded. | acmrsu | Not yet |
 | 10 | Press "Submit for Judging" before 11:59 PM local time on 15 November, after ticking the terms and original-work boxes. | Submit at hour 12.5 and keep the rest as buffer. Resubmit if anything changes before the deadline (S6-08). | acmrsu | Not yet |
 
@@ -98,11 +98,11 @@ Space Apps team: **Project Hail Marcus**.
 | 1 | Seedlign | Yes |
 | 2 | polsalarm | Yes |
 | 3 | TadeyRuk | Yes |
-| 4 | open | No owner yet |
+| 4 | Romeo-04 | Yes |
 | 5 | Emyol | Yes |
 | 6 | acmrsu | Yes |
 
-Confirmed by acmrsu on 15 Nov 2026. If someone takes seat 4, add them to the team and the Local Event before they commit.
+Confirmed by acmrsu on 15 Nov 2026. That's six members, the most the rules allow, so the team is full.
 
 ## NASA data and resources
 
@@ -167,10 +167,20 @@ Challenge page: [Space Mission Design Game](https://www.spaceappschallenge.org/2
 
 ## AI use
 
-_To be filled in by the team: where AI tools were used for code, art or data._
+Homestead was made with AI assistance. The concept and design are the team's own, and AI was not used to come up with the idea.
+
+- **Code:** written with Claude Code (Anthropic) as an assistant. Every change went through a pull request that a team member merged, and a person played the game after each merge.
+- **Reviews:** a GitHub Action runs Claude on each pull request to point out bugs and missing tests (`.github/workflows/claude-review.yml`).
+- **Research and docs:** Claude helped find and check the NASA sources above and drafted parts of this README.
+- **Art:** drawn in code and labelled as made with AI. The game will show a "Made with AI assistance" label in a corner of the screen.
+- **No NASA branding:** no AI-made content uses NASA logos, flags or mission identifiers.
+
+The full record, area by area, is in [`docs/ai-use.md`](docs/ai-use.md).
 
 ## Credits and licences
 
 - [PeerJS](https://peerjs.com/) (MIT), and its free public signalling server for pairing players by code.
+- [Pixelify Sans](https://github.com/eifetx/Pixelify-Sans), © 2021 The Pixelify Sans Project Authors, [SIL Open Font License 1.1](src/ui/fonts/OFL-PixelifySans.txt). Used for titles.
+- [IBM Plex Mono](https://github.com/IBM/plex), © 2017 IBM Corp., [SIL Open Font License 1.1](src/ui/fonts/OFL-IBMPlexMono.txt). Used for the HUD, brief and report text.
 
-_Still to add: fonts, sounds and other outside resources._
+_Still to add: sounds and any other outside resources._

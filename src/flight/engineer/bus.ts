@@ -32,8 +32,10 @@ export interface Bus {
   seed: number;
   /** the power part feeding the bus */
   source: string;
-  /** watts the power part supplies */
+  /** watts the power part supplies; seat 1's flare rule (S4-07) may lower it every tick */
   supply: number;
+  /** 0..1 share of supply the bus can use; a cold energy core cuts it (S5-07), independent of flares */
+  supplyScale: number;
   loads: Load[];
   /** 0..1; fills while the draw is over supply, trips the breaker at 1 */
   strain: number;
@@ -56,6 +58,7 @@ export function createBus(seed: number, power: { id: string; watts: number }, pa
     seed,
     source: power.id,
     supply: power.watts,
+    supplyScale: 1,
     loads: parts.map((p) => ({ ...p, on: true })),
     strain: 0,
     tripped: 0,
@@ -85,9 +88,14 @@ export function powered(bus: DeepReadonly<Bus>, slot: Slot): boolean {
   return bus.tripped === 0 && bus.loads.some((l) => l.slot === slot && l.on);
 }
 
+/** watts the bus can actually use right now */
+export function effectiveSupply(bus: DeepReadonly<Bus>): number {
+  return bus.supply * bus.supplyScale;
+}
+
 /** the draw is over supply right now; strain can still be easing off after it drops back */
 export function overloaded(bus: DeepReadonly<Bus>): boolean {
-  return draw(bus) > bus.supply;
+  return draw(bus) > effectiveSupply(bus);
 }
 
 export function secondsToTrip(bus: DeepReadonly<Bus>): number {

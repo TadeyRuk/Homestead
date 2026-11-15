@@ -2,7 +2,7 @@ import type { DeepReadonly } from "../../core/scene";
 import { partName } from "../../data/data";
 import { alpha, bar, box, clamp, text } from "../../ui/kit";
 import { C, ROLE_COLOUR, SLOT_NAME } from "../../ui/tokens";
-import { draw as busDraw, overloaded, secondsToTrip, type Bus } from "./bus";
+import { draw as busDraw, effectiveSupply, overloaded, secondsToTrip, type Bus } from "./bus";
 import type { Welder } from "./weld";
 
 /** a panel on seat 3's 640 x 360 grid; the station's draw calls begin() first */
@@ -21,12 +21,14 @@ export function drawBus(ctx: CanvasRenderingContext2D, bus: DeepReadonly<Bus>, a
   const w = a.w - 20;
   box(ctx, a.x, a.y, a.w, a.h, active ? EDGE : C.line);
   text(ctx, "POWER BUS", x, a.y + 16, 9, active ? EDGE : C.muted, { weight: 600 });
-  text(ctx, `${partName(bus.source)}  ${bus.supply} W`, x, a.y + 29, 7, C.muted);
+  const supply = effectiveSupply(bus);
+  const cut = supply < bus.supply ? `  cold core: ${Math.round(supply)} W usable` : "";
+  text(ctx, `${partName(bus.source)}  ${bus.supply} W${cut}`, x, a.y + 29, 7, cut ? C.amber : C.muted);
 
   // load against supply; the bar's end is the supply line
   const watts = busDraw(bus);
   // a dead power part still has to read as fully loaded, not as NaN
-  const load = bus.supply > 0 ? watts / bus.supply : watts > 0 ? Infinity : 0;
+  const load = supply > 0 ? watts / supply : watts > 0 ? Infinity : 0;
   const over = overloaded(bus);
   bar(ctx, x, a.y + 36, w, 9, clamp(load), load > 1 ? C.red : load > 0.85 ? C.amber : C.green);
   text(ctx, Number.isFinite(load) ? `${Math.round(load * 100)}% load` : "no supply", x + w, a.y + 55, 7, C.white, { align: "right" });

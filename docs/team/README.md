@@ -9,7 +9,7 @@ Six seats, one owner each. Read this file first, then your seat file. Times are 
 | 1 | Core and network | Seedlign | [seat-1-core-network.md](seat-1-core-network.md) |
 | 2 | Ground, maps and build logic | polsalarm | [seat-2-ground-build.md](seat-2-ground-build.md) |
 | 3 | UI, data and report | TadeyRuk | [seat-3-ui-data-report.md](seat-3-ui-data-report.md) |
-| 4 | Pilot and Comms | open | [seat-4-pilot-comms.md](seat-4-pilot-comms.md) |
+| 4 | Pilot and Comms | Romeo-04 | [seat-4-pilot-comms.md](seat-4-pilot-comms.md) |
 | 5 | Engineer and Science | Emyol | [seat-5-engineer-science.md](seat-5-engineer-science.md) |
 | 6 | Ship it | acmrsu | [seat-6-ship-it.md](seat-6-ship-it.md) |
 
