@@ -117,19 +117,43 @@
     const mine = HS.S ? { suit: HS.S.suit, visor: HS.S.visor, name: HS.S.name } : {};
     HS.S = Object.assign({}, s, { mission: HS.MISSIONS[s.mission] }, mine);
   };
+  // snapshots are deltas: only the parts of the run state (S) and the scene state (d) that changed since the
+  // last one, each part compared as JSON. A full one goes out on a scene change and every FULL_MS, and the room
+  // sends a full one instead to a joiner that is new or that missed snapshots on a backed-up link.
+  const FULL_MS = 1000;
+  let sentS = {}, sentD = {}, sentScene = '', lastFull = 0;
+  const changed = (obj, sent) => {
+    if (!obj) return null;
+    const out = {};
+    for (const k in obj) { const j = JSON.stringify(obj[k]); if (sent[k] !== j) { sent[k] = j; out[k] = obj[k]; } }
+    for (const k in sent) if (!(k in obj)) { delete sent[k]; out[k] = null; }
+    return out;
+  };
   function sendSnap(now) {
     if (now - N.lastSnap < SNAP_MS) return;
     N.lastSnap = now;
     const cur = HS.scenes[HS.sceneName];
-    const data = { scene: HS.sceneName, S: HS.S && HS.S.mission ? packS() : null, d: cur && cur.save ? cur.save() : null, fx: outbox, crew: N.crew, roles: N.roles, seat: N.seat, ask: N.ask };
-    N.room.send(data, now);
-    lastData = Object.assign({}, data, { fx: [] });   // a keepalive repeats the state, not the sounds
+    const S = HS.S && HS.S.mission ? packS() : null, d = cur && cur.save ? cur.save() : null;
+    const head = { scene: HS.sceneName, fx: outbox, crew: N.crew, roles: N.roles, seat: N.seat, ask: N.ask };
+    const whole = () => Object.assign({}, head, { full: true, S, d });
+    if (HS.sceneName !== sentScene || now - lastFull > FULL_MS) { sentScene = HS.sceneName; lastFull = now; sentS = {}; sentD = {}; }
+    const fresh = !Object.keys(sentS).length && !Object.keys(sentD).length;
+    const sS = changed(S, sentS), sD = changed(d, sentD);
+    N.room.send(fresh ? whole() : Object.assign({}, head, { full: false, S: sS, d: sD }), now, whole);
+    lastData = Object.assign(whole(), { fx: [] });   // a keepalive repeats the whole state, not the sounds
     outbox = [];
   }
   // ---------- smoothing on joiners: snapshots arrive about 30 a second and unevenly, so a joiner draws the
   // scene DELAY ms in the past, blending the two snapshots around that moment. Only positions are blended;
   // counters and everything else take the newer snapshot's value.
-  const DELAY = 50, BLEND = new Set(['x', 'y', 'e', 'rot']);
+  // DELAY follows how unevenly snapshots arrive: the usual gap plus three times its jitter, kept in 50..250 ms
+  const BLEND = new Set(['x', 'y', 'e', 'rot']);
+  let DELAY = 50, gapAvg = 33, gapJit = 0, lastArrive = 0;
+  const arrived = (now) => {
+    if (lastArrive) { const gap = now - lastArrive; gapJit += (Math.abs(gap - gapAvg) - gapJit) * .1; gapAvg += (gap - gapAvg) * .1; }
+    lastArrive = now;
+    DELAY = Math.max(50, Math.min(250, gapAvg + 3 * gapJit));
+  };
   let buf = [];   // [{ t, d }] for the current scene, oldest first
   const blend = (a, b, k, key) => {
     if (typeof b === 'number') return typeof a === 'number' && BLEND.has(key) ? a + (b - a) * k : b;
@@ -167,15 +191,25 @@
     live.x = pred.x; live.y = pred.y; live.walk = pred.walk; live.flip = pred.flip; live.face = pred.face;
   }
 
+  let base = null;   // the joiner's copy of the host's full state, kept up to date by deltas
   function onSnap(data) {
     if (N.mode !== 'client' || !data) return;
     if (N.client.id()) N.me = N.client.id();   // the welcome comes before the first snapshot
     if (data.crew) N.crew = data.crew;
     if (data.roles) { N.roles = data.roles; N.seat = data.seat || {}; N.ask = data.ask || null; }
     if (data.fx) play(data.fx);
-    if (data.S) loadS(data.S);
+    // rebuild the whole state: a full snapshot replaces it, a delta changes only the parts it carries
+    if (data.full) base = { scene: data.scene, S: data.S, d: data.d };
+    else if (!base || base.scene !== data.scene) return;   // a delta with nothing to apply it to: wait for a full one
+    else {
+      if (data.S) base.S = Object.assign({}, base.S, data.S);
+      if (data.d) base.d = Object.assign({}, base.d, data.d);
+    }
+    if (base.S) loadS(base.S);
     if (data.scene !== HS.sceneName && data.scene !== 'lobby') { buf = []; pred = null; HS.netGo(data.scene); return; }
-    if (data.d) buf.push({ t: performance.now(), d: data.d });
+    const now = performance.now();
+    arrived(now);
+    if (base.d) buf.push({ t: now, d: base.d });
   }
 
   // ---------- the frame hooks main.js calls
@@ -191,7 +225,18 @@
     if (N.mode === 'host') N.room.end('The host left the game');
     else { N.client.leave(); leave('You left the game'); }
   }
+  // the joiner's link, top left: the round trip to the host and whether it runs direct or through the relay
+  let route = '', routeAt = 0;
+  const linkLine = () => {
+    if (N.mode !== 'client') return;
+    const now = performance.now();
+    if (now - routeAt > 5000) { routeAt = now; N.client.route().then((r) => { route = r; }, () => {}); }
+    const rtt = N.client.rtt();
+    const s = (rtt == null ? 'ping ...' : `ping ${Math.round(rtt)} ms`) + (route && route !== 'unknown' ? `  ${route}` : '');
+    HS.T(s, 636, 341, 6.5, rtt != null && rtt > 250 ? C.amber : '#6f7d8c', { a: 'right', b: 'middle' });
+  };
   HS.netDraw = () => {
+    if (PLAY.includes(HS.sceneName) || HS.sceneName === 'lobby') linkLine();
     if (N.mode === 'solo' || !quitAt || performance.now() - quitAt > QUIT_MS) return;
     HS.prompt(N.mode === 'host' ? 'Leave? This ends the game for everyone.  [ESC] again to leave' : 'Leave the game?  [ESC] again to leave', 320, 180, C.amber);
   };
@@ -226,7 +271,7 @@
   setInterval(() => {
     const now = performance.now();
     if (N.mode === 'client') { if (now - N.lastPing > PING_MS) { N.lastPing = now; N.client.ping(); } N.client.check(); }
-    else if (N.mode === 'host') { N.room.check(); if (N.mode === 'host' && lastData && now - N.lastSnap > 900) { N.lastSnap = now; N.room.send(lastData, now); } }
+    else if (N.mode === 'host') { N.room.check(); if (N.mode === 'host' && lastData && now - N.lastSnap > 900) { N.lastSnap = now; const keep = lastData; N.room.send(keep, now, () => keep); } }
   }, 500);
 
   function leave(reason) {
