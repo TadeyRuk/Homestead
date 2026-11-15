@@ -86,7 +86,9 @@
   };
 
   // ---------- input
-  const In = HS.In = { down: new Set(), hit: new Set(), mx: 320, my: 180, mdown: false, click: false, any: false };
+  // HS.local is this tab's keys and pointer. HS.In is whoever the game is reading right now: the host points it
+  // at each crew member's input in turn (js/net-game.js), so scenes read HS.key and HS.In as before
+  const In = HS.local = HS.In = { down: new Set(), hit: new Set(), mx: 320, my: 180, mdown: false, click: false, any: false };
   const GAME_KEYS = new Set(['Tab', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Backspace']);
   window.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -101,18 +103,18 @@
   cv.addEventListener('pointermove', mpos);
   window.addEventListener('pointerup', () => { In.mdown = false; });
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
-  HS.key = (...codes) => codes.some(c => In.down.has(c));
-  HS.hit = (...codes) => codes.some(c => In.hit.has(c));
+  HS.key = (...codes) => codes.some(c => HS.In.down.has(c));
+  HS.hit = (...codes) => codes.some(c => HS.In.hit.has(c));
   HS.axis = () => ({
     x: (HS.key('KeyD', 'ArrowRight') ? 1 : 0) - (HS.key('KeyA', 'ArrowLeft') ? 1 : 0),
     y: (HS.key('KeyS', 'ArrowDown') ? 1 : 0) - (HS.key('KeyW', 'ArrowUp') ? 1 : 0)
   });
-  HS.over = (x, y, w, h) => In.mx >= x && In.mx <= x + w && In.my >= y && In.my <= y + h;
+  HS.over = (x, y, w, h) => HS.In.mx >= x && HS.In.mx <= x + w && HS.In.my >= y && HS.In.my <= y + h;
   HS.button = (label, x, y, w, h, col, hot) => {
     const o = HS.over(x, y, w, h);
     box(x, y, w, h, col, 5, o || hot ? HS.rgba(col, .22) : 'rgba(8,14,26,.9)');
     T(label, x + w / 2, y + h / 2 + .5, 9.5, col, { w: 600, a: 'center', b: 'middle' });
-    return o && In.click;
+    return o && HS.In.click;
   };
   HS.endFrame = () => { In.hit.clear(); In.click = false; };
 
